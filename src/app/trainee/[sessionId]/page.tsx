@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { ScreenShell } from "@/components/screen-shell";
 import { ScenarioRun } from "@/components/scenario-run";
+import { getGuiTemplate } from "@/lib/store/kb";
 import { getSession } from "@/lib/store/sessions";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,13 @@ export default async function RunPage({
     redirect(`/trainee/${sessionId}/debrief`);
   }
 
+  // Only an approved console is used. A draft stays invisible to trainees, the
+  // same rule the knowledge base follows.
+  const template = await getGuiTemplate();
+  const templateHtml = template?.approved
+    ? template.generated_ui_code
+    : undefined;
+
   return (
     <ScreenShell
       theme="ops"
@@ -25,7 +33,7 @@ export default async function RunPage({
       title={session.scenario_instance.scenario_name}
       contained={false}
     >
-      <ScenarioRun session={session} />
+      <ScenarioRun session={session} templateHtml={templateHtml} />
     </ScreenShell>
   );
 }

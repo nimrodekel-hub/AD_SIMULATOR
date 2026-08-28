@@ -1,21 +1,37 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { DecisionMade, Session } from "@/lib/domain/schemas";
+import { SimulatedConsole } from "@/components/simulated-console";
+import type {
+  DecisionMade,
+  ScenarioInstance,
+  Session,
+} from "@/lib/domain/schemas";
 
 /**
  * Screen 3, the back half: running the scenario.
  *
- * Operations-room layout, at operations-room density. The brief asks for this
- * screen to feel like a real console, and the visual load is part of the
- * exercise — reading a crowded track table under a running clock is the skill
- * being trained, not an obstacle to it.
+ * Two presentations of the same run. When the designer has approved a console
+ * shell, the live pieces are rendered into its slots and the trainee sees
+ * something that looks like their own equipment. Otherwise they fall back to
+ * the built-in operations layout, which is plain but complete.
+ *
+ * Either way the pieces themselves — clock, air picture, resources, decision —
+ * are the same components with the same data. Only the frame around them
+ * changes.
  */
 
 type Stage = "brief" | "running" | "submitting";
 
-export function ScenarioRun({ session }: { session: Session }) {
+export function ScenarioRun({
+  session,
+  templateHtml,
+}: {
+  session: Session;
+  /** The approved console shell, when there is one. */
+  templateHtml?: string;
+}) {
   const router = useRouter();
   const scenario = session.scenario_instance;
 
@@ -114,10 +130,7 @@ export function ScenarioRun({ session }: { session: Session }) {
                 label="Decisions"
                 value={String(scenario.decision_points.length)}
               />
-              <Readout
-                label="Window"
-                value={`${scenario.time_window_seconds}s`}
-              />
+              <Readout label="Window" value={`${scenario.time_window_seconds}s`} />
               <Readout label="Level" value={session.difficulty_level} />
             </dl>
             <p className="mt-5 text-xs text-muted">
@@ -140,23 +153,43 @@ export function ScenarioRun({ session }: { session: Session }) {
     );
   }
 
-  /* ---- The console --------------------------------------------- */
+  /* ---- The live pieces ----------------------------------------- */
   const point = scenario.decision_points[current];
-  const urgency =
-    remaining <= scenario.time_window_seconds * 0.25
-      ? "status-danger"
-      : remaining <= scenario.time_window_seconds * 0.5
-        ? "status-warn"
-        : "status-ok";
 
+  const clock = <Clock remaining={remaining} window={scenario.time_window_seconds} />;
+  const tracks = <TrackTable scenario={scenario} />;
+  const resources = <ResourceList scenario={scenario} />;
+  const decision = (
+    <DecisionPanel
+      submitting={stage === "submitting"}
+      situation={point.situation_rendered}
+      actions={point.actions}
+      error={error}
+      onChoose={choose}
+    />
+  );
+
+  /* ---- Inside the designer's console --------------------------- */
+  if (templateHtml) {
+    return (
+      <SimulatedConsole
+        html={templateHtml}
+        slots={{
+          "system-name": <span className="data">{scenario.scenario_name}</span>,
+          clock,
+          tracks,
+          resources,
+          decision,
+        }}
+      />
+    );
+  }
+
+  /* ---- Built-in operations layout ------------------------------ */
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Status strip */}
       <div className="flex flex-wrap items-center gap-4 border-b border-line px-4 py-2">
-        <span className={`chip ${urgency} data`}>
-          T-{String(Math.floor(remaining / 60)).padStart(2, "0")}:
-          {String(remaining % 60).padStart(2, "0")}
-        </span>
+        {clock}
         <span className="data text-xs text-muted">
           DECISION {current + 1} / {scenario.decision_points.length}
         </span>
@@ -166,125 +199,173 @@ export function ScenarioRun({ session }: { session: Session }) {
       </div>
 
       <div className="grid flex-1 gap-px bg-[var(--border)] lg:grid-cols-[1fr_18rem]">
-        {/* Track table */}
         <section className="bg-panel">
           <div className="panel-header">Air picture</div>
-          <div className="overflow-x-auto">
-            <table className="data w-full min-w-[44rem] text-xs">
-              <thead className="text-muted">
-                <tr className="border-b border-line">
-                  <Th>TRACK</Th>
-                  <Th>IFF</Th>
-                  <Th>CLASS</Th>
-                  <Th right>BRG</Th>
-                  <Th right>RNG</Th>
-                  <Th right>ALT</Th>
-                  <Th right>SPD</Th>
-                  <Th right>TTI</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {scenario.tracks.map((track) => (
-                  <tr key={track.designator} className="border-b border-line/60">
-                    <Td>{track.designator}</Td>
-                    <Td>
-                      <span className={`chip ${iffTone(track.iff_status)}`}>
-                        {track.iff_status}
-                      </span>
-                    </Td>
-                    <Td>{track.classification}</Td>
-                    <Td right>{track.bearing_deg}°</Td>
-                    <Td right>{track.range_km} km</Td>
-                    <Td right>{track.altitude_ft.toLocaleString()} ft</Td>
-                    <Td right>{track.speed_kts} kts</Td>
-                    <Td right>{track.time_to_impact_seconds}s</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {scenario.tracks.some((track) => track.notes) ? (
-            <div className="border-t border-line p-3">
-              <p className="mb-2 text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-muted">
-                Track notes
-              </p>
-              <ul className="space-y-1 text-xs text-muted">
-                {scenario.tracks
-                  .filter((track) => track.notes)
-                  .map((track) => (
-                    <li key={track.designator}>
-                      <span className="data text-ink">{track.designator}</span>{" "}
-                      {track.notes}
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          ) : null}
+          {tracks}
         </section>
-
-        {/* Resources */}
         <aside className="bg-panel">
           <div className="panel-header">Resources</div>
-          <ul className="divide-y divide-[var(--border)]">
-            {scenario.resources.map((resource) => (
-              <li key={resource.name} className="px-3 py-2.5">
-                <p className="text-xs">{resource.name}</p>
-                <p className="data mt-1 text-sm">
-                  <span
-                    className={
-                      resource.available <= resource.total * 0.34
-                        ? "text-danger"
-                        : "text-accent"
-                    }
-                  >
-                    {resource.available}
-                  </span>
-                  <span className="text-muted">
-                    {" "}
-                    / {resource.total} {resource.unit}
-                  </span>
-                </p>
-              </li>
-            ))}
-          </ul>
+          {resources}
         </aside>
       </div>
 
-      {/* Decision point */}
-      <div className="border-t border-line bg-panel-raised p-4">
-        {stage === "submitting" ? (
-          <p className="text-sm text-muted">Evaluating the run…</p>
-        ) : (
-          <>
-            <p className="mb-1 text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-accent">
-              Decision required
-            </p>
-            <p className="text-sm">{point.situation_rendered}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {point.actions.map((action) => (
-                <button
-                  key={action.label}
-                  type="button"
-                  className="btn max-w-sm flex-col !items-start gap-1 text-left"
-                  onClick={() => choose(action.label)}
-                  title={action.description}
-                >
-                  <span className="font-semibold">{action.label}</span>
-                  <span className="text-xs font-normal text-muted">
-                    {action.description}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        {error ? (
-          <p className="chip status-danger mt-3 !normal-case">{error}</p>
-        ) : null}
-      </div>
+      <div className="border-t border-line bg-panel-raised p-4">{decision}</div>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* The pieces                                                          */
+/* ------------------------------------------------------------------ */
+
+function Clock({ remaining, window: total }: { remaining: number; window: number }) {
+  const urgency =
+    remaining <= total * 0.25
+      ? "status-danger"
+      : remaining <= total * 0.5
+        ? "status-warn"
+        : "status-ok";
+
+  return (
+    <span className={`chip ${urgency} data`}>
+      T-{String(Math.floor(remaining / 60)).padStart(2, "0")}:
+      {String(remaining % 60).padStart(2, "0")}
+    </span>
+  );
+}
+
+function TrackTable({ scenario }: { scenario: ScenarioInstance }) {
+  return (
+    <>
+      <div className="overflow-x-auto">
+        <table className="data w-full min-w-[44rem] text-xs">
+          <thead className="text-muted">
+            <tr className="border-b border-line">
+              <Th>TRACK</Th>
+              <Th>IFF</Th>
+              <Th>CLASS</Th>
+              <Th right>BRG</Th>
+              <Th right>RNG</Th>
+              <Th right>ALT</Th>
+              <Th right>SPD</Th>
+              <Th right>TTI</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {scenario.tracks.map((track) => (
+              <tr key={track.designator} className="border-b border-line/60">
+                <Td>{track.designator}</Td>
+                <Td>
+                  <span className={`chip ${iffTone(track.iff_status)}`}>
+                    {track.iff_status}
+                  </span>
+                </Td>
+                <Td>{track.classification}</Td>
+                <Td right>{track.bearing_deg}°</Td>
+                <Td right>{track.range_km} km</Td>
+                <Td right>{track.altitude_ft.toLocaleString()} ft</Td>
+                <Td right>{track.speed_kts} kts</Td>
+                <Td right>{track.time_to_impact_seconds}s</Td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {scenario.tracks.some((track) => track.notes) ? (
+        <div className="border-t border-line p-3">
+          <p className="mb-2 text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-muted">
+            Track notes
+          </p>
+          <ul className="space-y-1 text-xs text-muted">
+            {scenario.tracks
+              .filter((track) => track.notes)
+              .map((track) => (
+                <li key={track.designator}>
+                  <span className="data text-ink">{track.designator}</span>{" "}
+                  {track.notes}
+                </li>
+              ))}
+          </ul>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function ResourceList({ scenario }: { scenario: ScenarioInstance }) {
+  return (
+    <ul className="divide-y divide-[var(--border)]">
+      {scenario.resources.map((resource) => (
+        <li key={resource.name} className="px-3 py-2.5">
+          <p className="text-xs">{resource.name}</p>
+          <p className="data mt-1 text-sm">
+            <span
+              className={
+                resource.available <= resource.total * 0.34
+                  ? "text-danger"
+                  : "text-accent"
+              }
+            >
+              {resource.available}
+            </span>
+            <span className="text-muted">
+              {" "}
+              / {resource.total} {resource.unit}
+            </span>
+          </p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function DecisionPanel({
+  submitting,
+  situation,
+  actions,
+  error,
+  onChoose,
+}: {
+  submitting: boolean;
+  situation: string;
+  actions: Array<{ label: string; description: string }>;
+  error?: string;
+  onChoose: (label: string) => void;
+}) {
+  return (
+    <>
+      {submitting ? (
+        <p className="text-sm text-muted">Evaluating the run…</p>
+      ) : (
+        <>
+          <p className="mb-1 text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-accent">
+            Decision required
+          </p>
+          <p className="text-sm">{situation}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {actions.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                className="btn max-w-sm flex-col !items-start gap-1 text-left"
+                onClick={() => onChoose(action.label)}
+                title={action.description}
+              >
+                <span className="font-semibold">{action.label}</span>
+                <span className="text-xs font-normal text-muted">
+                  {action.description}
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {error ? (
+        <p className="chip status-danger mt-3 !normal-case">{error}</p>
+      ) : null}
+    </>
   );
 }
 
@@ -314,13 +395,7 @@ function Readout({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Th({
-  children,
-  right,
-}: {
-  children: React.ReactNode;
-  right?: boolean;
-}) {
+function Th({ children, right }: { children: ReactNode; right?: boolean }) {
   return (
     <th
       className={`px-3 py-2 text-[0.625rem] font-semibold uppercase tracking-[0.08em] ${
@@ -332,13 +407,7 @@ function Th({
   );
 }
 
-function Td({
-  children,
-  right,
-}: {
-  children: React.ReactNode;
-  right?: boolean;
-}) {
+function Td({ children, right }: { children: ReactNode; right?: boolean }) {
   return (
     <td className={`px-3 py-2 ${right ? "text-right" : "text-left"}`}>
       {children}

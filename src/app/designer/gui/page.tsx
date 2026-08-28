@@ -1,18 +1,20 @@
-import { NotBuiltYet } from "@/components/not-built-yet";
+import { GuiBuilder } from "@/components/gui-builder";
 import { ScreenShell } from "@/components/screen-shell";
+import { getGuiTemplate } from "@/lib/store/kb";
 
-export default function GuiBuilderPage() {
+export const dynamic = "force-dynamic";
+
+export default async function GuiBuilderPage() {
+  const existing = await getGuiTemplate();
+
   return (
     <ScreenShell
       theme="work"
       eyebrow="System Designer"
       title="Simulated console"
-      subtitle="Built once from reference screenshots"
+      subtitle="Built once from reference screenshots, then used by every run"
     >
-      <NotBuiltYet
-        stage="Build stage 5"
-        what="Upload 2–5 screenshots of a console, and the system generates a static look-alike interface for trainee runs to render inside. Until then, training runs use the plain text console."
-      />
+      <GuiBuilder existing={existing} />
     </ScreenShell>
   );
 }

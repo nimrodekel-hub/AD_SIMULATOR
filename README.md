@@ -23,7 +23,7 @@ the design decisions were made.
 | Framework | Next.js 16 (App Router) + TypeScript + Tailwind v4 |
 | Hosting | Vercel — rebuilds on every push |
 | Storage | JSON files committed to this repository, written through the GitHub API |
-| AI | Anthropic API, five integration points each with its own system prompt |
+| AI | Anthropic API, six integration points each with its own system prompt |
 
 **Everything lives in git.** Dilemmas, the simulated-console template, the
 trainee roster and every training run are all JSON files in `data/`. There is no
@@ -67,9 +67,10 @@ writes through the GitHub API instead — see below.
 | `ANTHROPIC_MODEL` | No | Defaults to `claude-opus-5`. |
 | `AI_MOCK` | No | Set to `1` to force mock mode even with a key. |
 
-The GitHub variables are **required in production**. Without them the app falls
-back to the local filesystem, and a serverless filesystem is read-only — so
-nothing anyone saved would survive the request that saved it.
+Names are case-sensitive. The GitHub variables are **required in production**:
+without them the app falls back to the local filesystem, and a serverless
+filesystem is read-only — so nothing anyone saved would survive the request that
+saved it. The home screen's status board names any that are missing.
 
 Data is written to the `data` branch rather than `main`, so training runs do not
 trigger a rebuild of the site.
@@ -89,6 +90,18 @@ Screens 1 and 4 are read while thinking, so they use a calm, roomy layout.
 Screens 2 and 3 are read under time pressure, so they use a dense
 operations-room layout. Both are defined as token sets in `src/app/globals.css`.
 
+## The simulated console
+
+The designer uploads two to five screenshots of a real console and the model
+reproduces its look and feel as a static HTML shell — layout, palette, density
+and typography, but explicitly not identifying content.
+
+The shell is chrome only. It carries five `data-slot` markers, and the trainee
+screen renders real React into them through portals. The appearance comes from
+the model; the behaviour does not. Scripts, inline handlers and `javascript:`
+URLs are stripped before the markup is stored, and a shell missing any slot
+cannot be approved.
+
 ## Where things live
 
 ```
@@ -106,7 +119,7 @@ src/
       sessions.ts       training runs and the trainee roster
     config.ts           the only module that reads process.env
 data/
-  kb/                   the knowledge base
+  kb/                   the knowledge base and the console template
   sessions/             one file per training run
   trainees.json         the roster (defaults are used until this file exists)
 ```
@@ -119,5 +132,5 @@ data/
 | 2. Designer — learn a dilemma | Done |
 | 3. Trainee — matching and scenario generation | Done |
 | 4. Debrief | Done |
-| 5. Simulated console builder | Not started |
+| 5. Simulated console builder | Done |
 | 6. Instructor board | Not started |
