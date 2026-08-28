@@ -19,16 +19,25 @@ interface ChatMessage {
   content: string;
 }
 
-const OPENING_MESSAGE: ChatMessage = {
+/** Names the system, so the designer answers about that one and not in general. */
+const openingMessage = (systemName: string): ChatMessage => ({
   role: "assistant",
-  content:
-    "Let's capture one dilemma. Start anywhere — the situation that makes an operator hesitate, a decision you have seen go wrong, or the trade-off you most want trainees to feel.\n\nI'll ask follow-up questions as we go, and when there's enough to work with I'll say so.",
-};
+  content: `Let's capture one dilemma an operator of ${systemName} faces. Start anywhere — the situation that makes them hesitate, a decision you have seen go wrong, or the trade-off you most want trainees to feel.\n\nI'll ask follow-up questions as we go, and when there's enough to work with I'll say so.`,
+});
 
-export function LearningChat() {
+export function LearningChat({
+  systemId,
+  systemName,
+}: {
+  /** The system this dilemma is being taught inside. It is filed under it. */
+  systemId: string;
+  systemName: string;
+}) {
   const router = useRouter();
 
-  const [messages, setMessages] = useState<ChatMessage[]>([OPENING_MESSAGE]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    openingMessage(systemName),
+  ]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
@@ -117,14 +126,16 @@ export function LearningChat() {
     setSaving(true);
     setError(undefined);
     try {
-      const response = await fetch("/api/dilemmas", {
+      const response = await fetch(`/api/systems/${systemId}/dilemmas`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ draft: edited, transcript: transcript() }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Save failed.");
-      router.push(`/designer/${payload.entry.id}`);
+      router.push(
+        `/designer/systems/${systemId}/dilemmas/${payload.entry.id}`,
+      );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Save failed.");
       setSaving(false);
