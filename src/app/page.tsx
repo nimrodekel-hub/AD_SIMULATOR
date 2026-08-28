@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { config, githubConfigProblems } from "@/lib/config";
-import { getGuiTemplate, listDilemmas } from "@/lib/store/kb";
+import { getGuiTemplate, getSystemProfile, listDilemmas } from "@/lib/store/kb";
 import { isGitBacked } from "@/lib/store/repo-files";
 
 /* Reads the knowledge base on every request — this page is a live status
@@ -32,7 +32,11 @@ const ROLES = [
 ] as const;
 
 export default async function Home() {
-  const [dilemmas, gui] = await Promise.all([listDilemmas(), getGuiTemplate()]);
+  const [dilemmas, gui, profile] = await Promise.all([
+    listDilemmas(),
+    getGuiTemplate(),
+    getSystemProfile(),
+  ]);
   const approved = dilemmas.filter((entry) => entry.status === "approved").length;
   const drafts = dilemmas.length - approved;
 
@@ -88,6 +92,22 @@ export default async function Home() {
               approved === 0
                 ? "No approved dilemmas yet — trainees have nothing to match against."
                 : undefined
+            }
+          />
+          <StatusRow
+            label="System behaviour"
+            value={
+              profile?.approved
+                ? profile.system_name_fictional
+                : profile
+                  ? "Draft"
+                  : "Not described"
+            }
+            tone={profile?.approved ? "ok" : "warn"}
+            note={
+              profile?.approved
+                ? "Scenarios and the console are built from this."
+                : "Until this is approved, scenarios are generated against a system the model invents."
             }
           />
           <StatusRow
