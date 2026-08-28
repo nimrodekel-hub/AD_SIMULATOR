@@ -52,6 +52,31 @@ export const config = {
   },
 } as const;
 
+/**
+ * Names the specific thing wrong with the GitHub configuration, for the status
+ * board to show.
+ *
+ * "Storage: local filesystem" tells an operator that saving is broken but not
+ * which of three variables to go and fix — and on a hosted deployment they
+ * cannot read the logs to find out. Never reports a value, only whether one is
+ * present and well-formed.
+ */
+export function githubConfigProblems(): string[] {
+  const problems: string[] = [];
+
+  if (!githubToken) problems.push("GITHUB_TOKEN is not set");
+
+  if (!githubRepo) {
+    problems.push("GITHUB_REPO is not set");
+  } else if (!githubOwner || !githubName) {
+    problems.push(
+      `GITHUB_REPO must look like "owner/name" — it is currently "${githubRepo}"`,
+    );
+  }
+
+  return problems;
+}
+
 /** Where everything lives inside the repository. */
 export const DATA_PATHS = {
   dilemmas: "data/kb/dilemmas",
