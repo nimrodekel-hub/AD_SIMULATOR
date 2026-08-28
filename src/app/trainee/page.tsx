@@ -1,15 +1,21 @@
-import { NotBuiltYet } from "@/components/not-built-yet";
 import { ScreenShell } from "@/components/screen-shell";
+import { TrainingRequest } from "@/components/training-request";
+import { listTrainees } from "@/lib/store/sessions";
 
-export default function TraineePage() {
+export const dynamic = "force-dynamic";
+
+export default async function TraineePage() {
+  const trainees = await listTrainees();
+
   return (
-    <ScreenShell theme="ops" eyebrow="Trainee" title="Request training">
-      <div className="mx-auto w-full max-w-3xl px-6 py-10">
-        <NotBuiltYet
-          stage="Build stage 3"
-          what="Ask for the training you want in plain language. The system matches it to a captured dilemma, asks a clarifying question if it is unsure, and generates a scenario at the right difficulty."
-        />
-      </div>
+    <ScreenShell
+      theme="ops"
+      eyebrow="Trainee"
+      title="Request training"
+      subtitle="Ask for what you want to practise, in your own words"
+      contained={false}
+    >
+      <TrainingRequest trainees={trainees} />
     </ScreenShell>
   );
 }
