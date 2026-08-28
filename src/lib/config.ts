@@ -77,12 +77,30 @@ export function githubConfigProblems(): string[] {
   return problems;
 }
 
-/** Where everything lives inside the repository. */
+/**
+ * Where everything lives inside the repository.
+ *
+ * Each simulated system owns a directory, and everything that only makes sense
+ * inside that system lives under it: how it behaves, its console, its
+ * reference screenshots and the dilemmas taught within it. Listing one
+ * system's dilemmas is then a single directory read rather than a scan of
+ * every dilemma in the repository.
+ */
 export const DATA_PATHS = {
-  dilemmas: "data/kb/dilemmas",
-  gui: "data/kb/gui",
-  systemProfile: "data/kb/system-profile.json",
-  screenshots: "data/kb/gui/screenshots",
+  systems: "data/kb/systems",
   sessions: "data/sessions",
   trainees: "data/trainees.json",
 } as const;
+
+/** The files and directories inside one system's directory. */
+export const systemPaths = (systemId: string) => {
+  const root = `${DATA_PATHS.systems}/${systemId}`;
+  return {
+    root,
+    system: `${root}/system.json`,
+    profile: `${root}/profile.json`,
+    gui: `${root}/gui.json`,
+    screenshots: `${root}/screenshots`,
+    dilemmas: `${root}/dilemmas`,
+  };
+};
