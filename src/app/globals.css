@@ -1,0 +1,254 @@
+@import "tailwindcss";
+
+/* ==================================================================
+   Two visual languages, one product.
+
+   The brief calls for the operations screens and the working screens to
+   feel different, for a reason worth restating: the trainee console and
+   the instructor board are read under time pressure, so they get density,
+   hard edges and glow. The designer's chat and the debrief are read while
+   thinking, so they get space, calm and larger type.
+
+   Both are defined as token sets. A screen opts into one by wrapping in
+   .theme-ops or .theme-work — no component knows which it is in.
+   ================================================================== */
+
+:root {
+  /* ---- Status colours: identical in both themes, on purpose. ------
+     Green/amber/red carry meaning here, not decoration. An operator who
+     learns "amber means degraded" on the console must not have to relearn
+     it on the debrief screen. */
+  --ok: #35d07f;
+  --warn: #ffab2e;
+  --danger: #ff4d4f;
+  --ok-dim: #35d07f26;
+  --warn-dim: #ffab2e26;
+  --danger-dim: #ff4d4f26;
+
+  /* Sensible defaults; every screen overrides these via a theme class. */
+  --bg: #0d1117;
+  --panel: #151b23;
+  --panel-raised: #1b232d;
+  --border: #262f3b;
+  --border-strong: #364253;
+  --text: #e6edf3;
+  --muted: #90a0b3;
+  --accent: #4aa8ff;
+  --accent-dim: #4aa8ff1f;
+  --glow: none;
+  --radius: 8px;
+  --panel-gap: 1rem;
+}
+
+/* ---- Group A — "operations room" (trainee console, instructor board) --- */
+.theme-ops {
+  --bg: #0a0e14;
+  --panel: #0e141c;
+  --panel-raised: #131b25;
+  --border: #1e2b3a;
+  --border-strong: #2c3f54;
+  --text: #d7e3ef;
+  --muted: #7a8ea3;
+  --accent: #00d9ff;
+  --accent-dim: #00d9ff1f;
+  --glow: 0 0 12px #00d9ff40;
+  --radius: 2px;
+  --panel-gap: 1px;
+}
+
+/* ---- Group B — "working surface" (designer, debrief) ------------------ */
+.theme-work {
+  --bg: #0d1117;
+  --panel: #151b23;
+  --panel-raised: #1b232d;
+  --border: #262f3b;
+  --border-strong: #364253;
+  --text: #e6edf3;
+  --muted: #90a0b3;
+  --accent: #4aa8ff;
+  --accent-dim: #4aa8ff1f;
+  --glow: none;
+  --radius: 8px;
+  --panel-gap: 1.25rem;
+}
+
+/* Expose the tokens as Tailwind utilities. `inline` matters: the utilities
+   resolve var(--x) at the point of use, so a .theme-ops wrapper re-points
+   bg-panel, text-accent and friends without any per-screen class swapping. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-raised: var(--panel-raised);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-ok-dim: var(--ok-dim);
+  --color-warn-dim: var(--warn-dim);
+  --color-danger-dim: var(--danger-dim);
+
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+
+  --radius-panel: var(--radius);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+/* ------------------------------------------------------------------
+   Shared component primitives
+   ------------------------------------------------------------------ */
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* Separation by line rather than by shadow — a control-room convention,
+   and it holds up at the densities the ops screens run at. */
+.panel-header {
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.75rem;
+}
+
+.theme-ops .panel-header {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
+/* Glow is reserved for the element that is currently live. Applied to
+   everything it would stop meaning anything. */
+.is-active {
+  border-color: var(--accent);
+  box-shadow: var(--glow);
+}
+
+/* Numeric readouts: monospace and tabular so digits do not shuffle
+   sideways as values tick. */
+.data {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-ok {
+  color: var(--ok);
+  background: var(--ok-dim);
+}
+.status-warn {
+  color: var(--warn);
+  background: var(--warn-dim);
+}
+.status-danger {
+  color: var(--danger);
+  background: var(--danger-dim);
+}
+
+.chip {
+  border-radius: calc(var(--radius) + 2px);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.125rem 0.5rem;
+  text-transform: uppercase;
+}
+
+/* Buttons and inputs: one definition, themed by tokens. */
+.btn {
+  align-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text);
+  display: inline-flex;
+  font-size: 0.875rem;
+  font-weight: 500;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.btn:hover:not(:disabled) {
+  background: var(--panel-raised);
+  border-color: var(--accent);
+}
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #06121a;
+  font-weight: 600;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent);
+  filter: brightness(1.12);
+}
+
+.field {
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+}
+.field:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.field::placeholder {
+  color: var(--muted);
+}
+
+.label {
+  color: var(--muted);
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.375rem;
+  text-transform: uppercase;
+}
+
+/* Long-form reading: the debrief and the chat. Wider leading than the
+   console would ever use. */
+.prose-block {
+  line-height: 1.7;
+}
+.prose-block p + p {
+  margin-top: 0.875rem;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 5px;
+}
