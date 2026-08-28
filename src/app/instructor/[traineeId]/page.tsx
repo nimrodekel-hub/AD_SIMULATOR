@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ScoreHistoryChart } from "@/components/score-trend";
 import { ScreenShell } from "@/components/screen-shell";
 import { scoreTone, summarise } from "@/lib/stats";
-import { listDilemmas } from "@/lib/store/kb";
+import { listAllDilemmas, listSystems } from "@/lib/store/kb";
 import { getTrainee, listSessionsForTrainee } from "@/lib/store/sessions";
 
 /**
@@ -22,15 +22,19 @@ export default async function TraineeHistoryPage({
 }: PageProps<"/instructor/[traineeId]">) {
   const { traineeId } = await params;
 
-  const [trainee, sessions, dilemmas] = await Promise.all([
+  const [trainee, sessions, dilemmas, systems] = await Promise.all([
     getTrainee(traineeId),
     listSessionsForTrainee(traineeId),
-    listDilemmas(),
+    listAllDilemmas(),
+    listSystems(),
   ]);
   if (!trainee) notFound();
 
   const stats = summarise(sessions);
+  // Runs span systems, so a title is resolved without knowing which system it
+  // came from, and the system is named alongside it.
   const titleFor = new Map(dilemmas.map((entry) => [entry.id, entry.title]));
+  const systemFor = new Map(systems.map((system) => [system.id, system.name]));
 
   return (
     <ScreenShell
@@ -112,6 +116,9 @@ export default async function TraineeHistoryPage({
                       <span className="min-w-0 flex-1 truncate text-sm">
                         {titleFor.get(session.dilemma_entry_id) ??
                           "(dilemma since removed)"}
+                      </span>
+                      <span className="data text-xs text-muted">
+                        {systemFor.get(session.system_id) ?? "(system removed)"}
                       </span>
                       <span className="data text-xs text-muted">
                         {session.difficulty_level}
