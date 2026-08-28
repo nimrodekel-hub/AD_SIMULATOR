@@ -117,6 +117,7 @@ src/
       repo-files.ts     git as the storage medium: GitHub API or local filesystem
       kb.ts             dilemmas and the console template
       sessions.ts       training runs and the trainee roster
+    stats.ts            the instructor's numbers, derived from the session log
     config.ts           the only module that reads process.env
 data/
   kb/                   the knowledge base and the console template
@@ -133,4 +134,4 @@ data/
 | 3. Trainee — matching and scenario generation | Done |
 | 4. Debrief | Done |
 | 5. Simulated console builder | Done |
-| 6. Instructor board | Not started |
+| 6. Instructor board | Done |
