@@ -4,7 +4,7 @@ import {
   generateGuiTemplate,
   missingSlots,
 } from "@/lib/ai/tasks/generate-gui";
-import { saveScreenshot } from "@/lib/store/kb";
+import { getSystemProfile, saveScreenshot } from "@/lib/store/kb";
 
 /**
  * Turns reference screenshots into a console shell.
@@ -39,6 +39,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Give the simulated system a name first." },
       { status: 400 },
+    );
+  }
+
+  // The console is built from the screenshots and the profile together. Without
+  // the profile it would only look right, and a console that looks right while
+  // behaving wrong is the failure this whole step exists to prevent.
+  const profile = await getSystemProfile();
+  if (!profile?.approved) {
+    return NextResponse.json(
+      {
+        error:
+          "Teach and approve the system profile first — the console is built from how the system behaves, not only from how it looks.",
+      },
+      { status: 409 },
     );
   }
 
@@ -85,6 +99,7 @@ export async function POST(request: NextRequest) {
 
     const draft = await generateGuiTemplate({
       screenshots: stored.map(({ mediaType, base64 }) => ({ mediaType, base64 })),
+      profile,
       systemNameFictional: systemName,
       guidance: String(form.get("guidance") ?? "").trim(),
       previousHtml: String(form.get("previous_html") ?? "") || undefined,
