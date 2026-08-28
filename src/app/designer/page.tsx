@@ -1,194 +1,145 @@
 import Link from "next/link";
+import { NewSystemForm } from "@/components/new-system-form";
 import { ScreenShell } from "@/components/screen-shell";
-import { getGuiTemplate, getSystemProfile, listDilemmas } from "@/lib/store/kb";
+import { getSystemBundle, listSystems } from "@/lib/store/kb";
 
 /**
- * The designer's home: a setup sequence, then the knowledge base.
+ * The designer's home: every simulated system the app holds.
  *
- * The order matters and is shown as an order. A dilemma is a judgement call
- * *within* a system — teaching dilemmas before the system is described means
- * every scenario is generated against a system the model invented, and nothing
- * about the result looks wrong.
+ * Systems are independent. Each one owns how it behaves, what its console looks
+ * like and which dilemmas were taught inside it, so a second system can be
+ * started before the first is finished, and neither affects the other.
  */
 
 export const dynamic = "force-dynamic";
 
 export default async function DesignerHome() {
-  const [dilemmas, gui, profile] = await Promise.all([
-    listDilemmas(),
-    getGuiTemplate(),
-    getSystemProfile(),
-  ]);
-
-  const profileReady = profile?.approved === true;
-  const consoleReady = gui?.approved === true;
+  const systems = await listSystems();
+  const bundles = await Promise.all(
+    systems.map(async (system) => {
+      // The bundle re-reads the system record; the one from the listing is
+      // already known to exist, so keep that and take only the rest.
+      const { profile, gui, dilemmas } = await getSystemBundle(system.id);
+      return { system, profile, gui, dilemmas };
+    }),
+  );
 
   return (
     <ScreenShell
       theme="work"
       eyebrow="System Designer"
-      title="Knowledge base"
-      subtitle="Describe the system, build its console, then teach it dilemmas"
+      title="Simulated systems"
+      subtitle="Each system has its own behaviour, console and dilemmas"
     >
-      {/* ---- Setup, in order ----------------------------------------- */}
-      <section>
-        <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-muted">
-          Setup
-        </h2>
-        <ol className="mt-4 space-y-3">
-          <SetupStep
-            number={1}
-            href="/designer/system"
-            title="How the system behaves"
-            done={profileReady}
-            state={
-              profileReady
-                ? `"${profile.system_name_fictional}" — in use`
-                : profile
-                  ? "Draft, not approved"
-                  : "Not described"
-            }
-            blurb="Answer a set of questions about track classes, identification, the operator's actions and the engagement envelope. Everything downstream is built from it — without it the model invents a system, and the scenarios look right without being right."
-          />
-          <SetupStep
-            number={2}
-            href="/designer/gui"
-            title="Simulated console"
-            done={consoleReady}
-            blocked={!profileReady}
-            state={
-              consoleReady
-                ? `"${gui.system_name_fictional}" — in use`
-                : gui
-                  ? "Draft, not approved"
-                  : "Not built"
-            }
-            blurb="Upload two to five screenshots. The console is generated from the screenshots and the behaviour profile together, so it shows the right columns and the right controls — not just the right colours."
-            blockedNote="Needs the behaviour profile first."
-          />
-          <SetupStep
-            number={3}
-            href="/designer/learn"
-            title="Teach a dilemma"
-            done={dilemmas.some((entry) => entry.status === "approved")}
-            state={
-              dilemmas.length === 0
-                ? "None captured"
-                : `${dilemmas.filter((d) => d.status === "approved").length} approved`
-            }
-            blurb="Talk a real operational dilemma through, review the record extracted from it, correct it, approve it."
-            warnNote={
-              profileReady
-                ? undefined
-                : "You can start now, but scenarios built from this dilemma will use an invented system until the profile is approved."
-            }
-          />
-        </ol>
-      </section>
-
-      {/* ---- The knowledge base -------------------------------------- */}
-      <section className="mt-12 border-t border-line pt-8">
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <h2 className="flex-1 text-sm font-semibold">Dilemmas</h2>
-          <Link href="/designer/learn" className="btn btn-primary">
-            Teach a dilemma
-          </Link>
+      {bundles.length === 0 ? (
+        <div className="panel p-8 text-center">
+          <p className="text-sm">No systems yet.</p>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+            A system is everything a trainee sees: how it behaves, what its
+            console shows, and the dilemmas its operators face. Name one to
+            begin — you can add more later, and they stay independent.
+          </p>
         </div>
+      ) : (
+        <ul className="space-y-3">
+          {bundles.map(({ system, profile, gui, dilemmas }) => {
+            const approved = dilemmas.filter(
+              (entry) => entry.status === "approved",
+            ).length;
 
-        {dilemmas.length === 0 ? (
-          <div className="panel p-8 text-center">
-            <p className="text-sm">Nothing captured yet.</p>
-            <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-              Teaching a dilemma is a conversation: describe the situation the
-              way you would to a new operator, and the system will extract a
-              structured record for you to correct and approve.
-            </p>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {dilemmas.map((entry) => (
-              <li key={entry.id}>
+            return (
+              <li key={system.id}>
                 <Link
-                  href={`/designer/${entry.id}`}
-                  className="panel flex flex-wrap items-center gap-x-4 gap-y-2 p-4 transition-colors hover:border-accent"
+                  href={`/designer/systems/${system.id}`}
+                  className="panel block p-5 transition-colors hover:border-accent"
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{entry.title}</p>
-                    <p className="data mt-1 truncate text-xs text-muted">
-                      {entry.sub_domain_tag} · {entry.decision_points.length}{" "}
-                      decision point
-                      {entry.decision_points.length === 1 ? "" : "s"}
-                    </p>
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <h2 className="text-lg font-semibold">{system.name}</h2>
+                    <span
+                      className={`chip ${
+                        readyForTraining(profile?.approved, approved)
+                          ? "status-ok"
+                          : "status-warn"
+                      }`}
+                    >
+                      {readyForTraining(profile?.approved, approved)
+                        ? "ready for training"
+                        : "in setup"}
+                    </span>
                   </div>
-                  <span
-                    className={`chip ${
-                      entry.status === "approved" ? "status-ok" : "status-warn"
-                    }`}
-                  >
-                    {entry.status}
-                  </span>
+
+                  {system.note ? (
+                    <p className="mt-1 text-sm text-muted">{system.note}</p>
+                  ) : null}
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Step
+                      label="Behaviour"
+                      done={profile?.approved === true}
+                      state={
+                        profile?.approved
+                          ? "approved"
+                          : profile
+                            ? "draft"
+                            : "not described"
+                      }
+                    />
+                    <Step
+                      label="Console"
+                      done={gui?.approved === true}
+                      state={
+                        gui?.approved ? "approved" : gui ? "draft" : "not built"
+                      }
+                    />
+                    <Step
+                      label="Dilemmas"
+                      done={approved > 0}
+                      state={
+                        dilemmas.length === 0
+                          ? "none"
+                          : `${approved} approved`
+                      }
+                    />
+                  </div>
                 </Link>
               </li>
-            ))}
-          </ul>
-        )}
+            );
+          })}
+        </ul>
+      )}
+
+      <section className="mt-12 border-t border-line pt-8">
+        <h2 className="text-sm font-semibold">Add a system</h2>
+        <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
+          The name is the fictional one operators will see on the console and
+          the one a trainee picks from. Keep it vendor-neutral.
+        </p>
+        <NewSystemForm />
       </section>
     </ScreenShell>
   );
 }
 
-function SetupStep({
-  number,
-  href,
-  title,
-  blurb,
+/** A system is trainable once it has a profile in force and something to teach. */
+function readyForTraining(profileApproved: boolean | undefined, approved: number) {
+  return profileApproved === true && approved > 0;
+}
+
+function Step({
+  label,
   state,
   done,
-  blocked,
-  blockedNote,
-  warnNote,
 }: {
-  number: number;
-  href: string;
-  title: string;
-  blurb: string;
+  label: string;
   state: string;
   done: boolean;
-  blocked?: boolean;
-  blockedNote?: string;
-  warnNote?: string;
 }) {
   return (
-    <li>
-      <Link
-        href={href}
-        className="panel flex gap-4 p-4 transition-colors hover:border-accent"
-      >
-        <span
-          className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-            done ? "status-ok" : "bg-panel-raised text-muted"
-          }`}
-        >
-          {done ? "✓" : number}
-        </span>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="font-medium">{title}</p>
-            <span className={`chip ${done ? "status-ok" : "status-warn"}`}>
-              {state}
-            </span>
-          </div>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">{blurb}</p>
-
-          {blocked && blockedNote ? (
-            <p className="mt-2 text-xs text-warn">{blockedNote}</p>
-          ) : null}
-          {warnNote ? (
-            <p className="mt-2 text-xs text-warn">{warnNote}</p>
-          ) : null}
-        </div>
-      </Link>
-    </li>
+    <span className="chip bg-panel-raised text-muted">
+      <span className={done ? "text-ok" : "text-warn"}>{done ? "✓" : "•"}</span>
+      <span className="ml-1.5">
+        {label}: {state}
+      </span>
+    </span>
   );
 }
