@@ -6,7 +6,7 @@ import {
   ClarificationRoundSchema,
   DifficultyLevelSchema,
 } from "@/lib/domain/schemas";
-import { getDilemma } from "@/lib/store/kb";
+import { getDilemma, getSystemProfile } from "@/lib/store/kb";
 import { createSession } from "@/lib/store/sessions";
 
 /** Instantiates a scenario from the matched dilemma and opens a session. */
@@ -41,7 +41,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const scenario = await generateScenario(dilemma, parsed.data.difficulty);
+    // Only an approved profile governs generation. A draft is the designer
+    // still working, and half-taught doctrine is worse than none.
+    const profile = await getSystemProfile();
+    const scenario = await generateScenario(
+      dilemma,
+      parsed.data.difficulty,
+      profile?.approved ? profile : null,
+    );
     const session = await createSession({
       traineeId: parsed.data.trainee_id,
       dilemmaEntryId: dilemma.id,

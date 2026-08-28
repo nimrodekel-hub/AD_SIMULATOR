@@ -3,9 +3,11 @@ import { DATA_PATHS } from "../config";
 import {
   DilemmaEntrySchema,
   GuiTemplateSchema,
+  SystemProfileSchema,
   type DilemmaDraft,
   type DilemmaEntry,
   type GuiTemplate,
+  type SystemProfile,
 } from "../domain/schemas";
 import { repoFiles } from "./repo-files";
 
@@ -148,4 +150,35 @@ export async function saveScreenshot(
   const filePath = `${DATA_PATHS.screenshots}/${crypto.randomUUID()}-${safeName}`;
   await repoFiles().writeBinary(filePath, bytes, `Add GUI reference ${safeName}`);
   return filePath;
+}
+
+/* ------------------------------------------------------------------ */
+/* System profile                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * How the simulated system behaves. One record, taught before any dilemma and
+ * read by scenario generation, debriefing and the console builder alike.
+ */
+export async function getSystemProfile(): Promise<SystemProfile | null> {
+  const raw = await repoFiles().read(DATA_PATHS.systemProfile);
+  if (raw === null) return null;
+
+  const parsed = SystemProfileSchema.safeParse(JSON.parse(raw));
+  if (!parsed.success) {
+    console.error("Skipping malformed system profile:", parsed.error.message);
+    return null;
+  }
+  return parsed.data;
+}
+
+export async function saveSystemProfile(profile: SystemProfile): Promise<void> {
+  const validated = SystemProfileSchema.parse(profile);
+  await repoFiles().write(
+    DATA_PATHS.systemProfile,
+    serialise(validated),
+    validated.approved
+      ? `Approve system profile: ${validated.system_name_fictional}`
+      : `Update system profile draft: ${validated.system_name_fictional}`,
+  );
 }

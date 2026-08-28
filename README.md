@@ -23,13 +23,13 @@ the design decisions were made.
 | Framework | Next.js 16 (App Router) + TypeScript + Tailwind v4 |
 | Hosting | Vercel — rebuilds on every push |
 | Storage | JSON files committed to this repository, written through the GitHub API |
-| AI | Anthropic API, six integration points each with its own system prompt |
+| AI | Anthropic API, seven integration points each with its own system prompt |
 
-**Everything lives in git.** Dilemmas, the simulated-console template, the
-trainee roster and every training run are all JSON files in `data/`. There is no
-database to provision and nothing to keep in sync: one storage mechanism, one
-place to look, and a permanent inspectable history of both the operational
-knowledge and the training that came out of it.
+**Everything lives in git.** The system behaviour profile, the dilemmas, the
+simulated-console template, the trainee roster and every training run are all
+JSON files in `data/`. There is no database to provision and nothing to keep in
+sync: one storage mechanism, one place to look, and a permanent inspectable
+history of both the operational knowledge and the training that came out of it.
 
 The cost is that a training run makes a few commits and each write takes about a
 second. At the scale this is built for that is invisible, and the audit trail is
@@ -77,9 +77,9 @@ trigger a rebuild of the site.
 
 ## The four screens
 
-1. **System Designer** — teach a dilemma through conversation, review the
-   structured record extracted from it, correct it, approve it. Also builds the
-   simulated console from reference screenshots.
+1. **System Designer** — a setup sequence, then the knowledge base: describe how
+   the system behaves, build its console from reference screenshots, then teach
+   dilemmas through conversation and approve the records extracted from them.
 2. **Instructor** — trainee roster, scores, trend, and the full history of every
    session and debrief.
 3. **Trainee** — request training in plain language; the system matches, asks a
@@ -90,11 +90,44 @@ Screens 1 and 4 are read while thinking, so they use a calm, roomy layout.
 Screens 2 and 3 are read under time pressure, so they use a dense
 operations-room layout. Both are defined as token sets in `src/app/globals.css`.
 
+## How the system behaves
+
+A dilemma is a judgement call *within* a system, so the system has to be
+described first. The designer answers eight guided questions — what is defended
+and against what, what track classes exist and what tells them apart, what
+identification states there are and what puts a track into each one, what the
+operator reads for every track, what the operator may do and in what order, what
+the system does by itself, the engagement envelope, and who authorises a shot —
+plus an open section for everything the questions did not ask about.
+
+The model turns the answers into a structured **behaviour profile**, and the
+designer corrects it field by field before approving it. Nothing else runs on
+guesses after that:
+
+- **Scenarios** may only use the classifications and identification states the
+  profile declares, inside its speed, altitude and range bands, and may only ask
+  a trainee to do something the profile lists as an operator responsibility.
+- **Track readouts are the profile's columns.** Tracks carry one readout per
+  declared field, in the declared order — so the air picture shows what this
+  system's operators actually read, not a fixed set of columns.
+- **The console** is generated from the screenshots *and* the profile, so it
+  shows the right columns, the right identification colours, and controls for
+  the operator's real workflow.
+- **The debrief** knows what the operator could have done.
+
+Without this the model invents an air-defence system, and the scenarios look
+right without being right — the worst failure mode for a trainer, because nobody
+can see it. So the console step is blocked until the profile is approved, and
+the status board says plainly when scenarios are running against an invented
+system.
+
 ## The simulated console
 
 The designer uploads two to five screenshots of a real console and the model
 reproduces its look and feel as a static HTML shell — layout, palette, density
-and typography, but explicitly not identifying content.
+and typography, but explicitly not identifying content. Where the screenshots
+and the behaviour profile disagree, the profile wins: the screenshots show one
+moment, the profile describes the system.
 
 The shell is chrome only. It carries five `data-slot` markers, and the trainee
 screen renders real React into them through portals. The appearance comes from
@@ -115,12 +148,15 @@ src/
     domain/schemas.ts   Zod schemas — validation and AI output format in one place
     store/
       repo-files.ts     git as the storage medium: GitHub API or local filesystem
-      kb.ts             dilemmas and the console template
+      kb.ts             the behaviour profile, dilemmas and the console template
       sessions.ts       training runs and the trainee roster
     stats.ts            the instructor's numbers, derived from the session log
     config.ts           the only module that reads process.env
 data/
-  kb/                   the knowledge base and the console template
+  kb/
+    system-profile.json how the simulated system behaves — read by everything
+    dilemmas/           one file per captured dilemma
+    gui/                the console template and its reference screenshots
   sessions/             one file per training run
   trainees.json         the roster (defaults are used until this file exists)
 ```
@@ -135,3 +171,4 @@ data/
 | 4. Debrief | Done |
 | 5. Simulated console builder | Done |
 | 6. Instructor board | Done |
+| 7. System behaviour profile, and a console built from it | Done |

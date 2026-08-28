@@ -81,6 +81,7 @@ export function githubConfigProblems(): string[] {
 export const DATA_PATHS = {
   dilemmas: "data/kb/dilemmas",
   gui: "data/kb/gui",
+  systemProfile: "data/kb/system-profile.json",
   screenshots: "data/kb/gui/screenshots",
   sessions: "data/sessions",
   trainees: "data/trainees.json",

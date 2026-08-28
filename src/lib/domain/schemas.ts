@@ -119,6 +119,91 @@ export const DilemmaEntrySchema = DilemmaDraftSchema.extend({
 export type DilemmaEntry = z.infer<typeof DilemmaEntrySchema>;
 
 /* ------------------------------------------------------------------ */
+/* System profile — how the simulated system actually behaves          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Taught once, before any dilemma, and injected into every scenario and
+ * debrief afterwards.
+ *
+ * Without it the model invents a system: it guesses what classifications exist,
+ * what makes a track hostile, and what an operator can do. The scenarios then
+ * look right and are not right. This record replaces those guesses with the
+ * designer's own doctrine.
+ */
+
+export const TrackClassificationSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  typical_speed_kts: RangeSchema,
+  typical_altitude_ft: RangeSchema,
+  /** How this kind of track behaves on its way to a target. */
+  behaviour_note: z.string(),
+});
+export type TrackClassification = z.infer<typeof TrackClassificationSchema>;
+
+export const IffStateSchema = z.object({
+  name: z.string(),
+  meaning: z.string(),
+  /** What has to happen for a track to be in this state. */
+  how_determined: z.string(),
+  /** Drives the colour the console shows it in, using the status palette. */
+  tone: z.enum(["friendly", "neutral", "caution", "hostile"]),
+});
+export type IffState = z.infer<typeof IffStateSchema>;
+
+export const TrackReadoutFieldSchema = z.object({
+  /** Column header as the real console shows it, e.g. "RNG". */
+  label: z.string(),
+  unit: z.string(),
+  description: z.string(),
+});
+export type TrackReadoutField = z.infer<typeof TrackReadoutFieldSchema>;
+
+export const EngagementDoctrineSchema = z.object({
+  min_range_km: z.number(),
+  max_range_km: z.number(),
+  time_of_flight_note: z.string(),
+  simultaneous_engagements_note: z.string(),
+  /** Who may authorise an engagement, and when that changes. */
+  authority_note: z.string(),
+});
+export type EngagementDoctrine = z.infer<typeof EngagementDoctrineSchema>;
+
+/** The part the model extracts from the designer's answers. */
+export const SystemProfileDraftSchema = z.object({
+  system_name_fictional: z.string(),
+  /** What the system defends, and against what. */
+  purpose: z.string(),
+  track_classifications: z.array(TrackClassificationSchema),
+  iff_states: z.array(IffStateSchema),
+  /** The columns the console shows for every track, in display order. */
+  track_readout_fields: z.array(TrackReadoutFieldSchema),
+  engagement: EngagementDoctrineSchema,
+  /** What the operator decides. */
+  operator_responsibilities: z.array(z.string()),
+  /** What the system does without being asked. */
+  automatic_functions: z.array(z.string()),
+  /** The order actions are actually performed in. */
+  workflow_steps: z.array(z.string()),
+  /** Anything else worth knowing that the questions did not ask about. */
+  general_notes: z.string(),
+});
+export type SystemProfileDraft = z.infer<typeof SystemProfileDraftSchema>;
+
+export const SystemProfileSchema = SystemProfileDraftSchema.extend({
+  id: z.string(),
+  approved: z.boolean(),
+  /** The designer's raw answers, kept so the extraction can be audited. */
+  source_answers: z.array(
+    z.object({ question: z.string(), answer: z.string() }),
+  ),
+  created_at: z.string(),
+  approved_at: z.string().nullable(),
+});
+export type SystemProfile = z.infer<typeof SystemProfileSchema>;
+
+/* ------------------------------------------------------------------ */
 /* Simulated system GUI                                                */
 /* ------------------------------------------------------------------ */
 
@@ -138,18 +223,27 @@ export type GuiTemplate = z.infer<typeof GuiTemplateSchema>;
 /* Scenario instance — one concrete rendering of a dilemma             */
 /* ------------------------------------------------------------------ */
 
+/**
+ * One readout on a track, e.g. { label: "RNG", value: "62 km" }.
+ *
+ * The columns are not fixed by this code: they come from the system profile the
+ * designer taught, so the console shows the fields their system actually shows.
+ */
+export const TrackReadoutSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+});
+export type TrackReadout = z.infer<typeof TrackReadoutSchema>;
+
 export const TrackSchema = z.object({
   /** Short track designator shown on the display, e.g. "TK-4471". */
   designator: z.string(),
-  /** One of the dilemma's `iff_certainty_levels`. */
+  /** One of the system profile's declared identification states. */
   iff_status: z.string(),
+  /** One of the system profile's declared track classifications. */
   classification: z.string(),
-  bearing_deg: z.number(),
-  range_km: z.number(),
-  altitude_ft: z.number(),
-  speed_kts: z.number(),
-  heading_deg: z.number(),
-  time_to_impact_seconds: z.number(),
+  /** One entry per readout field the profile declares, in that order. */
+  readouts: z.array(TrackReadoutSchema),
   /** Anything that makes this track ambiguous or notable. */
   notes: z.string(),
 });
