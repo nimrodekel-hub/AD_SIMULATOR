@@ -97,7 +97,7 @@ data/kb/                the knowledge base, committed
 | --- | --- |
 | 1. Skeleton, data model, storage, AI layer | Done |
 | 2. Designer — learn a dilemma | Done |
-| 3. Trainee — matching and scenario generation | Not started |
-| 4. Debrief | Not started |
+| 3. Trainee — matching and scenario generation | Done |
+| 4. Debrief | Done |
 | 5. Simulated console builder | Not started |
 | 6. Instructor board | Not started |
