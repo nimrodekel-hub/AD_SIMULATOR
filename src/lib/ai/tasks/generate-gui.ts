@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import type { SystemProfile } from "../../domain/schemas";
 import { structured, type Anthropic } from "../client";
 
 /**
@@ -72,13 +73,26 @@ Build the layout with CSS grid or flexbox so it survives different window sizes.
 
 Prefer dark palettes and monospace numerals unless the screenshots clearly show otherwise.
 
+## Behave like the system, not just look like it
+
+You are given a profile of how the system actually works, and it is binding:
+
+- **The air-picture slot must be laid out for the profile's readout fields.** Those are the columns the console shows, in that order. Size the panel so all of them fit without the page scrolling sideways.
+- **The identification states in the profile are the only ones that exist.** If the reference console shows a legend, a status key or a colour bar, populate it from those states and their tones — friendly, neutral, caution, hostile — not from what the screenshots happen to show.
+- **The decision slot has to hold the operator's real actions.** Look at the workflow and the operator responsibilities: if committing an engagement takes four steps, the panel needs room for four controls, not one.
+- **Do not build affordances for things the system does automatically.** A console with a "correlate tracks" button, when the profile says correlation is automatic, teaches an operator something false.
+
+Where the screenshots and the profile disagree, follow the profile: the screenshots show one moment, the profile describes the system.
+
 ## Design notes
 
-Two or three sentences: what you took from the screenshots, and anything you deliberately left out or generalised.`;
+Two or three sentences: what you took from the screenshots, what you took from the profile, and anything you deliberately left out or generalised.`;
 
 interface GuiInput {
   /** Base64-encoded screenshots with their media types. */
   screenshots: Array<{ mediaType: string; base64: string }>;
+  /** How the system behaves. The console is built to match it, not just the images. */
+  profile: SystemProfile;
   systemNameFictional: string;
   /** Extra direction from the designer on a regenerate. Empty on first run. */
   guidance: string;
@@ -88,6 +102,7 @@ interface GuiInput {
 
 export async function generateGuiTemplate({
   screenshots,
+  profile,
   systemNameFictional,
   guidance,
   previousHtml,
@@ -105,6 +120,24 @@ export async function generateGuiTemplate({
     type: "text",
     text: [
       `The fictional system name is "${systemNameFictional}". Use it wherever the reference shows a product or system name.`,
+      `<system_profile>\n${JSON.stringify(
+        {
+          purpose: profile.purpose,
+          track_readout_fields: profile.track_readout_fields,
+          iff_states: profile.iff_states,
+          track_classifications: profile.track_classifications.map((entry) => ({
+            name: entry.name,
+            description: entry.description,
+          })),
+          operator_responsibilities: profile.operator_responsibilities,
+          automatic_functions: profile.automatic_functions,
+          workflow_steps: profile.workflow_steps,
+          engagement: profile.engagement,
+          general_notes: profile.general_notes,
+        },
+        null,
+        2,
+      )}\n</system_profile>`,
       previousHtml
         ? `Here is your previous attempt. Refine it rather than starting over.\n\n<previous>\n${previousHtml}\n</previous>`
         : "",
