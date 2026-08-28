@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { config } from "@/lib/config";
+import { config, githubConfigProblems } from "@/lib/config";
 import { getGuiTemplate, listDilemmas } from "@/lib/store/kb";
 import { isGitBacked } from "@/lib/store/repo-files";
 
@@ -103,11 +103,11 @@ export default async function Home() {
           <StatusRow
             label="Storage"
             value={isGitBacked() ? "Git — committed to the repository" : "Local filesystem"}
-            tone={isGitBacked() ? "ok" : "warn"}
+            tone={isGitBacked() ? "ok" : "danger"}
             note={
               isGitBacked()
                 ? "Dilemmas and training runs alike are committed as files."
-                : "Set GITHUB_TOKEN and GITHUB_REPO to commit every change to the repository."
+                : `Nothing you save will survive. ${githubConfigProblems().join("; ")}. Fix in Vercel under Settings → Environment Variables, then redeploy — environment changes only take effect on a new build.`
             }
           />
           <StatusRow
