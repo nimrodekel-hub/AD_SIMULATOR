@@ -10,6 +10,12 @@ everything arrives at once"), matches it to the right captured expertise,
 generates a plausible scenario from it, and debriefs the trainee against the
 expert's own recorded reasoning.
 
+## Architecture
+
+[`ARCHITECTURE.md`](ARCHITECTURE.md) (Hebrew) is the reference document: what runs
+where, how data flows through the system, what is stored on which branch, and why
+the design decisions were made.
+
 ## How it is put together
 
 | Concern | Choice |
@@ -47,9 +53,8 @@ writes through the GitHub API instead — see below.
 
 1. On [vercel.com](https://vercel.com), **Add New → Project**, and import this
    repository.
-2. Set **Production Branch** to `claude/air-defense-simulator-bwmstp`.
-3. Add the environment variables below.
-4. Deploy. Every later push rebuilds automatically.
+2. Add the environment variables below.
+3. Deploy. Every later push to `main` rebuilds automatically.
 
 ### Environment variables
 
@@ -57,14 +62,17 @@ writes through the GitHub API instead — see below.
 | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | Yes | Drives every AI feature. Unset ⇒ mock mode. |
 | `GITHUB_TOKEN` | In production | Fine-grained token with `contents: read and write` on this repository. |
-| `GITHUB_REPO` | In production | `owner/name`, e.g. `nimrodekel-hub/ad_simulator`. |
-| `GITHUB_BRANCH` | In production | Branch that data is committed to. |
+| `GITHUB_REPO` | In production | `owner/name`, e.g. `nimrodekel-hub/AD_SIMULATOR`. |
+| `GITHUB_BRANCH` | In production | Branch that data is committed to — use `data`. |
 | `ANTHROPIC_MODEL` | No | Defaults to `claude-opus-5`. |
 | `AI_MOCK` | No | Set to `1` to force mock mode even with a key. |
 
 The GitHub variables are **required in production**. Without them the app falls
 back to the local filesystem, and a serverless filesystem is read-only — so
 nothing anyone saved would survive the request that saved it.
+
+Data is written to the `data` branch rather than `main`, so training runs do not
+trigger a rebuild of the site.
 
 ## The four screens
 
