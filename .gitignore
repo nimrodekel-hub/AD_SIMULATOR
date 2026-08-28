@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# package-lock.json
+#
+# Deliberately not tracked. This project is developed in a sandbox that blocks
+# git push, so files reach the repository through the GitHub Contents API —
+# which needs the whole file inline in one request. The lockfile is ~200 KB,
+# past what a single request can carry, so it would arrive truncated.
+#
+# Consequence: `npm install` resolves from package.json rather than a pinned
+# tree, so builds are not bit-reproducible. next and react are pinned exactly;
+# everything else is caret-ranged. Acceptable for a proof of concept.
+#
+# To undo: delete these lines and commit the lockfile from an environment where
+# `git push` works.
+package-lock.json
