@@ -35,10 +35,19 @@ const EXAMPLES = [
   "Something hard — make me run out of interceptors.",
 ];
 
-export function TrainingRequest({ trainees }: { trainees: Trainee[] }) {
+export function TrainingRequest({
+  trainees,
+  preselectedTraineeId,
+}: {
+  trainees: Trainee[];
+  /** Set when an instructor started this run from a trainee's history. */
+  preselectedTraineeId?: string;
+}) {
   const router = useRouter();
 
-  const [traineeId, setTraineeId] = useState(trainees[0]?.id ?? "");
+  const [traineeId, setTraineeId] = useState(
+    preselectedTraineeId ?? trainees[0]?.id ?? "",
+  );
   const [request, setRequest] = useState("");
   const [clarifications, setClarifications] = useState<ClarificationRound[]>([]);
   const [answer, setAnswer] = useState("");
