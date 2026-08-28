@@ -35,33 +35,28 @@ export const config = {
   },
 
   /**
-   * The knowledge base (dilemmas + GUI template) is stored as JSON files in the
-   * git repository. When these are set the app reads and writes them through the
-   * GitHub API; otherwise it falls back to the local filesystem, which is what
-   * happens during local development.
+   * Everything this app stores — the knowledge base and the session log alike —
+   * lives as JSON files in the git repository. When these are set the app reads
+   * and writes them through the GitHub API; otherwise it falls back to the local
+   * filesystem, which is what happens during local development.
+   *
+   * Required in production: the serverless filesystem is read-only, so without
+   * these nothing saved would survive a request, let alone a deploy.
    */
   github: {
     token: githubToken,
     owner: githubOwner,
     repo: githubName,
     branch: optional("GITHUB_BRANCH") ?? "claude/air-defense-simulator-bwmstp",
-    /** Only the GitHub backend can write on Vercel — the filesystem is read-only there. */
     enabled: Boolean(githubToken && githubOwner && githubName),
-  },
-
-  /**
-   * Session logs live in libSQL (SQLite). Locally that is a file; in production
-   * it is a Turso database, which is the same engine over the network.
-   */
-  db: {
-    url: optional("TURSO_DATABASE_URL") ?? "file:./data/local.db",
-    authToken: optional("TURSO_AUTH_TOKEN"),
   },
 } as const;
 
-/** Where KB files live inside the repository. */
+/** Where everything lives inside the repository. */
 export const DATA_PATHS = {
   dilemmas: "data/kb/dilemmas",
   gui: "data/kb/gui",
   screenshots: "data/kb/gui/screenshots",
+  sessions: "data/sessions",
+  trainees: "data/trainees.json",
 } as const;

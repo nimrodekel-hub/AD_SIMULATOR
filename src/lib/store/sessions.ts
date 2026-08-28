@@ -1,43 +1,38 @@
 import "server-only";
-import type { Row } from "@libsql/client";
-import { db, fromJson } from "../db";
-import type {
-  ClarificationRound,
-  DecisionMade,
-  Debrief,
-  DifficultyLevel,
-  ScenarioInstance,
-  Session,
-  Trainee,
+import { DATA_PATHS } from "../config";
+import {
+  SessionSchema,
+  TraineeSchema,
+  type ClarificationRound,
+  type Debrief,
+  type DecisionMade,
+  type DifficultyLevel,
+  type ScenarioInstance,
+  type Session,
+  type Trainee,
 } from "../domain/schemas";
+import { repoFiles } from "./repo-files";
 
 /**
  * Session log: every training run, the decisions taken during it, and the
  * debrief it produced. This is the instructor's evidence base.
+ *
+ * Stored the same way as the knowledge base — one JSON file per run in the
+ * repository — so the whole system has exactly one storage mechanism and no
+ * external database to provision. A run costs a handful of commits, which is
+ * fine at the scale this is built for and gives every training run a permanent,
+ * inspectable record.
  */
 
-function toSession(row: Row): Session {
-  return {
-    id: String(row.id),
-    trainee_id: String(row.trainee_id),
-    dilemma_entry_id: String(row.dilemma_entry_id),
-    requested_text: String(row.requested_text),
-    clarification_rounds: fromJson<ClarificationRound[]>(row.clarification_rounds, []),
-    difficulty_level: String(row.difficulty_level) as DifficultyLevel,
-    scenario_instance: fromJson<ScenarioInstance>(
-      row.scenario_instance,
-      {} as ScenarioInstance,
-    ),
-    decisions_made: fromJson<DecisionMade[]>(row.decisions_made, []),
-    outcome: fromJson<Session["outcome"]>(row.outcome, null),
-    score: row.score === null ? null : Number(row.score),
-    debrief_text: String(row.debrief_text ?? ""),
-    recommendations: fromJson<string[]>(row.recommendations, []),
-    status: String(row.status) as Session["status"],
-    created_at: String(row.created_at),
-    completed_at: row.completed_at === null ? null : String(row.completed_at),
-  };
+const fileFor = (id: string) => `${DATA_PATHS.sessions}/${id}.json`;
+
+function serialise(value: unknown): string {
+  return `${JSON.stringify(value, null, 2)}\n`;
 }
+
+/* ------------------------------------------------------------------ */
+/* Sessions                                                            */
+/* ------------------------------------------------------------------ */
 
 export async function createSession(input: {
   traineeId: string;
@@ -47,119 +42,145 @@ export async function createSession(input: {
   difficulty: DifficultyLevel;
   scenario: ScenarioInstance;
 }): Promise<Session> {
-  const client = await db();
-  const id = crypto.randomUUID();
-  const createdAt = new Date().toISOString();
+  const session: Session = {
+    id: crypto.randomUUID(),
+    trainee_id: input.traineeId,
+    dilemma_entry_id: input.dilemmaEntryId,
+    requested_text: input.requestedText,
+    clarification_rounds: input.clarificationRounds,
+    difficulty_level: input.difficulty,
+    scenario_instance: input.scenario,
+    decisions_made: [],
+    outcome: null,
+    score: null,
+    debrief_text: "",
+    recommendations: [],
+    status: "in_progress",
+    created_at: new Date().toISOString(),
+    completed_at: null,
+  };
 
-  await client.execute({
-    sql: `INSERT INTO sessions
-            (id, trainee_id, dilemma_entry_id, requested_text, clarification_rounds,
-             difficulty_level, scenario_instance, decisions_made, status, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, '[]', 'in_progress', ?)`,
-    args: [
-      id,
-      input.traineeId,
-      input.dilemmaEntryId,
-      input.requestedText,
-      JSON.stringify(input.clarificationRounds),
-      input.difficulty,
-      JSON.stringify(input.scenario),
-      createdAt,
-    ],
-  });
-
-  const created = await getSession(id);
-  if (!created) throw new Error("Session vanished immediately after insert");
-  return created;
+  await save(session, `Start training run ${session.id.slice(0, 8)}`);
+  return session;
 }
 
 export async function getSession(id: string): Promise<Session | null> {
-  const client = await db();
-  const result = await client.execute({
-    sql: "SELECT * FROM sessions WHERE id = ?",
-    args: [id],
-  });
-  const row = result.rows[0];
-  return row ? toSession(row) : null;
+  const raw = await repoFiles().read(fileFor(id));
+  if (raw === null) return null;
+
+  const parsed = SessionSchema.safeParse(JSON.parse(raw));
+  if (!parsed.success) {
+    // One malformed run must not break the instructor's whole history view.
+    console.error(`Skipping malformed session ${id}:`, parsed.error.message);
+    return null;
+  }
+  return parsed.data;
 }
 
+async function save(session: Session, message: string): Promise<void> {
+  await repoFiles().write(
+    fileFor(session.id),
+    serialise(SessionSchema.parse(session)),
+    message,
+  );
+}
+
+/**
+ * Stores what the trainee chose, before the debrief is generated. A failure in
+ * the assessment then loses the assessment but never the record of the run.
+ */
 export async function recordDecisions(
   id: string,
   decisions: DecisionMade[],
 ): Promise<void> {
-  const client = await db();
-  await client.execute({
-    sql: "UPDATE sessions SET decisions_made = ? WHERE id = ?",
-    args: [JSON.stringify(decisions), id],
-  });
+  const session = await getSession(id);
+  if (!session) return;
+  await save(
+    { ...session, decisions_made: decisions },
+    `Record decisions for run ${id.slice(0, 8)}`,
+  );
 }
 
-/** Writes the debrief and closes the session. */
+/** Writes the debrief and closes the run. */
 export async function completeSession(
   id: string,
   debrief: Debrief,
 ): Promise<void> {
-  const client = await db();
-  await client.execute({
-    sql: `UPDATE sessions
-             SET outcome = ?, score = ?, debrief_text = ?, recommendations = ?,
-                 status = 'completed', completed_at = ?
-           WHERE id = ?`,
-    args: [
-      JSON.stringify(debrief.outcome),
-      debrief.score,
-      debrief.debrief_text,
-      JSON.stringify(debrief.recommendations),
-      new Date().toISOString(),
-      id,
-    ],
-  });
-}
+  const session = await getSession(id);
+  if (!session) return;
 
-export async function listSessionsForTrainee(traineeId: string): Promise<Session[]> {
-  const client = await db();
-  const result = await client.execute({
-    sql: "SELECT * FROM sessions WHERE trainee_id = ? ORDER BY created_at DESC",
-    args: [traineeId],
-  });
-  return result.rows.map(toSession);
+  await save(
+    {
+      ...session,
+      outcome: debrief.outcome,
+      score: debrief.score,
+      debrief_text: debrief.debrief_text,
+      recommendations: debrief.recommendations,
+      status: "completed",
+      completed_at: new Date().toISOString(),
+    },
+    `Complete run ${id.slice(0, 8)} — scored ${Math.round(debrief.score)}`,
+  );
 }
 
 export async function listAllSessions(): Promise<Session[]> {
-  const client = await db();
-  const result = await client.execute(
-    "SELECT * FROM sessions ORDER BY created_at DESC",
+  const files = await repoFiles().list(DATA_PATHS.sessions);
+  const sessions = await Promise.all(
+    files
+      .filter((name) => name.endsWith(".json"))
+      .map((name) => getSession(name.replace(/\.json$/, ""))),
   );
-  return result.rows.map(toSession);
+
+  return sessions
+    .filter((session): session is Session => session !== null)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function listSessionsForTrainee(
+  traineeId: string,
+): Promise<Session[]> {
+  return (await listAllSessions()).filter(
+    (session) => session.trainee_id === traineeId,
+  );
 }
 
 /* ------------------------------------------------------------------ */
 /* Trainees                                                            */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The POC has no sign-up flow, so the roster is a fixed default until someone
+ * edits it. Ids are literal rather than generated: sessions reference them, so
+ * they have to stay identical across requests and deploys.
+ */
+const DEFAULT_ROSTER: Trainee[] = [
+  { id: "trainee-a", name: "Trainee A — Ops Console 1", notes: "", created_at: "" },
+  { id: "trainee-b", name: "Trainee B — Ops Console 2", notes: "", created_at: "" },
+  { id: "trainee-c", name: "Trainee C — Ops Console 3", notes: "", created_at: "" },
+];
+
 export async function listTrainees(): Promise<Trainee[]> {
-  const client = await db();
-  const result = await client.execute("SELECT * FROM trainees ORDER BY name");
-  return result.rows.map((row) => ({
-    id: String(row.id),
-    name: String(row.name),
-    notes: String(row.notes ?? ""),
-    created_at: String(row.created_at),
-  }));
+  const raw = await repoFiles().read(DATA_PATHS.trainees);
+  // No file yet is the normal first-run state, not an error — fall back to the
+  // default roster rather than writing one on a page load nobody asked to save.
+  if (raw === null) return DEFAULT_ROSTER;
+
+  const parsed = TraineeSchema.array().safeParse(JSON.parse(raw));
+  if (!parsed.success) {
+    console.error("Malformed trainee roster, using defaults:", parsed.error.message);
+    return DEFAULT_ROSTER;
+  }
+  return parsed.data;
 }
 
 export async function getTrainee(id: string): Promise<Trainee | null> {
-  const client = await db();
-  const result = await client.execute({
-    sql: "SELECT * FROM trainees WHERE id = ?",
-    args: [id],
-  });
-  const row = result.rows[0];
-  if (!row) return null;
-  return {
-    id: String(row.id),
-    name: String(row.name),
-    notes: String(row.notes ?? ""),
-    created_at: String(row.created_at),
-  };
+  return (await listTrainees()).find((trainee) => trainee.id === id) ?? null;
+}
+
+export async function saveTrainees(trainees: Trainee[]): Promise<void> {
+  await repoFiles().write(
+    DATA_PATHS.trainees,
+    serialise(TraineeSchema.array().parse(trainees)),
+    "Update trainee roster",
+  );
 }
