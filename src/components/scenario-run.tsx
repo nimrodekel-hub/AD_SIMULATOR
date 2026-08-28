@@ -27,10 +27,13 @@ type Stage = "brief" | "running" | "submitting";
 export function ScenarioRun({
   session,
   templateHtml,
+  iffTones,
 }: {
   session: Session;
   /** The approved console shell, when there is one. */
   templateHtml?: string;
+  /** Identification state (lower-cased) to status class, from the profile. */
+  iffTones?: Record<string, string>;
 }) {
   const router = useRouter();
   const scenario = session.scenario_instance;
@@ -157,7 +160,7 @@ export function ScenarioRun({
   const point = scenario.decision_points[current];
 
   const clock = <Clock remaining={remaining} window={scenario.time_window_seconds} />;
-  const tracks = <TrackTable scenario={scenario} />;
+  const tracks = <TrackTable scenario={scenario} iffTones={iffTones} />;
   const resources = <ResourceList scenario={scenario} />;
   const decision = (
     <DecisionPanel
@@ -234,7 +237,18 @@ function Clock({ remaining, window: total }: { remaining: number; window: number
   );
 }
 
-function TrackTable({ scenario }: { scenario: ScenarioInstance }) {
+function TrackTable({
+  scenario,
+  iffTones,
+}: {
+  scenario: ScenarioInstance;
+  iffTones?: Record<string, string>;
+}) {
+  /* The columns are whatever the system profile declared, so the table shows
+     the fields this system actually shows. Taken from the first track: the
+     generator produces the same readouts, in the same order, for all of them. */
+  const columns = scenario.tracks[0]?.readouts.map((readout) => readout.label) ?? [];
+
   return (
     <>
       <div className="overflow-x-auto">
@@ -244,11 +258,11 @@ function TrackTable({ scenario }: { scenario: ScenarioInstance }) {
               <Th>TRACK</Th>
               <Th>IFF</Th>
               <Th>CLASS</Th>
-              <Th right>BRG</Th>
-              <Th right>RNG</Th>
-              <Th right>ALT</Th>
-              <Th right>SPD</Th>
-              <Th right>TTI</Th>
+              {columns.map((label) => (
+                <Th key={label} right>
+                  {label}
+                </Th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -256,16 +270,16 @@ function TrackTable({ scenario }: { scenario: ScenarioInstance }) {
               <tr key={track.designator} className="border-b border-line/60">
                 <Td>{track.designator}</Td>
                 <Td>
-                  <span className={`chip ${iffTone(track.iff_status)}`}>
+                  <span className={`chip ${iffTone(track.iff_status, iffTones)}`}>
                     {track.iff_status}
                   </span>
                 </Td>
                 <Td>{track.classification}</Td>
-                <Td right>{track.bearing_deg}°</Td>
-                <Td right>{track.range_km} km</Td>
-                <Td right>{track.altitude_ft.toLocaleString()} ft</Td>
-                <Td right>{track.speed_kts} kts</Td>
-                <Td right>{track.time_to_impact_seconds}s</Td>
+                {track.readouts.map((readout, index) => (
+                  <Td key={index} right>
+                    {readout.value}
+                  </Td>
+                ))}
               </tr>
             ))}
           </tbody>
@@ -371,8 +385,17 @@ function DecisionPanel({
 
 /* ------------------------------------------------------------------ */
 
-/** Colour by identification confidence, using the system-wide status palette. */
-function iffTone(status: string): string {
+/**
+ * Colour by identification state, using the system-wide status palette.
+ *
+ * The designer's profile decides this: they said what each state means and how
+ * urgently it should read. The keyword guess below is only for a system that
+ * has not been taught yet.
+ */
+function iffTone(status: string, tones?: Record<string, string>): string {
+  const declared = tones?.[status.toLowerCase()];
+  if (declared) return declared;
+
   const normalised = status.toLowerCase();
   if (normalised.includes("confirmed") && normalised.includes("hostile")) {
     return "status-danger";
