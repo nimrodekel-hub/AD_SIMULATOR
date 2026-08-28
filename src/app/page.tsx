@@ -101,12 +101,12 @@ export default async function Home() {
             }
           />
           <StatusRow
-            label="Knowledge storage"
+            label="Storage"
             value={isGitBacked() ? "Git — committed to the repository" : "Local filesystem"}
             tone={isGitBacked() ? "ok" : "warn"}
             note={
               isGitBacked()
-                ? undefined
+                ? "Dilemmas and training runs alike are committed as files."
                 : "Set GITHUB_TOKEN and GITHUB_REPO to commit every change to the repository."
             }
           />

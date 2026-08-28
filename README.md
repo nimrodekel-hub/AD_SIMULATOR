@@ -15,20 +15,19 @@ expert's own recorded reasoning.
 | Concern | Choice |
 | --- | --- |
 | Framework | Next.js 16 (App Router) + TypeScript + Tailwind v4 |
-| Hosting | Vercel — deploys on every push |
-| Knowledge base | JSON files committed to this repository, written via the GitHub API |
-| Session log | libSQL (SQLite) — a local file in development, Turso in production |
-| AI | Anthropic API, five separate task modules each with its own system prompt |
+| Hosting | Vercel — rebuilds on every push |
+| Storage | JSON files committed to this repository, written through the GitHub API |
+| AI | Anthropic API, five integration points each with its own system prompt |
 
-**Why the knowledge base is in git and the sessions are not.** Dilemmas are
-authored content that a domain expert cares about keeping: a commit per approval
-gives a reviewable history of how the operational knowledge evolved, and the
-files stay hand-editable if extraction ever misreads an expert. Session logs are
-high-churn operational records, which belong in a database.
+**Everything lives in git.** Dilemmas, the simulated-console template, the
+trainee roster and every training run are all JSON files in `data/`. There is no
+database to provision and nothing to keep in sync: one storage mechanism, one
+place to look, and a permanent inspectable history of both the operational
+knowledge and the training that came out of it.
 
-**Why Turso rather than a SQLite file.** Serverless functions have no writable
-disk, so a file-based database would silently lose every write. Turso is the same
-SQLite engine over the network; the schema and queries are unchanged.
+The cost is that a training run makes a few commits and each write takes about a
+second. At the scale this is built for that is invisible, and the audit trail is
+worth more than the milliseconds.
 
 ## Running it locally
 
@@ -41,24 +40,31 @@ Without an API key the app starts in **mock mode**: every screen works and is
 clickable, but AI responses are canned and labelled as such. The home screen
 shows the current mode.
 
-### Environment variables
+Locally, `data/` is written on the filesystem. In production the same code
+writes through the GitHub API instead — see below.
 
-Create `.env.local` in the project root.
+## Deploying
+
+1. On [vercel.com](https://vercel.com), **Add New → Project**, and import this
+   repository.
+2. Set **Production Branch** to `claude/air-defense-simulator-bwmstp`.
+3. Add the environment variables below.
+4. Deploy. Every later push rebuilds automatically.
+
+### Environment variables
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | Yes | Drives every AI feature. Unset ⇒ mock mode. |
-| `ANTHROPIC_MODEL` | No | Defaults to `claude-opus-5`. |
-| `AI_MOCK` | No | Set to `1` to force mock mode even with a key. |
 | `GITHUB_TOKEN` | In production | Fine-grained token with `contents: read and write` on this repository. |
 | `GITHUB_REPO` | In production | `owner/name`, e.g. `nimrodekel-hub/ad_simulator`. |
-| `GITHUB_BRANCH` | No | Branch the knowledge base is committed to. |
-| `TURSO_DATABASE_URL` | In production | Unset ⇒ local file at `data/local.db`. |
-| `TURSO_AUTH_TOKEN` | In production | Turso database token. |
+| `GITHUB_BRANCH` | In production | Branch that data is committed to. |
+| `ANTHROPIC_MODEL` | No | Defaults to `claude-opus-5`. |
+| `AI_MOCK` | No | Set to `1` to force mock mode even with a key. |
 
-The GitHub variables are **required in production**: without them the app falls
-back to the local filesystem, and on Vercel that filesystem is read-only, so
-nothing a designer saved would survive.
+The GitHub variables are **required in production**. Without them the app falls
+back to the local filesystem, and a serverless filesystem is read-only — so
+nothing anyone saved would survive the request that saved it.
 
 ## The four screens
 
@@ -86,9 +92,15 @@ src/
       client.ts         the only module that talks to the Anthropic API
       tasks/            one module per AI task, each with its own system prompt
     domain/schemas.ts   Zod schemas — validation and AI output format in one place
-    store/              knowledge base (git) and session log (libSQL)
+    store/
+      repo-files.ts     git as the storage medium: GitHub API or local filesystem
+      kb.ts             dilemmas and the console template
+      sessions.ts       training runs and the trainee roster
     config.ts           the only module that reads process.env
-data/kb/                the knowledge base, committed
+data/
+  kb/                   the knowledge base
+  sessions/             one file per training run
+  trainees.json         the roster (defaults are used until this file exists)
 ```
 
 ## Build status
