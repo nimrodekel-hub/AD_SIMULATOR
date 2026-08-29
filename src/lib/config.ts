@@ -90,7 +90,18 @@ export const DATA_PATHS = {
   systems: "data/kb/systems",
   sessions: "data/sessions",
   trainees: "data/trainees.json",
+  /**
+   * Work in progress that belongs to a person rather than to a system.
+   *
+   * One file per trainee, overwritten by their next run, so these never
+   * accumulate.
+   */
+  jobs: "data/jobs",
 } as const;
+
+/** Where a trainee's in-flight scenario generation is recorded. */
+export const scenarioJobPath = (traineeId: string) =>
+  `${DATA_PATHS.jobs}/scenario-${traineeId}.json`;
 
 /** The files and directories inside one system's directory. */
 export const systemPaths = (systemId: string) => {
@@ -101,6 +112,7 @@ export const systemPaths = (systemId: string) => {
     profile: `${root}/profile.json`,
     gui: `${root}/gui.json`,
     guiJob: `${root}/gui-job.json`,
+    dilemmaJob: `${root}/dilemma-job.json`,
     screenshots: `${root}/screenshots`,
     dilemmas: `${root}/dilemmas`,
   };
