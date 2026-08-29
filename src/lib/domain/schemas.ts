@@ -188,9 +188,24 @@ export const TrackReadoutFieldSchema = z.object({
 export type TrackReadoutField = z.infer<typeof TrackReadoutFieldSchema>;
 
 export const EngagementDoctrineSchema = z.object({
+  /**
+   * How far out the system sees, which is not how far it can shoot.
+   *
+   * Detection range is what decides how much warning an operator gets, so it
+   * sets the clock on every dilemma about time. It varies enormously between
+   * systems and must come from the designer rather than be assumed.
+   *
+   * Nullable and defaulted because profiles approved before this field existed
+   * do not carry it, and an old profile must keep loading rather than break the
+   * system it belongs to.
+   */
+  detection_range_km: z.number().nullable().default(null),
+  /** The closest a target can be and still be engaged. */
   min_range_km: z.number(),
+  /** The furthest a target can be and still be engaged. */
   max_range_km: z.number(),
   time_of_flight_note: z.string(),
+  /** How many interceptors may be in the air at once. Per system. */
   simultaneous_engagements_note: z.string(),
   /** Who may authorise an engagement, and when that changes. */
   authority_note: z.string(),
@@ -414,3 +429,44 @@ export const InstructorSchema = z.object({
   created_at: z.string(),
 });
 export type Instructor = z.infer<typeof InstructorSchema>;
+
+/* ------------------------------------------------------------------ */
+/* General knowledge — the step before any system                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One thing worth knowing that is true across systems, not inside one.
+ *
+ * Kept as a list rather than folded into the briefing prose so that a lesson
+ * can be added, corrected or removed on its own, without editing a wall of
+ * text and without disturbing the rest.
+ */
+export const LessonSchema = z.object({
+  id: z.string(),
+  /** A short name. Shown in the list and used to find it again. */
+  title: z.string().min(1),
+  /** The lesson itself, in the designer's own words. */
+  body: z.string().min(1),
+});
+export type Lesson = z.infer<typeof LessonSchema>;
+
+/**
+ * What every interviewer is told, before any particular system is discussed.
+ *
+ * This is the layer above the per-system profile: how air defence works in
+ * general, plus the lessons that keep proving true across systems. It is
+ * editable because it is doctrine in the ordinary sense — it accumulates, it
+ * gets corrected, and the person correcting it is the domain expert, not the
+ * model.
+ *
+ * It is orientation, never authority about a particular system. Where it and a
+ * system's approved profile disagree, the profile wins; where it and the expert
+ * disagree, the expert wins.
+ */
+export const GeneralKnowledgeSchema = z.object({
+  /** The background briefing, as markdown. */
+  briefing: z.string(),
+  lessons: z.array(LessonSchema),
+  updated_at: z.string(),
+});
+export type GeneralKnowledge = z.infer<typeof GeneralKnowledgeSchema>;
