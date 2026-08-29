@@ -199,11 +199,42 @@
       "elapsed_ms": 27000
     }
   ],
-  "outcome": null,
-  "score": null,
-  "debrief_text": "",
-  "recommendations": [],
-  "status": "in_progress",
+  "outcome": {
+    "success": false,
+    "summary": "Run failed. The trainee held fire correctly at the outset but never owned a last defensible engagement point, and gave no answer at the point where TRK 2104 was confirmed hostile — so the identified threat was never engaged. The success condition, which requires an explicitly owned last-shot point and an immediate engagement once identification resolves hostile, was not met.",
+    "per_decision": [
+      {
+        "decision_point_index": 0,
+        "chosen_action": "Hold and request a visual identification",
+        "preferred_action": "Hold fire, hand off for visual identification, and simultaneously query the airspace authority for corridor status",
+        "correct": false,
+        "comment": "Right instinct, incomplete execution. You withheld the effector and drove identification forward, which is the core of the expert's 'holding for a visual'. But you did not open the corridor-status query alongside it — a documented common error: the two lines of enquiry then run sequentially and neither completes inside the available time. Substantial partial credit for the hold; moderate penalty for sequencing instead of parallel action."
+      },
+      {
+        "decision_point_index": 1,
+        "chosen_action": "Do not engage",
+        "preferred_action": "Continue identification to the last defensible engagement point, with a pre-declared decision rule for what happens there",
+        "correct": false,
+        "comment": "Withholding was the correct direction — the authority's answer raised the probability of protected traffic without raising identification certainty. But 'do not engage' is a bare refusal, not a bounded hold. You did not compute or announce the 12 km last-shot point, did not state what would happen when it arrived, and did not name the behavioural triggers (turn onto the asset, acceleration, descent, departure from the corridor axis) that would collapse the hold early. That is the documented error of the hold becoming permanent by omission, and it leaves the team without a shared reference for when the decision must be taken. Heavily penalised."
+      },
+      {
+        "decision_point_index": 2,
+        "chosen_action": "(no answer given)",
+        "preferred_action": "Engage the identified hostile immediately and re-enter the identification cycle for the remaining unknowns",
+        "correct": false,
+        "comment": "Unanswered, therefore a miss, and the miss that decided the run. Identification had just been earned on TRK 2104 — no medical markings, external stores, hostile-pattern airframe — so the entire reason for the hold had evaporated and the shot was owed immediately, roughly 34 s from the last-shot ring. No engagement, no re-cue of the now-free identification asset onto TRK 2117, no upward report of confirmed corridor exploitation. This maps to the documented error of delaying or freezing engagements pending wider resolution, which guarantees a confirmed threat reaches the defended asset."
+      }
+    ]
+  },
+  "score": 27,
+  "debrief_text": "What decided this run was decision point 2. The electro-optical asset resolved TRK 2104 as a hostile-pattern airframe with external stores and no medical markings — the exact information your hold was bought to obtain — and you did not act on it. Once identification resolves, the reason for withholding no longer exists, and every second of closure since the original offer has already cost engagement margin. Not engaging there is the documented failure of freezing all engagements pending full resolution of the picture, and it means the confirmed threat runs on toward the keep-out boundary while you spend the very margin the identification effort was meant to preserve. The record is unambiguous on this: engage without further delay, then re-cue the free identification asset onto the remaining unknown, prioritised by time-to-boundary, and report the confirmed corridor exploitation upward.\n\nYour opening call was sound in its essentials. You did not treat interrogation failure as hostile identification and you did not fire at maximum range for the sake of geometry — the two errors this scenario is built to draw out. What you missed was the parallel corridor-status query. The expert's account puts identification and corridor deconfliction on the same clock, because running them in sequence is how both lines of enquiry fail to finish inside the available closure time. You attacked the symptom (unidentified track) without attacking the root of the ambiguity (unresolved corridor).\n\nDecision point 1 is where the hold stopped being a decision and started being drift. 'Do not engage' was directionally right — a scheduled but unlocated medical flight raises the stakes on both sides and does not license a shot — but you never computed or declared the 12 km last-shot point, never stated what would happen when it arrived, and never named the behaviours that would collapse the hold early. A controlled hold and an uncontrolled one look identical from the outside until the deadline passes; the pre-declared rule is the only thing that distinguishes them. Because you did not own that point at DP1, you had no framework ready when identification finally arrived at DP2, and the clock made the decision instead of you.\n\nOn the credit side: had you held and lost the window through a declared, bounded decision, you would have scored better than someone who fired early and happened to be right. You held, but you did not bound it, and you did not convert the information you paid for into action.",
+  "recommendations": [
+    "Practise opening the corridor-status query to the airspace control authority in the same breath as the electro-optical handoff, rather than after it — in this run the authority took three queries to answer, and you had started only one line of enquiry.",
+    "Drill the verbal habit of announcing the last defensible engagement point out loud with the decision that attaches to it: 'TRK 2104 crosses 12 km in 74 seconds; if identification is unresolved at that ring I will [X].' You reached DP1 with the ring 74 seconds away and never named it.",
+    "Rehearse the immediate transition from identification-resolved to weapon-release. When the EO call comes back hostile, the next action is the engagement, not a re-assessment of the wider picture — you had roughly 34 seconds of margin at DP2 and spent all of it.",
+    "Work the second-track discipline: after committing effectors to a confirmed hostile, re-cue the freed identification asset onto TRK 2117 and give it its own last-shot point, rather than either classifying it by association with the hostile or spreading effectors across it as a hedge."
+  ],
+  "status": "completed",
   "created_at": "2026-08-29T16:14:52.860Z",
-  "completed_at": null
+  "completed_at": "2026-08-29T16:15:33.671Z"
 }
