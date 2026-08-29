@@ -187,7 +187,18 @@
       }
     ]
   },
-  "decisions_made": [],
+  "decisions_made": [
+    {
+      "decision_point_index": 0,
+      "chosen_action": "Hold and request a visual identification",
+      "elapsed_ms": 41000
+    },
+    {
+      "decision_point_index": 1,
+      "chosen_action": "Do not engage",
+      "elapsed_ms": 27000
+    }
+  ],
   "outcome": null,
   "score": null,
   "debrief_text": "",
