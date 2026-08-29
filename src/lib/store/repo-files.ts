@@ -198,9 +198,7 @@ class GitHubFiles implements RepoFiles {
       }),
     });
     if (!response.ok) {
-      throw new Error(
-        `GitHub write failed for ${filePath}: ${response.status} ${await response.text()}`,
-      );
+      throw new Error(await describeWriteFailure(response, filePath));
     }
   }
 
@@ -226,11 +224,37 @@ class GitHubFiles implements RepoFiles {
       body: JSON.stringify({ message, sha, branch: this.branch }),
     });
     if (!response.ok) {
-      throw new Error(
-        `GitHub delete failed for ${filePath}: ${response.status} ${await response.text()}`,
-      );
+      throw new Error(await describeWriteFailure(response, filePath));
     }
   }
+}
+
+/**
+ * Turns a refused write into something the person reading it can act on.
+ *
+ * The raw body of a 403 here is `Resource not accessible by personal access
+ * token`, which is accurate and tells nobody what to do. The cause is almost
+ * always the same one, so name it and name the fix.
+ */
+async function describeWriteFailure(
+  response: Response,
+  filePath: string,
+): Promise<string> {
+  if (response.status === 403) {
+    return (
+      "GitHub refused the write: the token does not have permission to change " +
+      "this repository's contents. In the token's settings, set Repository " +
+      'permissions → Contents to "Read and write" — the token itself does not ' +
+      "change, so Vercel needs no redeploy."
+    );
+  }
+  if (response.status === 401) {
+    return "GitHub rejected the token — it is expired or invalid. Issue a new one and update GITHUB_TOKEN in Vercel.";
+  }
+  if (response.status === 404) {
+    return "GitHub could not find the repository or branch to write to. Check GITHUB_REPO and GITHUB_BRANCH.";
+  }
+  return `GitHub write failed for ${filePath}: ${response.status} ${await response.text()}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -250,4 +274,92 @@ export function repoFiles(): RepoFiles {
 /** True when saves become commits. The UI says so, so the user knows where data went. */
 export function isGitBacked(): boolean {
   return config.github.enabled;
+}
+
+/**
+ * Whether the configured token can actually *write* to the repository.
+ *
+ * `isGitBacked()` only says the variables are set. A token that is present but
+ * read-only passes that check, shows a green status board, and then fails on
+ * the first save with a raw 403 — after the user has already typed everything
+ * in. GitHub reports the token's effective rights on the repository itself, so
+ * the board can say so up front instead.
+ *
+ * Read-only and cheap: one GET, no writes, and it never reports a token value.
+ */
+export async function githubWriteAccess(): Promise<
+  { ok: true } | { ok: false; problem: string }
+> {
+  const { enabled, owner, repo, branch, token } = config.github;
+  if (!enabled) return { ok: false, problem: "GitHub is not configured." };
+
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+        cache: "no-store",
+      },
+    );
+
+    if (response.status === 401) {
+      return { ok: false, problem: "The token was rejected — it is expired or invalid." };
+    }
+    if (response.status === 404) {
+      return {
+        ok: false,
+        problem: `The token cannot see ${owner}/${repo}. Check GITHUB_REPO, and that the token grants access to this repository.`,
+      };
+    }
+    if (!response.ok) {
+      return { ok: false, problem: `GitHub replied ${response.status}.` };
+    }
+
+    const body = (await response.json()) as {
+      permissions?: { push?: boolean };
+      default_branch?: string;
+    };
+
+    if (body.permissions?.push !== true) {
+      return {
+        ok: false,
+        problem:
+          "The token can read this repository but not write to it. In the token's settings, set Repository permissions → Contents to \"Read and write\".",
+      };
+    }
+
+    // A write also needs the branch to exist; a typo in GITHUB_BRANCH fails the
+    // same way a missing permission does, and is just as invisible until a save.
+    const ref = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+        cache: "no-store",
+      },
+    );
+    if (ref.status === 404) {
+      return {
+        ok: false,
+        problem: `The branch "${branch}" does not exist in ${owner}/${repo}. Check GITHUB_BRANCH.`,
+      };
+    }
+
+    return { ok: true };
+  } catch (reason) {
+    return {
+      ok: false,
+      problem:
+        reason instanceof Error
+          ? `Could not reach GitHub: ${reason.message}`
+          : "Could not reach GitHub.",
+    };
+  }
 }

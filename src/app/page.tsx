@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { config, githubConfigProblems } from "@/lib/config";
 import { getSystemBundle, listSystems } from "@/lib/store/kb";
-import { isGitBacked } from "@/lib/store/repo-files";
+import { githubWriteAccess, isGitBacked } from "@/lib/store/repo-files";
 
 /* Reads the knowledge base on every request — this page is a live status
    board, and a cached copy would misreport what the system holds. */
@@ -33,9 +33,12 @@ const ROLES = [
 
 export default async function Home() {
   const systems = await listSystems();
-  const bundles = await Promise.all(
-    systems.map((system) => getSystemBundle(system.id)),
-  );
+  const [bundles, storage] = await Promise.all([
+    Promise.all(systems.map((system) => getSystemBundle(system.id))),
+    // Asks GitHub whether the token can actually write, rather than trusting
+    // that the variables being set means saving works.
+    isGitBacked() ? githubWriteAccess() : Promise.resolve(null),
+  ]);
 
   const dilemmas = bundles.flatMap((bundle) => bundle.dilemmas);
   const approved = dilemmas.filter((entry) => entry.status === "approved").length;
@@ -137,12 +140,20 @@ export default async function Home() {
           />
           <StatusRow
             label="Storage"
-            value={isGitBacked() ? "Git — committed to the repository" : "Local filesystem"}
-            tone={isGitBacked() ? "ok" : "danger"}
+            value={
+              !isGitBacked()
+                ? "Local filesystem"
+                : storage?.ok
+                  ? "Git — committed to the repository"
+                  : "Git — cannot write"
+            }
+            tone={storage?.ok ? "ok" : "danger"}
             note={
-              isGitBacked()
-                ? "Dilemmas and training runs alike are committed as files."
-                : `Nothing you save will survive. ${githubConfigProblems().join("; ")}. Fix in Vercel under Settings → Environment Variables, then redeploy — environment changes only take effect on a new build.`
+              !isGitBacked()
+                ? `Nothing you save will survive. ${githubConfigProblems().join("; ")}. Fix in Vercel under Settings → Environment Variables, then redeploy — environment changes only take effect on a new build.`
+                : storage?.ok
+                  ? "Dilemmas and training runs alike are committed as files."
+                  : `Nothing you save will survive: ${storage?.problem} Nothing here needs a redeploy unless you replace the token itself.`
             }
           />
           <StatusRow
