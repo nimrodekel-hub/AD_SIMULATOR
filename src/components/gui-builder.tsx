@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { GuiTemplate } from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
 
@@ -11,9 +11,14 @@ import { readJson } from "@/lib/http";
  *
  * The screenshots were uploaded and stored in step 1, so nothing is chosen or
  * transferred here: the model is handed the system's stored references and its
- * approved behaviour profile, and returns a console shell. The designer
- * previews it, regenerates with direction until it looks right, and approves it
- * once. Every training run on this system from then on renders inside it.
+ * approved behaviour profile, and returns a console shell.
+ *
+ * Pressing the button does not hold a connection open. Generation takes a
+ * minute or more, and a phone will not wait that long — the screen locks, the
+ * tab is suspended, and the request dies even though the server is working. So
+ * the button starts the work and this screen asks every few seconds whether it
+ * has finished. Closing the page and coming back is free: the answer is waiting
+ * when you return.
  */
 
 const REQUIRED_SLOT_LABELS: Record<string, string> = {
@@ -24,11 +29,28 @@ const REQUIRED_SLOT_LABELS: Record<string, string> = {
   decision: "decision panel",
 };
 
+/** Often enough to feel responsive, rare enough to be free. */
+const POLL_MS = 3000;
+
+interface JobResult {
+  html: string;
+  design_notes: string;
+  screenshots: string[];
+  missing_slots: string[];
+}
+
+interface Job {
+  status: "idle" | "running" | "done" | "failed";
+  error?: string | null;
+  result?: JobResult | null;
+}
+
 export function GuiBuilder({
   systemId,
   systemName,
   screenshotCount,
   existing,
+  initialJob,
 }: {
   systemId: string;
   /** The system's own fictional name. The console is titled with it. */
@@ -36,25 +58,80 @@ export function GuiBuilder({
   /** How many references are stored. Shown so the source is never a mystery. */
   screenshotCount: number;
   existing: GuiTemplate | null;
+  /** Whatever generation was already under way when this page loaded. */
+  initialJob: Job;
 }) {
   const router = useRouter();
 
   const [guidance, setGuidance] = useState("");
-  const [html, setHtml] = useState(existing?.generated_ui_code ?? "");
-  const [notes, setNotes] = useState("");
-  const [screenshots, setScreenshots] = useState<string[]>(
-    existing?.source_screenshots ?? [],
+  const [html, setHtml] = useState(
+    initialJob.result?.html ?? existing?.generated_ui_code ?? "",
   );
-  const [missingSlots, setMissingSlots] = useState<string[]>([]);
+  const [notes, setNotes] = useState(initialJob.result?.design_notes ?? "");
+  const [screenshots, setScreenshots] = useState<string[]>(
+    initialJob.result?.screenshots ?? existing?.source_screenshots ?? [],
+  );
+  const [missingSlots, setMissingSlots] = useState<string[]>(
+    initialJob.result?.missing_slots ?? [],
+  );
 
-  const [busy, setBusy] = useState<"generating" | "saving" | null>(null);
-  const [error, setError] = useState<string>();
+  const [generating, setGenerating] = useState(initialJob.status === "running");
+  const [waited, setWaited] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | undefined>(
+    initialJob.status === "failed" ? (initialJob.error ?? undefined) : undefined,
+  );
   const [notice, setNotice] = useState<string>();
 
+  /* ---- Ask the server how it is getting on ----------------------- */
+  useEffect(() => {
+    if (!generating) return;
+    let cancelled = false;
+    const startedAt = Date.now();
+
+    const clock = setInterval(
+      () => setWaited(Math.round((Date.now() - startedAt) / 1000)),
+      1000,
+    );
+
+    const poll = setInterval(async () => {
+      try {
+        const response = await fetch(
+          `/api/systems/${systemId}/gui/generate`,
+          { cache: "no-store" },
+        );
+        const job = await readJson<Job>(response);
+        if (cancelled) return;
+
+        if (job.status === "done" && job.result) {
+          setHtml(job.result.html);
+          setNotes(job.result.design_notes);
+          setScreenshots(job.result.screenshots);
+          setMissingSlots(job.result.missing_slots);
+          setGenerating(false);
+        } else if (job.status === "failed") {
+          setError(job.error ?? "Generation failed.");
+          setGenerating(false);
+        } else if (job.status === "idle") {
+          setGenerating(false);
+        }
+      } catch {
+        // A dropped poll says nothing about the work. Keep waiting — that is
+        // the whole point of not holding the connection open.
+      }
+    }, POLL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(clock);
+      clearInterval(poll);
+    };
+  }, [generating, systemId]);
+
   async function generate() {
-    setBusy("generating");
     setError(undefined);
     setNotice(undefined);
+    setWaited(0);
 
     try {
       const response = await fetch(`/api/systems/${systemId}/gui/generate`, {
@@ -67,28 +144,16 @@ export function GuiBuilder({
           previous_html: html || undefined,
         }),
       });
-      const payload = await readJson<{
-        error?: string;
-        html: string;
-        design_notes: string;
-        screenshots: string[];
-        missing_slots?: string[];
-      }>(response);
-      if (!response.ok) throw new Error(payload.error ?? "Generation failed.");
-
-      setHtml(payload.html);
-      setNotes(payload.design_notes);
-      setScreenshots(payload.screenshots);
-      setMissingSlots(payload.missing_slots ?? []);
+      const job = await readJson<Job & { error?: string }>(response);
+      if (!response.ok) throw new Error(job.error ?? "Could not start.");
+      setGenerating(true);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Generation failed.");
-    } finally {
-      setBusy(null);
+      setError(reason instanceof Error ? reason.message : "Could not start.");
     }
   }
 
   async function save(approved: boolean) {
-    setBusy("saving");
+    setSaving(true);
     setError(undefined);
     setNotice(undefined);
 
@@ -114,9 +179,11 @@ export function GuiBuilder({
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Save failed.");
     } finally {
-      setBusy(null);
+      setSaving(false);
     }
   }
+
+  const busy = generating || saving;
 
   return (
     <div className="space-y-8">
@@ -154,7 +221,7 @@ export function GuiBuilder({
         </p>
 
         <div className="mt-4 space-y-4">
-          {html ? (
+          {html && !generating ? (
             <label className="block">
               <span className="label">Direction for the next attempt</span>
               <textarea
@@ -169,21 +236,29 @@ export function GuiBuilder({
           <button
             type="button"
             className="btn btn-primary"
-            disabled={busy !== null}
+            disabled={busy}
             onClick={() => void generate()}
           >
-            {busy === "generating"
-              ? "Reading the screenshots…"
+            {generating
+              ? "Building…"
               : html
                 ? "Regenerate"
                 : "Generate console"}
           </button>
 
-          {busy === "generating" ? (
-            <p className="text-xs text-muted">
-              This is the longest step in the app — a minute or two is normal.
-              Leave the page open.
-            </p>
+          {generating ? (
+            <div className="panel p-4">
+              <p className="text-sm">
+                Building the console
+                {waited > 0 ? ` — ${formatWait(waited)} so far` : "…"}
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-muted">
+                This is the longest step in the app; a minute or two is normal.
+                It is running on the server, so you can lock your phone, switch
+                tabs or close this page — the console will be waiting here when
+                you come back.
+              </p>
+            </div>
           ) : null}
         </div>
       </section>
@@ -229,15 +304,15 @@ export function GuiBuilder({
             <button
               type="button"
               className="btn btn-primary"
-              disabled={busy !== null || missingSlots.length > 0}
+              disabled={busy || missingSlots.length > 0}
               onClick={() => void save(true)}
             >
-              {busy === "saving" ? "Saving…" : "Approve template"}
+              {saving ? "Saving…" : "Approve template"}
             </button>
             <button
               type="button"
               className="btn"
-              disabled={busy !== null}
+              disabled={busy}
               onClick={() => void save(false)}
             >
               Save as draft
@@ -247,4 +322,9 @@ export function GuiBuilder({
       ) : null}
     </div>
   );
+}
+
+function formatWait(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
 }

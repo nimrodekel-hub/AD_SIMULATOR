@@ -100,6 +100,7 @@ export const systemPaths = (systemId: string) => {
     system: `${root}/system.json`,
     profile: `${root}/profile.json`,
     gui: `${root}/gui.json`,
+    guiJob: `${root}/gui-job.json`,
     screenshots: `${root}/screenshots`,
     dilemmas: `${root}/dilemmas`,
   };

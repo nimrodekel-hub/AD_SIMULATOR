@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GuiBuilder } from "@/components/gui-builder";
 import { ScreenShell } from "@/components/screen-shell";
+import { asReported, readGuiJob } from "@/lib/store/gui-job";
 import {
   getGuiTemplate,
   getSystem,
@@ -15,11 +16,12 @@ export default async function GuiBuilderPage({
   params,
 }: PageProps<"/designer/systems/[systemId]/gui">) {
   const { systemId } = await params;
-  const [system, existing, profile, screenshots] = await Promise.all([
+  const [system, existing, profile, screenshots, job] = await Promise.all([
     getSystem(systemId),
     getGuiTemplate(systemId),
     getSystemProfile(systemId),
     listScreenshots(systemId),
+    readGuiJob(systemId),
   ]);
   if (!system) notFound();
 
@@ -53,6 +55,9 @@ export default async function GuiBuilderPage({
           systemName={system.name}
           screenshotCount={screenshots.length}
           existing={existing}
+          // Whatever was already under way. Loading this page mid-generation
+          // picks the wait back up rather than starting again.
+          initialJob={asReported(job)}
         />
       ) : (
         <div className="panel p-6">
