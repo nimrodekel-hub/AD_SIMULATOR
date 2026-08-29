@@ -4,7 +4,7 @@ import {
   type DilemmaDraft,
   type SystemProfile,
 } from "../../domain/schemas";
-import { AIR_DEFENCE_BRIEFING, describeSystem } from "../briefing";
+import { describeSystem, generalBriefing } from "../briefing";
 import { streamChat, structured, type Anthropic } from "../client";
 
 /**
@@ -85,14 +85,19 @@ export function designerChatStream(
   messages: Anthropic.MessageParam[],
   /** The system being taught, so the interviewer is not starting from nothing. */
   system: { name: string; profile: SystemProfile | null },
+  /** The general knowledge, as the designer currently has it written. */
+  general: string,
 ): ReadableStream<Uint8Array> {
   return streamChat({
-    // Two blocks, ordered stable-to-variable so caching works: the
-    // instructions and the generic briefing are identical for every system in
-    // the app and are paid for once across all of them; only the profile is
-    // cached per-system.
+    // Three blocks, ordered stable-to-variable so caching works. The
+    // instructions never change; the general knowledge changes only when the
+    // designer edits it, and is shared by every system; the profile is
+    // per-system. Each gets its own read point, so editing the general
+    // knowledge costs one re-read rather than invalidating the instructions
+    // too.
     system: [
-      `${INTERVIEW_SYSTEM}\n\n${AIR_DEFENCE_BRIEFING}`,
+      INTERVIEW_SYSTEM,
+      generalBriefing(general),
       describeSystem(system.name, system.profile),
     ],
     messages,

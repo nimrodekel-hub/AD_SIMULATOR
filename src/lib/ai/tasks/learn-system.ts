@@ -77,10 +77,10 @@ export const SYSTEM_QUESTIONS: GuidedQuestion[] = [
   },
   {
     id: "engagement",
-    question: "What are the engagement constraints?",
-    hint: "Minimum and maximum range, time of flight, and how many engagements can run at once.",
+    question: "How far can it see, how far can it shoot, and how many at once?",
+    hint: "Detection range and intercept range are different numbers and both matter — the first sets how much warning the operator gets, the second what they can do about it. Include the minimum range as well as the maximum, the time of flight, and how many interceptors may be in the air at the same time.",
     placeholder:
-      "e.g. 5 to 40 km, roughly 25 seconds of flight at mid-range, three simultaneous engagements…",
+      "e.g. Detects out to about 120 km. Engages between 5 and 40 km — inside 5 it cannot. Roughly 25 seconds of flight at mid-range. Two interceptors in the air at once, no more…",
   },
   {
     id: "authority",
@@ -120,6 +120,10 @@ You may be shown screenshots of the real console. They are **evidence about the 
 **iff_states.tone maps each state onto the console's status palette.** Use \`friendly\` for confirmed friendly, \`hostile\` for confirmed hostile, \`caution\` for anything leaning hostile but unresolved, and \`neutral\` for genuinely unknown or unclassified. This is what makes the display readable at a glance, so it has to match how an operator actually reads urgency.
 
 **Separate what the operator decides from what the system does.** If the system correlates tracks automatically, that is not an operator responsibility, and a scenario must not ask a trainee to do it.
+
+**Detection range and intercept range are different numbers, and both are per-system.** Detection range is how far out the system sees; minimum and maximum range are what it can actually engage. Take all three from the designer's answer. If they gave a detection range, record it; if they did not, leave it null rather than inferring one from the engagement envelope — how much warning an operator gets is not derivable from how far the weapon reaches.
+
+**How many interceptors may be in the air at once is per-system too.** Record what they said; never assume a number.
 
 **Speed and altitude bands must be plausible for the class described** and consistent with the engagement ranges given. If the designer's numbers conflict, follow their numbers and note the conflict in general_notes rather than silently correcting them.
 
@@ -176,6 +180,7 @@ const MOCK_PROFILE: SystemProfileDraft = {
     { label: "TTI", unit: "s", description: "Time to impact." },
   ],
   engagement: {
+    detection_range_km: 120,
     min_range_km: 5,
     max_range_km: 40,
     time_of_flight_note: "Roughly 25 seconds to mid-range.",

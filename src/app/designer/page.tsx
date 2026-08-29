@@ -31,6 +31,25 @@ export default async function DesignerHome() {
       title="Simulated systems"
       subtitle="Each system has its own behaviour, console and dilemmas"
     >
+      {/* The layer above every system. Placed first because it is the thing
+          to get right before teaching anything, and because it is easy to
+          forget it exists once systems fill the page. */}
+      <Link
+        href="/designer/knowledge"
+        className="panel mb-6 block p-5 transition-colors hover:border-accent"
+      >
+        <div className="flex flex-wrap items-baseline gap-x-3">
+          <h2 className="text-base font-semibold">General knowledge</h2>
+          <span className="chip status-ok">before any system</span>
+        </div>
+        <p className="mt-2 max-w-2xl text-sm text-muted">
+          How air defence works in general, and the lessons that hold across
+          systems. Every interview is told this before your system is
+          discussed, so it asks about what only you can answer instead of the
+          basics. Yours to edit.
+        </p>
+      </Link>
+
       {bundles.length === 0 ? (
         <div className="panel p-8 text-center">
           <p className="text-sm">No systems yet.</p>
