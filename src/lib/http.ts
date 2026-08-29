@@ -32,7 +32,7 @@ function explainNonJson(status: number): string {
       return "The upload was too large to accept. Send fewer or smaller files.";
     case 504:
     case 408:
-      return "The request took too long and was cut off. Try again, and with fewer files if you are uploading.";
+      return "The request took too long and was cut off before it finished. Try again — if it keeps happening, shorten your answers or store fewer screenshots.";
     case 502:
     case 503:
       return "The server was unreachable for a moment. Try again.";

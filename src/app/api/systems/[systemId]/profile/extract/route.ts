@@ -8,6 +8,18 @@ import { getSystem, loadScreenshots } from "@/lib/store/kb";
 
 export const maxDuration = 60;
 
+/**
+ * How many references the model is shown while reading the answers.
+ *
+ * The platform cuts this request off at sixty seconds, and images are the
+ * expensive part of it. Three is enough for what the screenshots are here to
+ * settle — the column labels, their order, the identification colours — because
+ * those are the same in every view of the same console. A fourth costs time and
+ * says nothing new. The console step, which cares about the whole look, still
+ * gets all of them.
+ */
+const MAX_REFERENCES_READ = 3;
+
 const BodySchema = z.object({
   answers: z.array(z.object({ question: z.string(), answer: z.string() })),
   open_notes: z.string(),
@@ -42,7 +54,10 @@ export async function POST(
     // The system's stored references, if it has any. They settle what the
     // display actually reads while the answers are being interpreted, rather
     // than only later when the console is drawn.
-    const screenshots = await loadScreenshots(systemId);
+    const screenshots = (await loadScreenshots(systemId)).slice(
+      0,
+      MAX_REFERENCES_READ,
+    );
 
     const draft = await extractSystemProfile(
       system.name,
