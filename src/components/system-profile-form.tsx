@@ -9,6 +9,7 @@ import type {
   SystemProfileDraft,
   TrackClassification,
 } from "@/lib/domain/schemas";
+import { readJson } from "@/lib/http";
 
 /**
  * Teaching the system how the system works.
@@ -69,7 +70,9 @@ export function SystemProfileForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ answers: answerList(), open_notes: openNotes }),
       });
-      const payload = await response.json();
+      const payload = await readJson<{ error?: string; draft: SystemProfileDraft }>(
+        response,
+      );
       if (!response.ok) throw new Error(payload.error ?? "Extraction failed.");
       setDraft(payload.draft as SystemProfileDraft);
       setPhase("reviewing");
@@ -95,7 +98,7 @@ export function SystemProfileForm({
           approved,
         }),
       });
-      const payload = await response.json();
+      const payload = await readJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(payload.error ?? "Save failed.");
       setNotice(
         approved

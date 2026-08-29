@@ -8,6 +8,7 @@ import type {
   ScenarioInstance,
   Session,
 } from "@/lib/domain/schemas";
+import { readJson } from "@/lib/http";
 
 /**
  * Screen 3, the back half: running the scenario.
@@ -66,7 +67,7 @@ export function ScenarioRun({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ decisions: final }),
         });
-        const payload = await response.json();
+        const payload = await readJson<{ error?: string }>(response);
         if (!response.ok) throw new Error(payload.error ?? "Debrief failed.");
         router.push(`/trainee/${session.id}/debrief`);
       } catch (reason) {
