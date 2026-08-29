@@ -657,7 +657,28 @@
       }
     ]
   },
-  "decisions_made": [],
+  "decisions_made": [
+    {
+      "decision_point_index": 0,
+      "chosen_action": "Engage the nearest UAV first, then turn to the jets",
+      "elapsed_ms": 24000
+    },
+    {
+      "decision_point_index": 1,
+      "chosen_action": "Hold and wait for a fire status to resolve",
+      "elapsed_ms": 2000
+    },
+    {
+      "decision_point_index": 2,
+      "chosen_action": "Engage the Unknown on the basis of its aggressive behaviour",
+      "elapsed_ms": 0
+    },
+    {
+      "decision_point_index": 3,
+      "chosen_action": "Hold fire until UAVs enter the innermost part of the envelope to maximise kill probability",
+      "elapsed_ms": 1000
+    }
+  ],
   "outcome": null,
   "score": null,
   "debrief_text": "",
