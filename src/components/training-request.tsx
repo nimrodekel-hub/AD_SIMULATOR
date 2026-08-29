@@ -7,6 +7,7 @@ import type {
   DifficultyLevel,
   Trainee,
 } from "@/lib/domain/schemas";
+import { readJson } from "@/lib/http";
 
 /**
  * Screen 3, the front half: the trainee asks for training in their own words.
@@ -28,6 +29,19 @@ type Phase =
       settledWithoutConfidence: boolean;
     }
   | { kind: "no_dilemmas" };
+
+/** The three shapes /api/training/match answers with. */
+interface MatchReply {
+  error?: string;
+  status: "no_dilemmas" | "needs_clarification" | "matched";
+  question: string;
+  rounds_remaining: number;
+  dilemma: { id: string; title: string };
+  confidence: number;
+  reasoning: string;
+  suggested_difficulty: DifficultyLevel;
+  settled_without_confidence: boolean;
+}
 
 const EXAMPLES = [
   "Everything arrives at once and I have to decide what to engage first.",
@@ -73,7 +87,7 @@ export function TrainingRequest({
           clarifications: rounds,
         }),
       });
-      const payload = await response.json();
+      const payload = await readJson<MatchReply>(response);
       if (!response.ok) throw new Error(payload.error ?? "Matching failed.");
 
       if (payload.status === "no_dilemmas") {
@@ -129,7 +143,9 @@ export function TrainingRequest({
           difficulty: phase.difficulty,
         }),
       });
-      const payload = await response.json();
+      const payload = await readJson<{ error?: string; session_id: string }>(
+        response,
+      );
       if (!response.ok) throw new Error(payload.error ?? "Could not start.");
       router.push(`/trainee/${payload.session_id}`);
     } catch (reason) {
