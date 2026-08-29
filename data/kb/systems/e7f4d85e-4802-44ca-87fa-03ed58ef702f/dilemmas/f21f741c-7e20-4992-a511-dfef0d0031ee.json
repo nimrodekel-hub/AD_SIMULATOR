@@ -1,0 +1,192 @@
+{
+  "title": "Low-Slow Unknown Inside an Unresolved Medevac Corridor",
+  "sub_domain_tag": "identification-and-engagement-authority",
+  "trigger_conditions": "Route a trainee here whenever the scenario involves a slow-moving, low-altitude, unidentified air track approaching at medium range (roughly 30-50 km) while the airspace it occupies is, or overlaps, a humanitarian or medical evacuation corridor whose activation or deconfliction status has not been confirmed. Trainee phrasings that should match include: 'low slow unknown', 'LSS track', 'slow mover no IFF', 'unknown squawking nothing at 40 km', 'medevac corridor', 'casevac lane', 'hospital flight', 'corridor not deconflicted', 'can't tell if it's the medevac', 'do I engage or hold for visual', 'held for a visual', 'no positive ID and it keeps closing', 'is it a drone or a helicopter', 'friendly rotary in my engagement zone', and any question about whether to shoot at maximum range versus waiting for positive identification when a protected-traffic corridor is involved. Also match debriefs of an engagement that was withheld and the track turned out hostile, or an engagement that was taken and the track turned out to be protected traffic.",
+  "key_variables": {
+    "threat_count_range": {
+      "min": 1,
+      "max": 4
+    },
+    "time_window_seconds": {
+      "min": 60,
+      "max": 300
+    },
+    "iff_certainty_levels": [
+      "no interrogation response, no corridor correlation - fully unknown",
+      "intermittent or garbled interrogation response",
+      "kinematics consistent with expected corridor traffic but no positive identification",
+      "corridor authority reports a flight scheduled but cannot confirm position",
+      "positive visual or electro-optical identification obtained",
+      "positively identified hostile profile"
+    ],
+    "resource_levels": [
+      {
+        "name": "ready effectors available to the engaging fire unit",
+        "unit": "rounds",
+        "min": 2,
+        "max": 8
+      },
+      {
+        "name": "visual or electro-optical identification assets able to be cued onto the track",
+        "unit": "assets",
+        "min": 0,
+        "max": 2
+      },
+      {
+        "name": "time remaining before the track reaches the defended-asset keep-out boundary",
+        "unit": "seconds",
+        "min": 30,
+        "max": 240
+      },
+      {
+        "name": "attempts made to raise the airspace control authority for corridor status",
+        "unit": "queries",
+        "min": 0,
+        "max": 4
+      }
+    ]
+  },
+  "decision_points": [
+    {
+      "situation": "A low, slow, unidentified track is detected at approximately 40 km, tracking steadily toward the defended area. Its flight path lies inside an air corridor nominally reserved for medical evacuation traffic, but the corridor's activation status has not been confirmed and no interrogation response has been received. Maximum effective engagement range is available now; the geometry is favourable and will remain so for some time.",
+      "valid_actions": [
+        {
+          "label": "Engage now at maximum range while the geometry is optimal",
+          "description": "Treat the absence of an interrogation response and the unconfirmed corridor as sufficient grounds for hostile classification, and commit an effector immediately to maximise standoff from the defended asset."
+        },
+        {
+          "label": "Hold fire, hand off for visual identification, and simultaneously query the airspace authority for corridor status",
+          "description": "Withhold the engagement, cue any available visual or electro-optical asset onto the track, and open a parallel request to the controlling authority to confirm whether the medevac corridor is active and whether the track correlates to a scheduled flight. Keep the fire solution maintained throughout."
+        },
+        {
+          "label": "Hold fire and take no further action until the track declares itself",
+          "description": "Assume the corridor implies protected status, break off active prosecution, and wait for the track to either identify itself or manoeuvre before reconsidering."
+        },
+        {
+          "label": "Declare the track hostile on kinematics alone and pass it to a higher echelon for the engagement decision",
+          "description": "Classify on the slow, low profile, then transfer the decision upward rather than resolving identification locally, accepting the delay that referral introduces."
+        }
+      ],
+      "preferred_action": "Hold fire, hand off for visual identification, and simultaneously query the airspace authority for corridor status",
+      "rationale": "The two facts that dominate this picture are that the track is unidentified and that it sits inside a corridor set aside for medical evacuation traffic whose status nobody has confirmed. Neither fact on its own justifies a decision. A low, slow profile is genuinely ambiguous - it fits a small uncrewed threat and it equally fits a rotary-wing medical flight, which is exactly why the corridor overlap matters. Firing at maximum range buys standoff, but standoff is only valuable if the target is hostile; against protected traffic it converts a recoverable ambiguity into an irreversible error. Conversely, simply waiting surrenders the initiative and lets the decision be made by the clock. The correct posture is to spend the available closure time actively: withhold the effector, drive identification forward through a visual or electro-optical handoff, and in parallel attack the root of the ambiguity by getting the corridor status resolved by the authority that owns it. Crucially, holding fire is not the same as standing down - the fire solution stays maintained so that if identification resolves hostile, or the track's behaviour changes, the engagement can be taken immediately at whatever range remains. This is what the expert described as the operator holding for a visual: a deliberate use of time to reduce uncertainty, not a refusal to act.",
+      "common_errors": [
+        "Treating no interrogation response as equivalent to hostile identification. Interrogation failure is common in low-altitude, slow traffic and in humanitarian flights operating outside normal military procedures; it is an absence of information, not a positive indicator.",
+        "Firing at maximum range purely because the geometry is best there, without asking what the remaining time could have been used to learn. Optimal geometry is not a reason to engage a track you cannot identify.",
+        "Interpreting 'hold for a visual' as passivity - dropping the track from active prosecution, releasing the fire solution, or standing the effector down, so that when identification finally resolves hostile there is no longer a shot available.",
+        "Assuming the corridor's mere existence confers protected status on anything inside it. An unresolved corridor is precisely a corridor whose contents are unknown, and adversaries are aware that protected airspace suppresses engagement.",
+        "Failing to open the corridor-status query in parallel with the identification effort, so that both lines of enquiry run sequentially and neither completes inside the available time.",
+        "Escalating the decision upward before doing the local identification work, which consumes the same time the visual handoff needed and returns an answer no better informed than the one available at the fire unit."
+      ]
+    },
+    {
+      "situation": "Roughly half the available time has elapsed. The visual identification asset has not yet resolved the track, and the airspace authority has responded that a medical flight is scheduled in the corridor but cannot confirm its current position. The track continues on a steady closing profile toward the keep-out boundary and is now inside the point where a further identification attempt and an engagement can both still be completed - but only just.",
+      "valid_actions": [
+        {
+          "label": "Engage immediately on the grounds that the confirmation window is closing",
+          "description": "Accept the partial corridor information as insufficient and release an effector now, before the track crosses the last point at which an engagement is assured."
+        },
+        {
+          "label": "Continue identification to the last defensible engagement point, with a pre-declared decision rule for what happens there",
+          "description": "Press the identification effort right up to the pre-computed last-shot point, having stated in advance what action will be taken if identification is still unresolved when that point is reached, and what track behaviours would trigger an earlier engagement."
+        },
+        {
+          "label": "Attempt warning or diversion measures to force the track to declare its intent",
+          "description": "Use available warning or challenge procedures to see whether the track responds in a way that resolves its identity, treating compliance as identification and non-compliance as an indicator."
+        },
+        {
+          "label": "Break the engagement and shift to protecting the defended asset by other means",
+          "description": "Accept that identification will not resolve in time, decline the engagement entirely, and rely on passive protection and layered defences behind this fire unit."
+        }
+      ],
+      "preferred_action": "Continue identification to the last defensible engagement point, with a pre-declared decision rule for what happens there",
+      "rationale": "The authority's answer has made the picture worse rather than better: a scheduled medical flight that cannot be located means the probability of protected traffic has risen while identification certainty has not. Engaging on this information would be firing into a known possibility of a medical flight, which is the worst available combination of confidence and consequence. But the opposite error - drifting past the last shot point while still gathering information - is equally a decision, just an unowned one. The discipline that separates a controlled hold from an uncontrolled one is the pre-declared rule: before the last-shot point arrives, the operator states what will happen when it does, and states which track behaviours - a turn onto the defended asset, an acceleration, a descent, a departure from the corridor axis - will collapse the hold immediately. That converts the remaining time from drift into a bounded, auditable interval of identification effort, and it means the eventual action, whichever way it goes, is a decision the operator made rather than one the clock made. Warning or diversion measures are a reasonable adjunct here and should be used if available, but they are not a substitute for owning the last-shot point, because a non-responsive track leaves the operator in exactly the same dilemma with less time.",
+      "common_errors": [
+        "Letting the last defensible engagement point pass while still 'working the identification', so the hold becomes permanent by omission rather than by decision.",
+        "Treating 'a medical flight is scheduled but unlocated' as either confirmation that this track is that flight, or as confirmation that it is not. It is neither; it raises the stakes on both sides of the decision.",
+        "Failing to compute and announce the last-shot point at all, which leaves the whole team without a shared reference for when the decision must be taken.",
+        "Not specifying in advance the behavioural triggers - turn, acceleration, descent, departure from the corridor axis - that would justify collapsing the hold before the deadline.",
+        "Using warning measures and then treating simple non-response as positive hostile identification; a medical flight may be on different frequencies or procedures and unable to answer.",
+        "Abandoning the engagement entirely on the assumption that rearward layers will cope, without confirming that those layers are cued, ready, and geometrically able to take the track."
+      ]
+    },
+    {
+      "situation": "Identification resolves. The track is confirmed as a hostile profile, and it is now closer than the range at which the engagement was originally offered. Additional unknown slow tracks have appeared on similar profiles within the same corridor, and effectors are limited.",
+      "valid_actions": [
+        {
+          "label": "Engage the identified hostile immediately and re-enter the identification cycle for the remaining unknowns",
+          "description": "Commit against the track whose identity is resolved, then apply the same withhold-and-identify discipline to the new unknowns rather than carrying the hostile classification across to them by association."
+        },
+        {
+          "label": "Engage the identified hostile and classify the remaining tracks hostile by association with it",
+          "description": "Treat the confirmed hostile as evidence that the corridor is being exploited, and prosecute the other slow tracks on the same profile without repeating the identification process."
+        },
+        {
+          "label": "Hold all engagements until every track in the corridor is individually identified",
+          "description": "Refuse to commit effectors until the whole picture is resolved, to guarantee that no protected flight is engaged."
+        },
+        {
+          "label": "Distribute the limited effectors evenly across all tracks to hedge against the worst case",
+          "description": "Assign effectors across the unknown and known tracks so that no single track is left unengaged, accepting reduced probability of kill on each."
+        }
+      ],
+      "preferred_action": "Engage the identified hostile immediately and re-enter the identification cycle for the remaining unknowns",
+      "rationale": "Identification is the currency of this problem, and it has just been earned on one track only. That track should be engaged without further delay, because the reason for the hold no longer exists and every second of closure since the original offer has cost engagement margin. The temptation once one hostile is confirmed is to let that confirmation contaminate the rest of the picture - the corridor is clearly being exploited, so surely the other slow movers are the same thing. That inference is exactly what an adversary who mixes hostile tracks into protected airspace is counting on, and it is also precisely the reasoning the original hold was designed to resist. The identification standard does not relax because the threat picture worsened; if anything, a confirmed exploitation attempt makes it more likely that genuine protected traffic is also in the corridor and more consequential to get wrong. Each remaining unknown gets its own identification cycle, its own last-shot point, and its own decision, run in parallel and prioritised by time-to-boundary. With effectors limited, they are committed to identified tracks in order of urgency, not spread thin as a hedge against uncertainty - a hedge that reduces the probability of stopping the one track known to be dangerous.",
+      "common_errors": [
+        "Carrying a hostile classification across from an identified track to unidentified tracks on a similar profile, which is guilt by association and defeats the entire purpose of the earlier hold.",
+        "Delaying the engagement of the now-identified hostile while re-assessing the wider picture, spending the margin that the identification effort was supposed to preserve.",
+        "Freezing all engagements pending full resolution of every track, which guarantees that at least one confirmed threat reaches the defended asset while the operator waits for certainty that may never arrive.",
+        "Spreading limited effectors thinly across identified and unidentified tracks, reducing effectiveness against the known threat without meaningfully covering the unknowns.",
+        "Failing to re-prioritise the remaining unknowns by time-to-boundary, so identification effort is spent on the least urgent track first.",
+        "Not reporting the confirmed corridor exploitation upward, denying the wider air picture information that would help other fire units facing the same ambiguity."
+      ]
+    }
+  ],
+  "difficulty_scaling": {
+    "easy": {
+      "description": "A single low, slow unknown at approximately 40 km inside a medevac corridor. A visual identification asset is on station and can be cued quickly, the airspace authority answers the corridor query on the first attempt, and effectors are plentiful. Identification resolves comfortably before the last defensible engagement point, so the trainee is assessed mainly on recognising that the hold is correct and on maintaining the fire solution throughout it.",
+      "threat_count": {
+        "min": 1,
+        "max": 1
+      },
+      "time_window_seconds": {
+        "min": 240,
+        "max": 300
+      },
+      "pressure_note": "Ample time and responsive supporting agencies. The dilemma is one of discipline rather than tempo: the trainee must resist an early engagement at optimal geometry and must not confuse holding fire with standing down."
+    },
+    "medium": {
+      "description": "Two low, slow unknowns enter the corridor on similar profiles. Only one identification asset is available and must be prioritised between them, and the airspace authority responds only after repeated queries, reporting a scheduled medical flight it cannot locate. One track will reach the keep-out boundary before identification can plausibly complete, forcing the trainee to compute and own a last-shot point.",
+      "threat_count": {
+        "min": 2,
+        "max": 2
+      },
+      "time_window_seconds": {
+        "min": 150,
+        "max": 200
+      },
+      "pressure_note": "Identification capacity is now scarcer than the number of tracks needing it, and the corridor information actively worsens the picture rather than clarifying it. The trainee must declare a decision rule at the last-shot point instead of letting the deadline pass unaddressed."
+    },
+    "hard": {
+      "description": "Four low, slow unknowns arrive staggered along the corridor axis, one of which resolves as a confirmed hostile mid-scenario. Identification assets are absent or intermittent, the airspace authority cannot be raised at all, and effectors are down to the minimum. Time-to-boundary on the leading tracks is short enough that identification and engagement cannot both complete on every track, so the trainee must ration identification effort and effectors simultaneously while refusing to classify the remaining unknowns by association with the confirmed hostile.",
+      "threat_count": {
+        "min": 3,
+        "max": 4
+      },
+      "time_window_seconds": {
+        "min": 60,
+        "max": 100
+      },
+      "pressure_note": "Maximum ambiguity with minimum time and resources. Supporting agencies are unavailable, so the trainee must resolve the corridor question from behavioural evidence alone, accept that at least one track cannot be fully identified before the decision point, and still keep each track's decision separate."
+    }
+  },
+  "evaluation_criteria": {
+    "success_condition": "The trainee withholds the engagement on an unidentified low, slow track inside an unresolved medevac corridor rather than firing at maximum range, and uses the resulting time actively: cueing visual or electro-optical identification, querying the airspace control authority about corridor status in parallel, and maintaining a live fire solution throughout the hold. The trainee computes and explicitly owns a last defensible engagement point, states in advance what will happen if identification is unresolved at that point, and names the track behaviours that would collapse the hold earlier. When identification resolves hostile, the trainee engages without further delay and continues to treat each remaining unknown as requiring its own identification, rather than classifying by association. Limited effectors are committed to identified tracks in order of time-to-boundary rather than spread as a hedge.",
+    "scoring_notes": "Score the reasoning process, not the outcome of the shot. A trainee who holds correctly and loses the engagement window through a declared, bounded decision has performed better than one who fires early at an unidentified track and happens to be right. Award the most credit for parallel action - identification and corridor deconfliction pursued at the same time - and for explicit ownership of the last-shot point, since both were the substance of the expert's account of holding for a visual. Penalise heavily: treating interrogation failure as hostile identification; letting the last-shot point pass without a stated decision; releasing the fire solution during the hold; and extending a confirmed hostile classification to other tracks on a similar profile. Penalise moderately: sequencing the identification and corridor queries instead of running them together; referring the decision upward before doing local identification work; treating non-response to a warning as positive hostile identification; and distributing scarce effectors evenly across identified and unidentified tracks. At higher difficulties, additionally credit the trainee for rationing identification effort by time-to-boundary and for reporting confirmed corridor exploitation upward."
+  },
+  "id": "f21f741c-7e20-4992-a511-dfef0d0031ee",
+  "system_id": "e7f4d85e-4802-44ca-87fa-03ed58ef702f",
+  "status": "draft",
+  "source_chat_log": "Designer: low slow unknown at 40 km in an unresolved medevac corridor; the operator held for a visual and did not engage.",
+  "created_at": "2026-08-29T16:11:30.579Z",
+  "approved_at": null
+}
