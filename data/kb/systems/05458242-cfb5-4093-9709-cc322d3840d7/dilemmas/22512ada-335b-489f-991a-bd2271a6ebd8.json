@@ -221,8 +221,8 @@
   },
   "id": "22512ada-335b-489f-991a-bd2271a6ebd8",
   "system_id": "05458242-cfb5-4093-9709-cc322d3840d7",
-  "status": "draft",
+  "status": "approved",
   "source_chat_log": "EXPERT: A track came in from the north-east at about 40 km, low, around 300 metres, doing roughly 180 knots. No IFF response at all.\nINTERVIEWER: What made it a dilemma rather than a routine engagement?\nEXPERT: A civilian medevac helicopter was cleared through that same corridor twenty minutes earlier and had not reported clear. The profile fitted both a slow cruise missile and that helicopter, and the corridor runs straight over a village.\nINTERVIEWER: What did the operator have available?\nEXPERT: Two ready launchers, 8 to 100 km, the track already inside the envelope, about four minutes to the defended point.\nINTERVIEWER: Who could authorise?\nEXPERT: Normally the battery commander, but he was off net for a handover. The operator had self-defence authority only on hostile intent — a turn onto the site, or a climb followed by a dive.\nINTERVIEWER: What actually happened?\nEXPERT: He held, requested a visual from the observation post on the ridge, got back \"rotary, white, red cross\" at three minutes, and did not engage. Right answer, but he was one nod from committing.\nINTERVIEWER: What would have made it wrong?\nEXPERT: If it had been a cruise missile, holding for the visual would have cost the site. Same hold, right and wrong depending on something he could not see.",
   "created_at": "2026-08-29T16:47:22.004Z",
-  "approved_at": null
+  "approved_at": "2026-08-29T16:47:24.369Z"
 }
