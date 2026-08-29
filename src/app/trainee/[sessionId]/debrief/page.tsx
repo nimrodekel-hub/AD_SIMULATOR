@@ -9,7 +9,9 @@ import { getSession } from "@/lib/store/sessions";
  *
  * Working-surface theme, not operations-room: this is read slowly, and it is
  * where the actual learning happens. Everything shown here is grounded in the
- * knowledge base — the per-decision comments are the expert's own reasoning.
+ * knowledge base — the comments against each moment are the expert's own
+ * reasoning, and the tally beside the score was counted by the simulation from
+ * the run itself rather than judged by anything.
  */
 
 export const dynamic = "force-dynamic";
@@ -62,6 +64,46 @@ export default async function DebriefPage({
         </div>
       </div>
 
+      {/* ---- What the simulation counted ---------------------------- */}
+      {session.run_result ? (
+        <section className="mt-6">
+          <h2 className="text-sm font-semibold">The tally</h2>
+          <p className="mt-1 text-xs text-muted">
+            Counted from the run itself. These are not judgements and nothing
+            can argue with them — the assessment above explains how they came
+            about.
+          </p>
+          <dl className="data mt-3 grid grid-cols-2 gap-px overflow-hidden rounded border border-line bg-[var(--border)] sm:grid-cols-3 lg:grid-cols-5">
+            <Tally
+              label="Hostiles destroyed"
+              value={session.run_result.hostiles_destroyed}
+            />
+            <Tally
+              label="Reached the site"
+              value={session.run_result.leakers}
+              bad={session.run_result.leakers > 0}
+            />
+            <Tally
+              label="Friendlies engaged"
+              value={session.run_result.friendly_engaged}
+              bad={session.run_result.friendly_engaged > 0}
+            />
+            <Tally
+              label="Rounds spent"
+              value={session.run_result.interceptors_spent}
+            />
+            <Tally
+              label="Mean reaction"
+              value={
+                session.run_result.mean_reaction_s === null
+                  ? "—"
+                  : `${session.run_result.mean_reaction_s}s`
+              }
+            />
+          </dl>
+        </section>
+      ) : null}
+
       {/* ---- The debrief itself ------------------------------------- */}
       <section className="mt-8">
         <h2 className="text-sm font-semibold">What happened</h2>
@@ -70,12 +112,13 @@ export default async function DebriefPage({
         </div>
       </section>
 
-      {/* ---- Decision by decision ----------------------------------- */}
+      {/* ---- The moments that decided it ---------------------------- */}
       <section className="mt-8">
-        <h2 className="text-sm font-semibold">Decision by decision</h2>
+        <h2 className="text-sm font-semibold">The moments that decided it</h2>
         <p className="mt-1 text-xs text-muted">
-          The comments below come from the knowledge base — the reasoning the
-          domain expert recorded when this dilemma was captured.
+          The turning points of the run, taken from what actually happened. The
+          comments come from the knowledge base — the reasoning the domain
+          expert recorded when this dilemma was captured.
         </p>
         <ol className="mt-4 space-y-3">
           {outcome.per_decision.map((entry) => (
@@ -84,21 +127,18 @@ export default async function DebriefPage({
                 <span
                   className={`chip ${entry.correct ? "status-ok" : "status-danger"}`}
                 >
-                  {entry.correct ? "correct" : "missed"}
+                  {entry.correct ? "well handled" : "cost you"}
                 </span>
-                <p className="text-xs text-muted">
-                  Decision {entry.decision_point_index + 1}
-                </p>
               </div>
 
               <dl className="mt-3 space-y-1.5 text-sm">
                 <div className="flex flex-wrap gap-x-2">
-                  <dt className="text-muted">You chose:</dt>
+                  <dt className="text-muted">You:</dt>
                   <dd>{entry.chosen_action}</dd>
                 </div>
                 {!entry.correct ? (
                   <div className="flex flex-wrap gap-x-2">
-                    <dt className="text-muted">Preferred:</dt>
+                    <dt className="text-muted">The record says:</dt>
                     <dd className="text-ok">{entry.preferred_action}</dd>
                   </div>
                 ) : null}
@@ -135,5 +175,33 @@ export default async function DebriefPage({
         </Link>
       </div>
     </ScreenShell>
+  );
+}
+
+/**
+ * One counted figure.
+ *
+ * Deliberately plain: these are facts about the run, and dressing them up
+ * would blur the line between what happened and what somebody thought of it.
+ * Only the two that fail a run are coloured.
+ */
+function Tally({
+  label,
+  value,
+  bad = false,
+}: {
+  label: string;
+  value: number | string;
+  bad?: boolean;
+}) {
+  return (
+    <div className="bg-panel p-4">
+      <dt className="text-[0.625rem] uppercase tracking-[0.1em] text-muted">
+        {label}
+      </dt>
+      <dd className={`mt-1 text-2xl font-semibold ${bad ? "text-danger" : ""}`}>
+        {value}
+      </dd>
+    </div>
   );
 }

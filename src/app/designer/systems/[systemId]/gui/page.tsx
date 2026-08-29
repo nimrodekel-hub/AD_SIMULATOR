@@ -49,6 +49,27 @@ export default async function GuiBuilderPage({
         </Link>
       </p>
 
+      {/* A console built before the simulator has nowhere to put a radar
+          picture, so runs fall back to the built-in layout rather than
+          squeezing a scope into a panel meant for rows of text. Say so here,
+          where it can be fixed, rather than leaving the designer to wonder why
+          their console never appears. */}
+      {existing?.approved &&
+      !existing.generated_ui_code.includes('data-slot="scope"') ? (
+        <div className="panel mb-8 border-l-2 border-l-warn p-4">
+          <p className="text-sm">
+            <strong>This console predates the live simulator.</strong> It has no
+            place for a radar picture, so training runs are using the built-in
+            operations layout instead of your console.
+          </p>
+          <p className="mt-2 text-xs text-muted">
+            Rebuilding it from the same screenshots adds a scope panel — the
+            circular display tracks actually move on — and runs will use your
+            console again.
+          </p>
+        </div>
+      ) : null}
+
       {missing === null ? (
         <GuiBuilder
           systemId={systemId}
