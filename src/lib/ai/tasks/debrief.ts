@@ -85,6 +85,7 @@ export async function generateDebrief(input: {
     schema: DebriefSchema,
     effort: "high",
     maxTokens: 8000,
+    label: "debrief",
     mock: () => mockDebrief(playback),
   });
 }
