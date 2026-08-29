@@ -97,6 +97,11 @@ export const DATA_PATHS = {
    * accumulate.
    */
   jobs: "data/jobs",
+  /**
+   * Knowledge that sits above every system: the general briefing and the
+   * lessons. One document for the whole app, edited by the designer.
+   */
+  generalKnowledge: "data/kb/general-knowledge.json",
 } as const;
 
 /** Where a trainee's in-flight scenario generation is recorded. */
