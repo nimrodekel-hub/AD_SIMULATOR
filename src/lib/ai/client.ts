@@ -44,21 +44,38 @@ function reportUsage(label: string, usage: Usage | null | undefined): void {
 }
 
 /**
- * Everything the model is told that does not change between calls.
+ * The system prompt, split into separately cacheable blocks.
  *
- * Marked for caching: it sits at the very front of every prompt, so it is the
- * one part that can be paid for once and read back cheaply. The hour-long
- * lifetime is chosen for the interview, where the expert takes minutes to write
- * each answer and a five-minute entry would be cold by the next turn.
+ * Caching is a prefix match, so the order is the design: put what never changes
+ * first and what varies last, and each block gets its own read point. The
+ * interview sends two — instructions and generic background, identical for
+ * every system in the app, then this system's profile — so the large constant
+ * half is paid for once across every conversation anyone has, and only the
+ * profile is cached per-system.
+ *
+ * The hour-long lifetime is chosen for the interview, where the expert takes
+ * minutes to write each answer and a five-minute entry would be cold by the
+ * next turn.
  */
-function cacheableSystem(system: string): Anthropic.TextBlockParam[] {
-  return [
-    {
-      type: "text",
-      text: system,
-      cache_control: { type: "ephemeral", ttl: "1h" },
-    },
-  ];
+function cacheableSystem(system: string | string[]): Anthropic.TextBlockParam[] {
+  const blocks = (Array.isArray(system) ? system : [system]).filter(
+    (text) => text.trim().length > 0,
+  );
+
+  // Four breakpoints per request is the hard limit, and the growing message
+  // tail claims one. Anything past that is silently wasted, so refuse to
+  // generate it rather than let a fourth block quietly stop caching.
+  if (blocks.length > 3) {
+    throw new Error(
+      `A prompt may carry at most 3 cached system blocks; got ${blocks.length}.`,
+    );
+  }
+
+  return blocks.map((text) => ({
+    type: "text",
+    text,
+    cache_control: { type: "ephemeral", ttl: "1h" },
+  }));
 }
 
 let client: Anthropic | undefined;
@@ -107,7 +124,8 @@ export function describeAiError(reason: unknown): string {
 /* ------------------------------------------------------------------ */
 
 export interface StructuredRequest<T> {
-  system: string;
+  /** One block, or several ordered stable-to-variable for caching. */
+  system: string | string[];
   messages: Anthropic.MessageParam[];
   schema: z.ZodType<T>;
   /**
@@ -177,7 +195,8 @@ export async function structured<T>({
 /* ------------------------------------------------------------------ */
 
 export interface StreamRequest {
-  system: string;
+  /** One block, or several ordered stable-to-variable for caching. */
+  system: string | string[];
   messages: Anthropic.MessageParam[];
   effort?: Effort;
   maxTokens?: number;

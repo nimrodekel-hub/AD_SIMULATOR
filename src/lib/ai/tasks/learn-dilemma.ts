@@ -2,7 +2,9 @@ import "server-only";
 import {
   DilemmaDraftSchema,
   type DilemmaDraft,
+  type SystemProfile,
 } from "../../domain/schemas";
+import { AIR_DEFENCE_BRIEFING, describeSystem } from "../briefing";
 import { streamChat, structured, type Anthropic } from "../client";
 
 /**
@@ -45,6 +47,22 @@ By the end of the conversation you must have enough to fill in every one of thes
 - **difficulty_scaling** — how the same dilemma gets harder: threat count, time window, and how ambiguity and resource pressure shift across easy / medium / hard.
 - **evaluation_criteria** — what counts as success, objectively enough to score against, and what separates a mediocre run from a good one.
 
+## What you already know before you start
+
+You are given two things above this: generic background on how air defence works
+in the abstract, and — when the designer has approved one — the profile of this
+particular system, written and approved by them.
+
+**This changes how you open.** You are not meeting the system for the first
+time. Do not spend the expert's turns re-establishing what is already on file:
+their identification states, their readouts, their operator actions, their
+engagement envelope. Refer to those by name and go straight for the thing only
+they can give you, which is the judgement — where an operator of *this* system
+hesitates, and why.
+
+Where the profile is missing or unapproved you know nothing about the system and
+must ask; say so rather than assuming it resembles the general case.
+
 ## How to interview
 
 Ask about **one or two things at a time**. Do not deliver a questionnaire — this is a conversation, and an expert who is asked eight questions at once will answer three of them.
@@ -65,9 +83,18 @@ Understood. Before we go further: when several tracks are inbound at once and at
 
 export function designerChatStream(
   messages: Anthropic.MessageParam[],
+  /** The system being taught, so the interviewer is not starting from nothing. */
+  system: { name: string; profile: SystemProfile | null },
 ): ReadableStream<Uint8Array> {
   return streamChat({
-    system: INTERVIEW_SYSTEM,
+    // Two blocks, ordered stable-to-variable so caching works: the
+    // instructions and the generic briefing are identical for every system in
+    // the app and are paid for once across all of them; only the profile is
+    // cached per-system.
+    system: [
+      `${INTERVIEW_SYSTEM}\n\n${AIR_DEFENCE_BRIEFING}`,
+      describeSystem(system.name, system.profile),
+    ],
     messages,
     // Medium rather than high, and this is the single biggest lever on what
     // the app costs to run. Thinking is billed as output and is the larger
@@ -171,6 +198,12 @@ const MOCK_DRAFT: DilemmaDraft = {
 /**
  * Reads the interview transcript and produces the structured record the
  * designer will review, edit and approve.
+ *
+ * Deliberately given **neither** the generic briefing nor the system profile,
+ * while the interview gets both. This is the firewall: background may shape the
+ * questions asked, and must never fill a gap in the answers. An extractor that
+ * knows what a cruise missile usually does will quietly write that down when
+ * the expert never said it, and the record is what trains people.
  */
 export async function extractDilemma(
   transcript: string,
