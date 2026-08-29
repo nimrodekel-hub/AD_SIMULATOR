@@ -251,11 +251,12 @@ export async function extractSystemProfile(
     // Medium rather than high. This is a reading task: the designer has already
     // written the answers and the labels are printed on the screenshots, so the
     // work is transcription and tidying rather than reasoning. High effort spent
-    // its extra thinking time without changing the record, and the platform cuts
-    // the request off at sixty seconds — a profile that never arrives is worth
-    // less than one that arrives slightly plainer.
+    // its extra thinking time without changing the record, and thinking is the
+    // larger half of what a call costs — so a profile that arrives slightly
+    // plainer, sooner and cheaper is the better trade. Measured at 29-35s.
     effort: "medium",
     maxTokens: 16000,
+    label: "extract-profile",
     mock: () => MOCK_PROFILE,
   });
 }
