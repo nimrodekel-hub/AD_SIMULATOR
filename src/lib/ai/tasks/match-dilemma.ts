@@ -97,6 +97,7 @@ export async function matchDilemma({
     schema: MatchResultSchema,
     effort: "high",
     maxTokens: 4000,
+    label: "match",
     mock: () => ({
       dilemma_entry_id: dilemmas[0]?.id ?? "",
       confidence: 0.9,

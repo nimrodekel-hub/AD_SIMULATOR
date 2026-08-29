@@ -70,6 +70,7 @@ export function designerChatStream(
     system: INTERVIEW_SYSTEM,
     messages,
     effort: "high",
+    label: "interview",
     mock: MOCK_REPLY,
   });
 }
@@ -175,6 +176,7 @@ export async function extractDilemma(
     schema: DilemmaDraftSchema,
     effort: "high",
     maxTokens: 16000,
+    label: "extract-dilemma",
     mock: () => MOCK_DRAFT,
   });
 }

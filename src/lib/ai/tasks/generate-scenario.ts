@@ -91,6 +91,7 @@ export async function generateScenario(
     schema: ScenarioInstanceSchema,
     effort: "high",
     maxTokens: 16000,
+    label: "scenario",
     mock: () => mockScenario(dilemma, difficulty, profile),
   });
 }
