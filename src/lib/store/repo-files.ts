@@ -137,6 +137,18 @@ class GitHubFiles implements RepoFiles {
   private readonly branch: string;
   private readonly headers: Record<string, string>;
 
+  /**
+   * Mutations run one at a time.
+   *
+   * Every write is a commit, and the Contents API refuses a commit whose parent
+   * has moved: two writes issued in parallel race, and the loser comes back
+   * `409 is at <sha> but expected <sha>`. Uploading a handful of screenshots is
+   * exactly that shape. Rather than making every caller remember to await in
+   * sequence — a rule that is invisible until it is broken, and then only
+   * sometimes — the store queues its own writes.
+   */
+  private queue: Promise<unknown> = Promise.resolve();
+
   constructor(owner: string, repo: string, branch: string, token: string) {
     this.base = `https://api.github.com/repos/${owner}/${repo}/contents`;
     this.branch = branch;
@@ -220,7 +232,22 @@ class GitHubFiles implements RepoFiles {
     return blob.content ? blob.content.replace(/\s+/g, "") : null;
   }
 
-  private async put(
+  /** Runs `work` after every mutation queued before it, failures included. */
+  private oneAtATime<T>(work: () => Promise<T>): Promise<T> {
+    const next = this.queue.then(work, work);
+    // A failed write must not wedge the queue for the writes behind it.
+    this.queue = next.then(
+      () => undefined,
+      () => undefined,
+    );
+    return next;
+  }
+
+  private put(filePath: string, base64: string, message: string): Promise<void> {
+    return this.oneAtATime(() => this.putNow(filePath, base64, message));
+  }
+
+  private async putNow(
     filePath: string,
     base64: string,
     message: string,
@@ -253,7 +280,11 @@ class GitHubFiles implements RepoFiles {
     await this.put(filePath, Buffer.from(bytes).toString("base64"), message);
   }
 
-  async remove(filePath: string, message: string): Promise<void> {
+  remove(filePath: string, message: string): Promise<void> {
+    return this.oneAtATime(() => this.removeNow(filePath, message));
+  }
+
+  private async removeNow(filePath: string, message: string): Promise<void> {
     const sha = await this.shaOf(filePath);
     if (!sha) return;
     const response = await fetch(this.url(filePath), {
