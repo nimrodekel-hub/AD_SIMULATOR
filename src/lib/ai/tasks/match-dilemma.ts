@@ -95,7 +95,15 @@ export async function matchDilemma({
       },
     ],
     schema: MatchResultSchema,
-    effort: "high",
+    // Medium rather than high. Routing a request to one of a handful of
+    // entries is a classification, not a deliberation — it measured at nine
+    // seconds against production even at high effort, which is the shape of a
+    // task that was not using the extra thinking it was paying for.
+    //
+    // The safeguard that matters here is not effort but the confidence
+    // threshold above: a matcher that is unsure asks rather than guesses, and
+    // that behaviour is unchanged.
+    effort: "medium",
     maxTokens: 4000,
     label: "match",
     mock: () => ({
