@@ -6,17 +6,24 @@ import { getSystem, loadScreenshots } from "@/lib/store/kb";
 
 /** Turns one system's answers into a structured behaviour profile. */
 
-export const maxDuration = 60;
+/**
+ * Every route that calls the model gets the long ceiling.
+ *
+ * A model call is the only thing here that takes minutes, and the platform
+ * kills the function when this elapses. Returning early and finishing in the
+ * background does not help: on this platform the function *is* the worker, and
+ * work scheduled after the response still runs inside the same budget.
+ */
+export const maxDuration = 300;
 
 /**
  * How many references the model is shown while reading the answers.
  *
- * The platform cuts this request off at sixty seconds, and images are the
- * expensive part of it. Three is enough for what the screenshots are here to
- * settle — the column labels, their order, the identification colours — because
- * those are the same in every view of the same console. A fourth costs time and
- * says nothing new. The console step, which cares about the whole look, still
- * gets all of them.
+ * Images are the expensive part of this call, and three is enough for what the
+ * screenshots are here to settle — the column labels, their order, the
+ * identification colours — because those are the same in every view of the same
+ * console. A fourth costs seconds and says nothing new. The console step, which
+ * cares about the whole look rather than the wording, still gets all of them.
  */
 const MAX_REFERENCES_READ = 3;
 

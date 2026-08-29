@@ -10,7 +10,15 @@ import { designerChatStream } from "@/lib/ai/tasks/learn-dilemma";
  * a streamed reply.
  */
 
-export const maxDuration = 60;
+/**
+ * Every route that calls the model gets the long ceiling.
+ *
+ * A model call is the only thing here that takes minutes, and the platform
+ * kills the function when this elapses. Returning early and finishing in the
+ * background does not help: on this platform the function *is* the worker, and
+ * work scheduled after the response still runs inside the same budget.
+ */
+export const maxDuration = 300;
 
 const BodySchema = z.object({
   messages: z
