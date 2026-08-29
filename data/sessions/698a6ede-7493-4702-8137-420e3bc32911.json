@@ -1,0 +1,668 @@
+{
+  "id": "698a6ede-7493-4702-8137-420e3bc32911",
+  "trainee_id": "trainee-a",
+  "system_id": "75980758-63a4-42ec-bbd7-0d4e65a0c118",
+  "dilemma_entry_id": "e2128e4e-e22c-43c7-87af-7c0c846c6f1b",
+  "requested_text": "train dealing a lot of targets",
+  "clarification_rounds": [],
+  "difficulty_level": "medium",
+  "scenario_instance": {
+    "scenario_name": "Saturation Raid — Sector Alpha Mass Inbound",
+    "situation_brief": "You are the sole console operator of a ground-based air-defence site defending a fixed installation. Radar coverage is a stationary 120-degree sector oriented 350°–070°; tilt is currently set for medium altitude. Engagement rings are 70 km (long), 50 km (medium) and 20 km (short). Two launchers are loaded and free; the system will not permit more than two rockets in the air at once. Thirteen tracks are held. Ten have been classified Enemy by the system: three fast jets on the outer arc and a following wave of seven UAVs. Three further tracks are held as Unknown; classification of Unknown tracks is referred to the commander, who answers in about fifteen seconds. Nothing may be fired on unless it is classified Enemy. The tactical window from the current picture to the first hostile arrival over the site is roughly four minutes.",
+    "time_window_seconds": 240,
+    "tracks": [
+      {
+        "designator": "TRK 2201",
+        "iff_status": "Enemy",
+        "classification": "Jet",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "2201"
+          },
+          {
+            "label": "SPD",
+            "value": "540 kts"
+          },
+          {
+            "label": "ALT",
+            "value": "4,200 ft"
+          },
+          {
+            "label": "TYPE",
+            "value": "Jet"
+          },
+          {
+            "label": "ID",
+            "value": "Enemy"
+          },
+          {
+            "label": "FIRE STATUS",
+            "value": "Ready to shoot"
+          },
+          {
+            "label": "TTI",
+            "value": "74 s"
+          },
+          {
+            "label": "PK",
+            "value": "82 %"
+          }
+        ],
+        "notes": "Lead jet. Bearing 041°, range 62 km at T+0, steady closing, no manoeuvre. Just inside the 70 km long-range ring with a valid solution displayed. At present closure it is over the site in about 223 s."
+      },
+      {
+        "designator": "TRK 2202",
+        "iff_status": "Enemy",
+        "classification": "Jet",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "2202"
+          },
+          {
+            "label": "SPD",
+            "value": "520 kts"
+          },
+          {
+            "label": "ALT",
+            "value": "6,800 ft"
+          },
+          {
+            "label": "TYPE",
+            "value": "Jet"
+          },
+          {
+            "label": "ID",
+            "value": "Enemy"
+          },
+          {
+            "label": "FIRE STATUS",
+            "value": "Ready to shoot"
+          },
+          {
+            "label": "TTI",
+            "value": "81 s"
+          },
+          {
+            "label": "PK",
+            "value": "79 %"
+          }
+        ],
+        "notes": "Second jet, bearing 026°, range 66 km at T+0. Trails the lead by roughly 15 s. Reaches the site in about 247 s if unengaged."
+      },
+      {
+        "designator": "TRK 2203",
+        "iff_status": "Enemy",
+        "classification": "Jet",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "2203"
+          },
+          {
+            "label": "SPD",
+            "value": "560 kts"
+          },
+          {
+            "label": "ALT",
+            "value": "2,900 ft"
+          },
+          {
+            "label": "TYPE",
+            "value": "Jet"
+          },
+          {
+            "label": "ID",
+            "value": "Enemy"
+          },
+          {
+            "label": "FIRE STATUS",
+            "value": "Ready to shoot"
+          },
+          {
+            "label": "TTI",
+            "value": "86 s"
+          },
+          {
+            "label": "PK",
+            "value": "74 %"
+          }
+        ],
+        "notes": "Third jet, bearing 058°, range 69 km at T+0, fastest closer of the three and lowest. Grazing the long-range ring; solution is valid but Pk is the weakest of the jet group at this range. Over the site in about 240 s."
+      },
+      {
+        "designator": "TRK 3311",
+        "iff_status": "Enemy",
+        "classification": "UAV",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "3311"
+          },
+          {
+            "label": "SPD",
+            "value": "245 kts"
+          },
+          {
+            "label": "ALT",
+            "value": "3,400 ft"
+          },
+          {
+            "label": "TYPE",
+            "value": "UAV"
+          },
+          {
+            "label": "ID",
+            "value": "Enemy"
+          },
+          {
+            "label": "FIRE STATUS",
+            "value": "Ready to shoot"
+          },
+          {
+            "label": "TTI",
+            "value": "41 s"
+          },
+          {
+            "label": "PK",
+            "value": "88 %"
+          }
+        ],
+        "notes": "Lead UAV of the following wave. Bearing 013°, range 30 km at T+0 — nearest track in the picture. Crosses the 20 km short-range ring at about T+79 s, over the site at about T+238 s."
+      },
+      {
+        "designator": "TRK 3312",
+        "iff_status": "Enemy",
+        "classification": "UAV",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "3312"
+          },
+          {
+            "label": "SPD",
+            "value": "240 kts"
+          },
+          {
+            "label": "ALT",
+            "value": "2,600 ft"
+          },
+          {
+            "label": "TYPE",
+            "value": "UAV"
+          },
+          {
+            "label": "ID",
+            "value": "Enemy"
+          },
+          {
+            "label": "FIRE STATUS",
+            "value": "Ready to shoot"
+          },
+          {
+            "label": "TTI",
+            "value": "45 s"
+          },
+          {
+            "label": "PK",
+            "value": "87 %"
+          }
+        ],
+        "notes": "Bearing 019°, range 33 km at T+0. Crosses the short ring at about T+105 s."
+      },
+      {
+        "designator": "TRK 3313",
+        "iff_status": "Enemy",
+        "classification": "UAV",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "3313"
+          },
+          {
+            "label": "SPD",
+            "value": "235 kts"
+          },
+          {
+            "label": "ALT",
+            "value": "5,100 ft"
+          },
+          {
+            "label": "TYPE",
+            "value": "UAV"
+          },
+          {
+            "label": "ID",
+            "value": "Enemy"
+          },
+          {
+            "label": "FIRE STATUS",
+            "value": "Ready to shoot"
+          },
+          {
+            "label": "TTI",
+            "value": "47 s"
+          },
+          {
+            "label": "PK",
+            "value": "85 %"
+          }
+        ],
+        "notes": "Bearing 004°, range 35 km at T+0, steady profile, no manoeuvre."
+      },
+      {
+        "designator": "TRK 3314",
+        "iff_status": "Enemy",
+        "classification": "UAV",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "3314"
+          },
+          {
+            "label": "SPD",
+            "value": "230 kts"
+          },
+          {
+            "label": "ALT",
+            "value": "1,800 ft"
+          },
+          {
+            "label": "TYPE",
+            "value": "UAV"
+          },
+          {
+            "label": "ID",
+            "value": "Enemy"
+          },
+          {
+            "label": "FIRE STATUS",
+            "value": "Ready to shoot"
+          },
+          {
+            "label": "TTI",
+            "value": "50 s"
+          },
+          {
+            "label": "PK",
+            "value": "84 %"
+          }
+        ],
+        "notes": "Bearing 049°, range 37 km at T+0. Low profile but currently above the tilt floor."
+      },
+      {
+        "designator": "TRK 3315",
+        "iff_status": "Enemy",
+        "classification": "UAV",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "3315"
+          },
+          {
+            "label": "SPD",
+            "value": "250 kts"
+          },
+          {
+            "label": "ALT",
+            "value": "8,200 ft"
+          },
+          {
+            "label": "TYPE",
+            "value": "UAV"
+          },
+          {
+            "label": "ID",
+            "value": "Enemy"
+          },
+          {
+            "label": "FIRE STATUS",
+            "value": "Ready to shoot"
+          },
+          {
+            "label": "TTI",
+            "value": "52 s"
+          },
+          {
+            "label": "PK",
+            "value": "83 %"
+          }
+        ],
+        "notes": "Bearing 062°, range 39 km at T+0, fastest of the UAV wave; will overtake TRK 3316 inside the medium ring."
+      },
+      {
+        "designator": "TRK 3316",
+        "iff_status": "Enemy",
+        "classification": "UAV",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "3316"
+          },
+          {
+            "label": "SPD",
+            "value": "225 kts"
+          },
+          {
+            "label": "ALT",
+            "value": "4,600 ft"
+          },
+          {
+            "label": "TYPE",
+            "value": "UAV"
+          },
+          {
+            "label": "ID",
+            "value": "Enemy"
+          },
+          {
+            "label": "FIRE STATUS",
+            "value": "Ready to shoot"
+          },
+          {
+            "label": "TTI",
+            "value": "55 s"
+          },
+          {
+            "label": "PK",
+            "value": "81 %"
+          }
+        ],
+        "notes": "Bearing 031°, range 42 km at T+0, inside medium-range ring."
+      },
+      {
+        "designator": "TRK 3317",
+        "iff_status": "Enemy",
+        "classification": "UAV",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "3317"
+          },
+          {
+            "label": "SPD",
+            "value": "220 kts"
+          },
+          {
+            "label": "ALT",
+            "value": "900 ft"
+          },
+          {
+            "label": "TYPE",
+            "value": "UAV"
+          },
+          {
+            "label": "ID",
+            "value": "Enemy"
+          },
+          {
+            "label": "FIRE STATUS",
+            "value": "Ready to shoot"
+          },
+          {
+            "label": "TTI",
+            "value": "58 s"
+          },
+          {
+            "label": "PK",
+            "value": "76 %"
+          }
+        ],
+        "notes": "Tail of the UAV wave. Bearing 067°, range 45 km at T+0, near the 50 km detection limit for its class and flying low — track quality degrades and it may drop below the current tilt setting as it closes."
+      },
+      {
+        "designator": "TRK 4401",
+        "iff_status": "Unknown",
+        "classification": "Jet",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "4401"
+          },
+          {
+            "label": "SPD",
+            "value": "420 kts"
+          },
+          {
+            "label": "ALT",
+            "value": "12,500 ft"
+          },
+          {
+            "label": "TYPE",
+            "value": "Jet"
+          },
+          {
+            "label": "ID",
+            "value": "Unknown"
+          },
+          {
+            "label": "FIRE STATUS",
+            "value": "Ready to shoot"
+          },
+          {
+            "label": "TTI",
+            "value": "68 s"
+          },
+          {
+            "label": "PK",
+            "value": "77 %"
+          }
+        ],
+        "notes": "Bearing 355°, range 58 km at T+0, inside the long-range ring. Heading has changed three times in the last minute and the track is descending while closing on the protected area — the profile reads as aggressive. No correlated call sign; classification not resolved. Referral to the commander is available."
+      },
+      {
+        "designator": "TRK 4402",
+        "iff_status": "Unknown",
+        "classification": "Helicopter",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "4402"
+          },
+          {
+            "label": "SPD",
+            "value": "110 kts"
+          },
+          {
+            "label": "ALT",
+            "value": "700 ft"
+          },
+          {
+            "label": "TYPE",
+            "value": "Helicopter"
+          },
+          {
+            "label": "ID",
+            "value": "Unknown"
+          },
+          {
+            "label": "FIRE STATUS",
+            "value": "Ready to shoot"
+          },
+          {
+            "label": "TTI",
+            "value": "46 s"
+          },
+          {
+            "label": "PK",
+            "value": "61 %"
+          }
+        ],
+        "notes": "Bearing 002°, range 34 km at T+0, very low and intermittent — sits close to the tilt floor and fades in and out of the envelope. Classification not resolved."
+      },
+      {
+        "designator": "TRK 4403",
+        "iff_status": "Unknown",
+        "classification": "UAV",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "4403"
+          },
+          {
+            "label": "SPD",
+            "value": "130 kts"
+          },
+          {
+            "label": "ALT",
+            "value": "9,400 ft"
+          },
+          {
+            "label": "TYPE",
+            "value": "UAV"
+          },
+          {
+            "label": "ID",
+            "value": "Unknown"
+          },
+          {
+            "label": "FIRE STATUS",
+            "value": "Ready to shoot"
+          },
+          {
+            "label": "TTI",
+            "value": "56 s"
+          },
+          {
+            "label": "PK",
+            "value": "72 %"
+          }
+        ],
+        "notes": "Bearing 044°, range 44 km at T+0, slow and steady, tracking laterally across the sector rather than at the site. Classification not resolved."
+      }
+    ],
+    "resources": [
+      {
+        "name": "Missiles simultaneously in the air (hard system limit)",
+        "unit": "rockets",
+        "available": 2,
+        "total": 2
+      },
+      {
+        "name": "Long-range engagement ring",
+        "unit": "km",
+        "available": 70,
+        "total": 70
+      },
+      {
+        "name": "Short-range engagement ring",
+        "unit": "km",
+        "available": 20,
+        "total": 20
+      },
+      {
+        "name": "Commander referral response time for an Unknown track",
+        "unit": "seconds",
+        "available": 15,
+        "total": 15
+      },
+      {
+        "name": "Hostile tracks in the raid (3 jets, 7 UAVs)",
+        "unit": "tracks",
+        "available": 10,
+        "total": 10
+      },
+      {
+        "name": "Unclassified tracks entering as Unknown (all actually friendly)",
+        "unit": "tracks",
+        "available": 3,
+        "total": 3
+      }
+    ],
+    "decision_points": [
+      {
+        "kb_decision_point_index": 0,
+        "situation_rendered": "T+0. Thirteen tracks are held. TRK 2201 (Jet, Enemy) has just crossed the 70 km ring at 62 km, bearing 041°, 540 kts, and the console shows a valid solution: TTI 74 s, PK 82%. TRK 2202 is 4 km behind it and TRK 2203 is at 69 km closing at 560 kts. The UAV wave is already inside the medium ring, with TRK 3311 the nearest track in the picture at 30 km and due to cross the 20 km short ring at about T+79 s. TRK 4401, TRK 4402 and TRK 4403 are held Unknown, one of them closing and manoeuvring. Both launchers are free and nothing is committed.",
+        "actions": [
+          {
+            "label": "Engage the nearest UAV first, then turn to the jets",
+            "description": "Clear the closest track on the display first on the reasoning that proximity equals urgency, then handle the jets as they arrive."
+          },
+          {
+            "label": "Fire the lead jet at the earliest valid firing solution",
+            "description": "Commit a rocket to the fastest closer as soon as the system shows the target inside the envelope with an acceptable kill probability, without waiting for the picture to improve."
+          },
+          {
+            "label": "Wait until all three Unknowns are classified before opening fire at all",
+            "description": "Resolve the identification picture completely so that no engagement is begun while any ambiguity remains on the display."
+          },
+          {
+            "label": "Hold the jet until it closes to a higher-confidence range",
+            "description": "Delay commitment to roughly mid-envelope so that kill probability is maximised and fewer rockets are expended per jet."
+          }
+        ]
+      },
+      {
+        "kb_decision_point_index": 1,
+        "situation_rendered": "T+79. Two rockets are in the air — one against TRK 2201, one against TRK 2202 — and both read ROCKET LAUNCHED with no outcome yet; the earlier of the two has roughly 12 s of flight remaining on the display. The in-flight limit of two is reached, so no third launch will be accepted. TRK 3311 (UAV, Enemy, 245 kts) has just crossed the 20 km short-range ring and shows TTI 26 s against a short-range interceptor. TRK 2203 is still inbound at 48 km and the remaining six UAVs are between 24 and 38 km.",
+        "actions": [
+          {
+            "label": "Break one jet engagement to free a launcher for the closing UAV",
+            "description": "Cease fire on the less-developed jet engagement so that a rocket becomes immediately available against the track now inside the short ring."
+          },
+          {
+            "label": "Hold and wait for a fire status to resolve",
+            "description": "Keep both engagements running, wait for the missiles to report, and take the freed launcher onto the UAV the moment the status resolves."
+          },
+          {
+            "label": "Salvo a third rocket at the UAV and accept the system limit warning",
+            "description": "Attempt to exceed the in-flight limit rather than allow a leaker, on the reasoning that a leaked UAV is a guaranteed loss and the limit may be soft."
+          },
+          {
+            "label": "Switch the guidance of a committed rocket onto the crossing UAV",
+            "description": "Retarget an in-flight rocket to the nearer, slower track, on the reasoning that the closer threat is the more immediate danger to the site."
+          }
+        ]
+      },
+      {
+        "kb_decision_point_index": 2,
+        "situation_rendered": "T+96. TRK 4401 is now at 34 km, bearing 358°, still held Unknown. It has descended through 9,000 ft, altered heading twice more and is now steady on a run that points directly at the protected area; the console offers a solution with TTI 44 s and PK 84%. No call sign has correlated. TRK 4402 and TRK 4403 also remain Unknown. One launcher is free, TRK 2203 is at 43 km and inside the long ring, and the UAV wave is crossing the short ring. Referral to the commander is available and answers in about 15 s.",
+        "actions": [
+          {
+            "label": "Engage the Unknown on the basis of its aggressive behaviour",
+            "description": "Treat closing, manoeuvring flight profile as sufficient evidence of hostility and engage before the track reaches a range where it can act."
+          },
+          {
+            "label": "Ignore the Unknown entirely and give it no further attention",
+            "description": "Deprioritise the track completely so that attention and launchers stay on confirmed hostiles until the raid is finished."
+          },
+          {
+            "label": "Refer to the commander and withhold fire until the track is classified Enemy",
+            "description": "Pass the unknown track up for classification, expect an answer within about fifteen seconds, and hold fire on that track meanwhile while continuing to service classified Enemy tracks."
+          },
+          {
+            "label": "Self-classify the track as Enemy and log the reasoning after the engagement",
+            "description": "Make the identification call locally to preserve reaction time, on the reasoning that the operator has the best view of the track's behaviour."
+          }
+        ]
+      },
+      {
+        "kb_decision_point_index": 3,
+        "situation_rendered": "T+152. TRK 2201, TRK 2202 and TRK 2203 have blinked out as good kills or are past the engagement window; no jets remain in the picture. Both launchers are free. Seven UAVs remain, spread between 6 km and 29 km: TRK 3311 at 6 km inside the short ring, TRK 3312 at 11 km, TRK 3313 at 16 km, TRK 3314 at 19 km, TRK 3315 at 22 km, TRK 3316 at 25 km and TRK 3317 at 29 km, the last of these low at 900 ft with intermittent track quality. TRK 4402 and TRK 4403 are still displayed as Unknown. The two-in-flight limit still applies and roughly 90 s of window remain.",
+        "actions": [
+          {
+            "label": "Service the UAVs strictly by slant range, nearest first",
+            "description": "Order the remaining queue purely by distance so that the closest track is always the one being engaged."
+          },
+          {
+            "label": "Hold fire until UAVs enter the innermost part of the envelope to maximise kill probability",
+            "description": "Conserve rockets by engaging only at short range where solutions are strongest, accepting a tighter timeline per target."
+          },
+          {
+            "label": "Mop up the UAVs by earliest available valid solution inside the shorter rings",
+            "description": "Work the UAV wave as a continuous queue, launching on whichever UAV has a valid solution each time a launcher frees, keeping both rockets working at all times."
+          }
+        ]
+      }
+    ]
+  },
+  "decisions_made": [],
+  "outcome": null,
+  "score": null,
+  "debrief_text": "",
+  "recommendations": [],
+  "status": "in_progress",
+  "created_at": "2026-08-29T19:10:30.800Z",
+  "completed_at": null
+}
