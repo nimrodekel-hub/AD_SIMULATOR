@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { designerChatStream } from "@/lib/ai/tasks/learn-dilemma";
+import {
+  asPromptSection,
+  getGeneralKnowledge,
+} from "@/lib/store/general-knowledge";
 import { getSystem, getSystemProfile } from "@/lib/store/kb";
 
 /**
@@ -55,9 +59,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const [system, profile] = await Promise.all([
+  const [system, profile, general] = await Promise.all([
     getSystem(parsed.data.system_id),
     getSystemProfile(parsed.data.system_id),
+    getGeneralKnowledge(),
   ]);
   if (!system) {
     return NextResponse.json({ error: "System not found" }, { status: 404 });
@@ -69,7 +74,8 @@ export async function POST(request: NextRequest) {
       // Only an approved profile is fact. A draft is the designer still
       // working, and half-taught behaviour is worse than none.
       profile: profile?.approved ? profile : null,
-    }),
+    },
+    asPromptSection(general)),
     {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
