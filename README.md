@@ -118,7 +118,16 @@ changes it.
 ## How a system behaves
 
 A dilemma is a judgement call *within* a system, so each system has to be
-described before its dilemmas. The designer answers eight guided questions —
+described before its dilemmas — and the screenshots come before the description,
+because three of the questions ask what the display shows. Which columns, in
+what order, in what units, and what each identification colour means are all far
+easier to get right with the display itself in hand, so the same references that
+build the console are read alongside the answers. They are evidence about the
+display, never authority about the system: a screenshot shows one moment, so
+where it disagrees with the designer the designer wins and the conflict is
+recorded rather than quietly resolved.
+
+The designer answers eight guided questions —
 what is defended and against what, what track classes exist and what tells them apart, what
 identification states there are and what puts a track into each one, what the
 operator reads for every track, what the operator may do and in what order, what
@@ -147,11 +156,11 @@ and the status board says plainly which systems are ready and which are not.
 
 ## The simulated console
 
-The designer uploads up to eight screenshots of a real console and the model
-reproduces its look and feel as a static HTML shell — layout, palette, density
-and typography, but explicitly not identifying content. Where the screenshots
-and the behaviour profile disagree, the profile wins: the screenshots show one
-moment, the profile describes the system.
+The designer uploads up to eight screenshots of a real console as the first
+setup step, and the model reproduces its look and feel as a static HTML shell —
+layout, palette, density and typography, but explicitly not identifying content.
+Where the screenshots and the behaviour profile disagree, the profile wins: the
+screenshots show one moment, the profile describes the system.
 
 The shell is chrome only. It carries five `data-slot` markers, and the trainee
 screen renders real React into them through portals. The appearance comes from
