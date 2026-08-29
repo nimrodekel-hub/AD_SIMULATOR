@@ -69,7 +69,17 @@ export function designerChatStream(
   return streamChat({
     system: INTERVIEW_SYSTEM,
     messages,
-    effort: "high",
+    // Medium rather than high, and this is the single biggest lever on what
+    // the app costs to run. Thinking is billed as output and is the larger
+    // half of a conversational call, and this call happens on *every turn* of
+    // an interview — so maximum reasoning was being bought a dozen times over
+    // to produce three sentences and a question.
+    //
+    // Interviewing is not where the reasoning has to be deep: the prompt above
+    // asks for one or two questions at a time, kept short. The judgement calls
+    // that decide whether the captured knowledge is any good happen later, in
+    // the extraction, the scenario and the debrief — and those stay high.
+    effort: "medium",
     label: "interview",
     mock: MOCK_REPLY,
   });
