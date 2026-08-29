@@ -1,0 +1,176 @@
+{
+  "purpose": "Point and area defence of a forward site against fighter aircraft, cruise missiles and UAVs, providing surveillance, identification and engagement of air tracks out to the system's stated engagement envelope.",
+  "track_classifications": [
+    {
+      "name": "Fighter (JET)",
+      "description": "Manned fast jet aircraft, separated from other classes primarily by speed and altitude. Appears on the display under the TYPE label 'JET'.",
+      "typical_speed_kts": {
+        "min": 240,
+        "max": 700
+      },
+      "typical_altitude_ft": {
+        "min": 500,
+        "max": 40000
+      },
+      "behaviour_note": "Manoeuvring tracks that may transit, orbit or run in on the defended site; may be either friendly or hostile, so identification matters before commitment."
+    },
+    {
+      "name": "Cruise missile (MSL)",
+      "description": "Powered cruise missile, distinguished by steady high speed on a consistent inbound course. Appears on the display under the TYPE label 'MSL'.",
+      "typical_speed_kts": {
+        "min": 280,
+        "max": 650
+      },
+      "typical_altitude_ft": {
+        "min": 100,
+        "max": 15000
+      },
+      "behaviour_note": "Typically non-manoeuvring or gently manoeuvring, direct run to the defended point; short reaction time and the driver of low time-to-impact readouts."
+    },
+    {
+      "name": "UAV",
+      "description": "Uninhabited air vehicle, generally slower and often higher-endurance than the other classes, though the display shows UAV tracks across a wide speed band. Appears on the display under the TYPE label 'UAV'.",
+      "typical_speed_kts": {
+        "min": 60,
+        "max": 320
+      },
+      "typical_altitude_ft": {
+        "min": 200,
+        "max": 20000
+      },
+      "behaviour_note": "May loiter, orbit or approach slowly; often the first class to be detected and the most likely to sit unresolved as an unknown."
+    }
+  ],
+  "iff_states": [
+    {
+      "name": "Unknown",
+      "meaning": "Track detected but not yet identified; no determination made either way.",
+      "how_determined": "Default state on track formation until identification is performed.",
+      "tone": "neutral"
+    },
+    {
+      "name": "Assumed hostile",
+      "meaning": "Track leaning hostile on the available evidence but not yet confirmed.",
+      "how_determined": "Assigned during operator identification when behaviour, class or approach geometry indicate hostility without confirmation.",
+      "tone": "caution"
+    },
+    {
+      "name": "Confirmed hostile",
+      "meaning": "Track positively identified as hostile and eligible for engagement subject to authority.",
+      "how_determined": "Assigned on confirmed identification during the operator's identify step.",
+      "tone": "hostile"
+    },
+    {
+      "name": "Friendly",
+      "meaning": "Track positively identified as friendly and not to be engaged.",
+      "how_determined": "Assigned on positive friendly identification during the operator's identify step.",
+      "tone": "friendly"
+    }
+  ],
+  "track_readout_fields": [
+    {
+      "label": "TRK",
+      "unit": "",
+      "description": "Track number assigned by the system."
+    },
+    {
+      "label": "IDENT",
+      "unit": "",
+      "description": "Current identification state of the track."
+    },
+    {
+      "label": "TYPE",
+      "unit": "",
+      "description": "Track classification (JET, MSL, UAV)."
+    },
+    {
+      "label": "AZ",
+      "unit": "deg",
+      "description": "Azimuth to the track."
+    },
+    {
+      "label": "RNG",
+      "unit": "km",
+      "description": "Range to the track."
+    },
+    {
+      "label": "ALT",
+      "unit": "ft",
+      "description": "Track altitude."
+    },
+    {
+      "label": "SPD",
+      "unit": "kts",
+      "description": "Track speed."
+    },
+    {
+      "label": "TTI",
+      "unit": "s",
+      "description": "Time to impact, computed automatically by the system."
+    }
+  ],
+  "engagement": {
+    "min_range_km": 8,
+    "max_range_km": 100,
+    "time_of_flight_note": "Time of flight was not stated by the designer; it should be assumed to scale with range across the 8-100 km envelope, with the system's automatically computed time-to-impact readout being the operator's primary timing reference.",
+    "simultaneous_engagements_note": "Two tracks may be engaged at once.",
+    "authority_note": "Engagement is authorised by the battery commander; authority passes to the operator when acting in self-defence."
+  },
+  "operator_responsibilities": [
+    "Select a track from the surveillance/engagement list.",
+    "Identify the selected track, setting it to unknown, assumed hostile, confirmed hostile or friendly.",
+    "Assign the identified track to an engagement.",
+    "Commit the engagement, subject to battery commander authority or self-defence rules.",
+    "Respect the two-simultaneous-engagement limit and the 8-100 km engagement envelope when choosing what to commit against."
+  ],
+  "automatic_functions": [
+    "Track correlation, including formation and maintenance of track numbers without operator action.",
+    "Continuous computation of time to impact (TTI) for displayed tracks.",
+    "Presentation of track kinematics (azimuth, range, altitude, speed) in the surveillance/engagement readout."
+  ],
+  "workflow_steps": [
+    "Select the track of interest in the surveillance/engagement list.",
+    "Identify the track, assigning one of the four identification states.",
+    "Assign the track to an engagement.",
+    "Commit, once authorised by the battery commander or under self-defence authority."
+  ],
+  "general_notes": "Screenshot/answer disagreement: the console screenshots show only three IDENT values (FRIEND, UNKNOWN, HOSTILE), while the designer states four identification states (unknown, assumed hostile, confirmed hostile, friendly). The answers have been followed and all four states retained; the screenshot is treated as a single moment that did not happen to show an assumed-hostile track, and the display wording for the confirmed states may be abbreviated as FRIEND/HOSTILE. Designer review should confirm the on-screen labels for each of the four states. Column labels, order and units in track_readout_fields are taken from the readable display header (TRK, IDENT, TYPE, AZ, RNG, ALT, SPD, TTI); units for AZ (deg), RNG (km), ALT (ft), SPD (kts) and TTI (s) are inferred from the value magnitudes and the stated 8-100 km engagement envelope and should be confirmed. Speed and altitude bands per class are generalised conservatively from the values visible on the display and the classes described; the screenshot sequence is a synthetic-looking ramp (evenly increasing range, altitude and speed with UAVs reaching high speeds and altitudes), so the bands here are widened modestly rather than taken literally. No sensor, radar or datalink detail, no time of flight, and no reload or magazine depth was described, so none is asserted. Correlation and time-to-impact are system functions and must not be set as trainee tasks in scenario or debrief.\"\"",
+  "id": "b5e6e2e0-2eb4-40c9-88e7-bd3f7ca38fab",
+  "approved": true,
+  "source_answers": [
+    {
+      "question": "What does this system defend, and against what?",
+      "answer": "Point and area defence of a forward site against fighters, cruise missiles and UAVs."
+    },
+    {
+      "question": "What kinds of tracks appear on the display, and what tells them apart?",
+      "answer": "Fighters, cruise missiles and UAVs, separated by speed and altitude."
+    },
+    {
+      "question": "What identification states exist, and what puts a track into each one?",
+      "answer": "Unknown, assumed hostile, confirmed hostile and friendly."
+    },
+    {
+      "question": "What does the operator read for each track?",
+      "answer": ""
+    },
+    {
+      "question": "What can the operator actually do, and in what order?",
+      "answer": "Select, identify, assign, commit."
+    },
+    {
+      "question": "What does the system do on its own, without the operator?",
+      "answer": "Correlation and time to impact."
+    },
+    {
+      "question": "What are the engagement constraints?",
+      "answer": "8 to 100 km, two at once."
+    },
+    {
+      "question": "Who may authorise an engagement, and when does that change?",
+      "answer": "Battery commander, or the operator in self-defence."
+    }
+  ],
+  "created_at": "2026-08-29T15:57:51.525Z",
+  "approved_at": "2026-08-29T15:57:51.525Z"
+}
