@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ScreenShell } from "@/components/screen-shell";
-import { getSystemBundle } from "@/lib/store/kb";
+import { getSystemBundle, listScreenshots } from "@/lib/store/kb";
 
 /**
  * One system's setup sequence, then its knowledge base.
@@ -10,6 +10,11 @@ import { getSystemBundle } from "@/lib/store/kb";
  * *within* a system — teaching dilemmas before the system is described means
  * every scenario is generated against a system the model invented, and nothing
  * about the result looks wrong.
+ *
+ * The screenshots come first for the same kind of reason. The questions in step
+ * 2 ask what the display shows — which columns, in what order, in what units.
+ * Those answers are read far more accurately with the display itself in hand,
+ * so the references are stored before the description rather than after it.
  */
 
 export const dynamic = "force-dynamic";
@@ -18,9 +23,13 @@ export default async function SystemSetupPage({
   params,
 }: PageProps<"/designer/systems/[systemId]">) {
   const { systemId } = await params;
-  const { system, profile, gui, dilemmas } = await getSystemBundle(systemId);
+  const [{ system, profile, gui, dilemmas }, screenshots] = await Promise.all([
+    getSystemBundle(systemId),
+    listScreenshots(systemId),
+  ]);
   if (!system) notFound();
 
+  const referencesReady = screenshots.length > 0;
   const profileReady = profile?.approved === true;
   const consoleReady = gui?.approved === true;
   const base = `/designer/systems/${systemId}`;
@@ -48,6 +57,18 @@ export default async function SystemSetupPage({
         <ol className="mt-4 space-y-3">
           <SetupStep
             number={1}
+            href={`${base}/screenshots`}
+            title="Reference screenshots"
+            done={referencesReady}
+            state={
+              referencesReady
+                ? `${screenshots.length} stored`
+                : "None uploaded"
+            }
+            blurb="Screenshots of the real console. They are read twice — once while your answers below are being interpreted, and again when the console is generated — so they come before the description, not after it."
+          />
+          <SetupStep
+            number={2}
             href={`${base}/profile`}
             title="How the system behaves"
             done={profileReady}
@@ -59,21 +80,30 @@ export default async function SystemSetupPage({
                   : "Not described"
             }
             blurb="Answer a set of questions about track classes, identification, the operator's actions and the engagement envelope. Everything downstream is built from it — without it the model invents a system, and the scenarios look right without being right."
-          />
-          <SetupStep
-            number={2}
-            href={`${base}/gui`}
-            title="Simulated console"
-            done={consoleReady}
-            blocked={!profileReady}
-            state={
-              consoleReady ? "In use" : gui ? "Draft, not approved" : "Not built"
+            warnNote={
+              referencesReady
+                ? undefined
+                : "You can answer without screenshots, but the questions about the display are much easier to get right when they are stored first."
             }
-            blurb="Upload up to eight screenshots. The console is generated from the screenshots and the behaviour profile together, so it shows the right columns and the right controls — not just the right colours."
-            blockedNote="Needs the behaviour profile first."
           />
           <SetupStep
             number={3}
+            href={`${base}/gui`}
+            title="Simulated console"
+            done={consoleReady}
+            blocked={!profileReady || !referencesReady}
+            state={
+              consoleReady ? "In use" : gui ? "Draft, not approved" : "Not built"
+            }
+            blurb="Generated from the stored screenshots and the behaviour profile together, so it shows the right columns and the right controls — not just the right colours."
+            blockedNote={
+              referencesReady
+                ? "Needs the behaviour profile first."
+                : "Needs the screenshots and the behaviour profile first."
+            }
+          />
+          <SetupStep
+            number={4}
             href={`${base}/learn`}
             title="Teach a dilemma"
             done={dilemmas.some((entry) => entry.status === "approved")}
