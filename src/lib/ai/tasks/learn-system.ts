@@ -248,7 +248,13 @@ export async function extractSystemProfile(
       },
     ],
     schema: SystemProfileDraftSchema,
-    effort: "high",
+    // Medium rather than high. This is a reading task: the designer has already
+    // written the answers and the labels are printed on the screenshots, so the
+    // work is transcription and tidying rather than reasoning. High effort spent
+    // its extra thinking time without changing the record, and the platform cuts
+    // the request off at sixty seconds — a profile that never arrives is worth
+    // less than one that arrives slightly plainer.
+    effort: "medium",
     maxTokens: 16000,
     mock: () => MOCK_PROFILE,
   });
