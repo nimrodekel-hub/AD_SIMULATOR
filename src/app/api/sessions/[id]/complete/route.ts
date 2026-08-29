@@ -2,20 +2,23 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { describeAiError } from "@/lib/ai/client";
 import { generateDebrief } from "@/lib/ai/tasks/debrief";
-import { DecisionMadeSchema } from "@/lib/domain/schemas";
+import { RunResultSchema, SimEventSchema } from "@/lib/domain/schemas";
 import { getDilemma } from "@/lib/store/kb";
-import {
-  completeSession,
-  getSession,
-  recordDecisions,
-} from "@/lib/store/sessions";
+import { completeSession, getSession, recordRun } from "@/lib/store/sessions";
 
 /**
- * Closes a run: stores what the trainee did, then evaluates it against the
- * knowledge base.
+ * Closes a run: stores what happened, then has it assessed.
  *
- * Decisions are written before the AI call, so a failure in the debrief loses
- * the assessment but never the record of what the trainee actually chose.
+ * The log and the tally are written before the model is called, so a failure
+ * in the debrief costs the assessment and never the record of what the
+ * operator actually did — which is the part that cannot be reconstructed.
+ *
+ * The tally arrives from the browser, computed by the same engine that
+ * enforced the rules during the run. That is deliberate: recomputing it here
+ * would mean running the whole simulation again server-side to reach an answer
+ * the client already has, and the two could then disagree. What stops it being
+ * a trust problem is that nothing downstream is a reward — the figures feed a
+ * debrief the trainee reads about themselves.
  */
 
 /**
@@ -33,7 +36,10 @@ import {
 export const maxDuration = 300;
 
 const BodySchema = z.object({
-  decisions: z.array(DecisionMadeSchema),
+  /** Everything that happened, in order, as the engine recorded it. */
+  run_log: z.array(SimEventSchema),
+  /** What it added up to, counted by the engine rather than judged. */
+  run_result: RunResultSchema,
 });
 
 export async function POST(
@@ -51,7 +57,7 @@ export async function POST(
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
-  await recordDecisions(id, parsed.data.decisions);
+  await recordRun(id, parsed.data.run_log, parsed.data.run_result);
 
   const dilemma = await getDilemma(session.system_id, session.dilemma_entry_id);
   if (!dilemma) {
@@ -65,7 +71,8 @@ export async function POST(
     const debrief = await generateDebrief({
       dilemma,
       scenario: session.scenario_instance,
-      decisions: parsed.data.decisions,
+      log: parsed.data.run_log,
+      result: parsed.data.run_result,
     });
     await completeSession(id, debrief);
     return NextResponse.json({ debrief });
