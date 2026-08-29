@@ -134,6 +134,17 @@ export interface StreamRequest {
 }
 
 /**
+ * How long the stream may stay silent before the first word arrives.
+ *
+ * The model thinks before it writes, and thinking produces no text — so between
+ * the headers and the first word the connection carries nothing at all. A phone
+ * treats a silent connection as a dead one. A single space every so often costs
+ * nothing, is trimmed off before display, and keeps the connection alive
+ * through however long the model needs to think.
+ */
+const SILENCE_LIMIT_MS = 15_000;
+
+/**
  * Streams a conversational reply as plain text chunks.
  *
  * The designer's learning conversation can run long, and waiting in silence for
@@ -168,13 +179,26 @@ export function streamChat({
           output_config: { effort },
         });
 
-        for await (const event of stream) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            controller.enqueue(encoder.encode(event.delta.text));
+        // Keep the connection warm while the model is still thinking. Stopped
+        // as soon as real text starts, so nothing is ever injected into the
+        // middle of a sentence.
+        let wroteText = false;
+        const keepAlive = setInterval(() => {
+          if (!wroteText) controller.enqueue(encoder.encode(" "));
+        }, SILENCE_LIMIT_MS);
+
+        try {
+          for await (const event of stream) {
+            if (
+              event.type === "content_block_delta" &&
+              event.delta.type === "text_delta"
+            ) {
+              wroteText = true;
+              controller.enqueue(encoder.encode(event.delta.text));
+            }
           }
+        } finally {
+          clearInterval(keepAlive);
         }
         controller.close();
       } catch (reason) {
