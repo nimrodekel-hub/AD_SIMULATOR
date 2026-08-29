@@ -6,10 +6,11 @@ import type { SystemProfile } from "../domain/schemas";
  *
  * Two separate things, and the difference between them is the whole point:
  *
- *   1. `AIR_DEFENCE_BRIEFING` — generic orientation. The shape of the field:
- *      what an air-defence system is for, what flies, how the chain from
- *      sensor to engagement generally runs, and the constraints every weapon
- *      system has. Constant for every system and every conversation.
+ *   1. `generalBriefing()` — orientation that holds across systems, edited by
+ *      the designer on the general-knowledge screen. What an air-defence system
+ *      is for, what flies, how the chain from sensor to engagement runs, what
+ *      differs between systems and must always be asked, and the lessons that
+ *      keep proving true. Identical for every system in the app.
  *   2. `describeSystem()` — this system, from its approved profile. Authoritative,
  *      because the designer wrote it and approved it.
  *
@@ -26,65 +27,22 @@ import type { SystemProfile } from "../domain/schemas";
  */
 
 /**
- * Generic background. Deliberately the sort of thing written in an open
- * textbook — no doctrine belonging to any force, no performance figures, and
- * nothing specific enough to substitute for what an expert would tell you.
+ * The editable general knowledge, wrapped in the rules that make it safe.
+ *
+ * The prose in the middle is the designer's and changes whenever they edit it.
+ * The framing around it is not editable, and must not be: it is what keeps
+ * general knowledge from being mistaken for fact about a particular system. An
+ * expert improving their doctrine should never be able to accidentally delete
+ * the sentence that stops the model inventing.
  */
-export const AIR_DEFENCE_BRIEFING = `# Background: how air defence works in general
+export function generalBriefing(body: string): string {
+  return `# Background: how air defence works in general
 
-This section is orientation, so that you can ask an expert sharper questions
-and understand their answers. It is **not** a description of the system being
+This section is orientation, so that you can ask an expert sharper questions and
+understand their answers. It is **not** a description of the system being
 discussed, and the rules at the end of this section bind you absolutely.
 
-## What an air-defence system is for
-
-An air-defence system denies airspace over something worth protecting — a site,
-a formation, a corridor, an area. Its job is to notice what is coming, work out
-what it is, decide whether it is a threat, and stop it before it reaches what is
-being defended. Every design is a compromise between how early it can see, how
-far out it can reach, and how many things it can handle at once.
-
-## What appears in the air picture
-
-Broadly: fast fixed-wing aircraft; rotary-wing, which is slow and often low;
-cruise missiles, which are fast, low and steady; ballistic threats, which arrive
-steeply and quickly; and uncrewed aircraft, which range from large and
-aircraft-like down to small, slow, low and hard to see, including loitering
-munitions that behave like a missile only at the end.
-
-Not everything in the air is a threat. Civil traffic, friendly aircraft,
-returning patrols and plain sensor clutter all appear too, and telling them
-apart is usually where the difficulty lives.
-
-## The chain from sensor to engagement
-
-Sensors produce returns; returns are correlated into tracks; tracks are
-identified; identified tracks are evaluated for threat; a weapon is assigned to
-the ones that warrant it; the engagement is carried out; the result is assessed.
-Systems differ enormously in which of those steps are automatic and which the
-operator performs — and that difference is precisely what you must ask about
-rather than assume.
-
-## Constraints every system has, in some form
-
-- **A reach**: a maximum range, and a minimum below which it cannot engage.
-- **An altitude envelope**, top and bottom.
-- **Time of flight**: an interceptor takes time to arrive, so a decision has to
-  be made earlier than the moment of impact.
-- **Capacity**: a limited number of engagements at once, and a limited magazine.
-- **Coverage**: sensors have arcs, horizons and terrain shadows; low and close
-  is often seen late.
-- **Authority**: someone is permitted to authorise an engagement, and that
-  someone can change under pressure, on loss of communications, or in
-  self-defence.
-
-## Where operator dilemmas usually come from
-
-Identification that will not resolve in the time available. More threats than
-interceptors. A threat that must be engaged now or not at all. Authority that is
-unavailable at the moment it is needed. The common thread is that the operator
-must act on incomplete information under a clock — which is what makes it worth
-training and worth capturing.
+${body.trim()}
 
 ---
 
@@ -94,7 +52,8 @@ training and worth capturing.
 shape, so you can follow the expert and ask better questions.
 
 - **Never state any of it as a fact about this system.** Not the target types,
-  not the constraints, not the workflow.
+  not the ranges, not how many interceptors can be in the air, not the workflow.
+  Every number differs between systems.
 - **Never let it answer a question for the expert.** If you need to know
   something, ask. An assumption that goes unchallenged becomes a false record.
 - **Never record anything from here.** Your transcript is the sole source for
@@ -106,6 +65,7 @@ shape, so you can follow the expert and ask better questions.
 
 Use it to ask "you mentioned identification is unresolved — is that the sensor,
 the IFF, or the time?" rather than "how does identification work?".`;
+}
 
 /**
  * The system under discussion, as the designer described and approved it.
