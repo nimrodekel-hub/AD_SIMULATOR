@@ -679,11 +679,49 @@
       "elapsed_ms": 1000
     }
   ],
-  "outcome": null,
-  "score": null,
-  "debrief_text": "",
-  "recommendations": [],
-  "status": "in_progress",
+  "outcome": {
+    "success": false,
+    "summary": "Failed run. You engaged an Unknown track at T+96 on the basis of its flight profile — the single worst outcome the scenario scores — and compounded it by opening on the nearest UAV instead of the lead jet, then holding UAV fire for kill probability during the mop-up. Only the hold at T+79 was correct.",
+    "per_decision": [
+      {
+        "decision_point_index": 0,
+        "chosen_action": "Engage the nearest UAV first, then turn to the jets",
+        "preferred_action": "Fire the lead jet at the earliest valid firing solution",
+        "correct": false,
+        "comment": "This is the first documented common error: engaging the nearest UAV because proximity reads as urgency, when closure rate — not slant range — determines who must die first. The record is explicit that the raid is only solvable if the jets are committed at the first valid solution so the launchers are free again when the UAV wave crosses the short ring. Clearing the near UAV first pushes the jet engagements later and cascades into a broken queue."
+      },
+      {
+        "decision_point_index": 1,
+        "chosen_action": "Hold and wait for a fire status to resolve",
+        "preferred_action": "Hold and wait for a fire status to resolve",
+        "correct": true,
+        "comment": "Correct, and taken in two seconds. You did not cease fire on a developing jet engagement, did not panic-switch, and did not try to force a third launch past the hard two-in-flight limit. The record treats holding here as correct behaviour rather than a failure to act. Note the rationale's point: this moment is not where the run is won or lost — it is decided upstream at T+0."
+      },
+      {
+        "decision_point_index": 2,
+        "chosen_action": "Engage the Unknown on the basis of its aggressive behaviour",
+        "preferred_action": "Refer to the commander and withhold fire until the track is classified Enemy",
+        "correct": false,
+        "comment": "The named worst error in the entry: firing on an Unknown because it behaves aggressively, which drives the score down hard regardless of hostile kills. All three Unknowns in this scenario are in fact friendly, and the descending, twice-manoeuvring run at the protected area is precisely the bait. An Unknown is a question, not a permission; nothing may be fired on unless classified Enemy, and the fifteen-second referral costs almost nothing against a correctly sequenced queue. Taken in zero seconds — no deliberation at all."
+      },
+      {
+        "decision_point_index": 3,
+        "chosen_action": "Hold fire until UAVs enter the innermost part of the envelope to maximise kill probability",
+        "preferred_action": "Mop up the UAVs by earliest available valid solution inside the shorter rings",
+        "correct": false,
+        "comment": "Matches the documented error of holding fire for a stronger short-range solution and running out of timeline against the tail of the wave. With roughly 90 s left, seven UAVs and both launchers free, this is a throughput problem: the rule is unchanged — fire when the system offers a valid solution and keep both rockets continuously employed."
+      }
+    ]
+  },
+  "score": 12,
+  "debrief_text": "The run was decided at T+96. You fired on TRK 4401 while it was still held Unknown, on the strength of its behaviour — descending, altering heading, steadying on the protected area. That is the single worst outcome this scenario scores, and the record is blunt about why: all three Unknowns are friendly, and the threatening-looking profile is the bait. An Unknown is a question, not a permission. Classification is referred to the commander, who answers in about fifteen seconds, and nothing may be fired on unless it is classified Enemy. You took zero seconds on that call. Fifteen seconds of referral cost almost nothing against a properly sequenced queue; being wrong costs the run.\n\nThe sequencing was already off before that. At T+0 you took the nearest UAV first. That is the classic error the entry names: proximity reads as urgency on the display, but closure rate is what determines who must die first. Jets are prioritised because they consume the timeline, not because they are close. Committing the lead jet at the first valid solution — TTI 74 s, PK 82%, a shot the system was already offering you — is what frees the launchers by the time the UAV wave crosses the short ring. Twenty-four seconds spent arriving at the wrong target compounded it.\n\nThe hold at T+79 was your one clean decision, and it was clean for the right reasons: both rockets committed, no cease-fire on a developing jet engagement, no panic-switch, no attempt to force a third launch past a hard system limit. But note what the rationale says about that moment — it is not where the run is won. It felt survivable only because the jets happened to resolve; the entry's point is that when this moment feels unwinnable, the fault is upstream in the queue.\n\nAt T+152, with both launchers free, seven UAVs and about 90 s of window, you held for maximum kill probability at short range. That is the documented error of compressing the remaining timeline and producing leakers at the end of a run. Once the fast closers are gone the UAV wave is a throughput problem: take the next available valid solution and keep both rockets continuously employed.",
+  "recommendations": [
+    "Rehearse the identification gate as a reflex: any track held Unknown gets referred to the commander immediately and is off limits until it comes back Enemy — regardless of how its flight profile reads. Run the T+96 picture again and make the referral inside five seconds while continuing to work TRK 2203.",
+    "Drill target selection by closure rate rather than slant range. Replay T+0 and practise committing the lead jet at the first valid solution the console offers, with a target decision time well under ten seconds.",
+    "Practise the UAV mop-up as a throughput exercise: with both launchers free, take the next valid solution rather than waiting for the nearest track or for a higher PK. Aim to have no launcher idle at any point in the final 90 s.",
+    "Keep the T+79 behaviour and understand why it worked — write out, in your own words, why holding on two committed rockets is correct and why a UAV crossing the short ring is the expected consequence of a jet-first sequence, not evidence the plan failed."
+  ],
+  "status": "completed",
   "created_at": "2026-08-29T19:10:30.800Z",
-  "completed_at": null
+  "completed_at": "2026-08-29T19:11:39.980Z"
 }
