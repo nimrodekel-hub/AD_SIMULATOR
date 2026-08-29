@@ -1,0 +1,189 @@
+{
+  "purpose": "Euro_AD is a ground-based air-defence system that defends its protected area against air-breathing threats — jets, helicopters and UAVs. It detects and tracks targets inside a fixed 120-degree radar sector, presents track data to a single operator console, and engages hostile air targets with long-, medium- and short-range interceptors from associated launchers.",
+  "track_classifications": [
+    {
+      "name": "Jet",
+      "description": "Fixed-wing manned combat or fast aircraft, the fastest and longest-detected class; radar detection range for this class is 150 km.",
+      "typical_speed_kts": {
+        "min": 300,
+        "max": 600
+      },
+      "typical_altitude_ft": {
+        "min": 1000,
+        "max": 40000
+      },
+      "behaviour_note": "Closes quickly, so the window between detection at 150 km and the 70 km long-range engagement ring is short; may manoeuvre in heading and altitude, which changes the displayed kill envelope."
+    },
+    {
+      "name": "Helicopter",
+      "description": "Rotary-wing aircraft, slower and lower than jets; radar detection range for this class is 100 km.",
+      "typical_speed_kts": {
+        "min": 0,
+        "max": 150
+      },
+      "typical_altitude_ft": {
+        "min": 100,
+        "max": 10000
+      },
+      "behaviour_note": "Often flies low, so it may sit under the radar tilt and be undetectable or un-engageable until it climbs or the operator adjusts the tilt."
+    },
+    {
+      "name": "UAV",
+      "description": "Unmanned air vehicle, the smallest and shortest-detected class; radar detection range for this class is 50 km.",
+      "typical_speed_kts": {
+        "min": 50,
+        "max": 250
+      },
+      "typical_altitude_ft": {
+        "min": 500,
+        "max": 25000
+      },
+      "behaviour_note": "Detected only inside 50 km, which places it close to or inside the medium- and short-range engagement rings from first detection; steady flight profiles are typical."
+    }
+  ],
+  "iff_states": [
+    {
+      "name": "Our Forces",
+      "meaning": "An aircraft belonging to the defending side's own units; carries a call sign rather than a track number.",
+      "how_determined": "Assigned by the system from own-force data and correlated call sign; the operator may set or change the classification manually.",
+      "tone": "friendly"
+    },
+    {
+      "name": "Friendly",
+      "meaning": "An aircraft identified as friendly but not one of the defending side's own units.",
+      "how_determined": "Classified friendly by the system or set by the operator through the classification control.",
+      "tone": "friendly"
+    },
+    {
+      "name": "Enemy",
+      "meaning": "A hostile air target, eligible for engagement; carries a track number rather than a call sign.",
+      "how_determined": "Classified hostile by the system from track behaviour and identification data, or set by the operator through the classification control.",
+      "tone": "hostile"
+    },
+    {
+      "name": "Unknown",
+      "meaning": "A detected track that has not yet been resolved as friendly or hostile.",
+      "how_determined": "Default state for a new track until identification data or operator action resolves it.",
+      "tone": "neutral"
+    }
+  ],
+  "track_readout_fields": [
+    {
+      "label": "TRK",
+      "unit": "number / call sign",
+      "description": "Track number for enemy and unknown tracks; call sign for own forces."
+    },
+    {
+      "label": "SPD",
+      "unit": "kts",
+      "description": "Current target speed."
+    },
+    {
+      "label": "ALT",
+      "unit": "ft",
+      "description": "Current target altitude."
+    },
+    {
+      "label": "TYPE",
+      "unit": "class",
+      "description": "Target type: jet, helicopter or UAV. Operator-editable."
+    },
+    {
+      "label": "ID",
+      "unit": "classification",
+      "description": "Enemy, friendly or own forces. Operator-editable."
+    },
+    {
+      "label": "FIRE STATUS",
+      "unit": "state",
+      "description": "Engagement state of the track: ready to shoot, rocket launched, intercepted, miss."
+    },
+    {
+      "label": "TTI",
+      "unit": "s",
+      "description": "Calculated time to intercept for the selected track, shown after selection."
+    },
+    {
+      "label": "PK",
+      "unit": "%",
+      "description": "Calculated probability of kill for the selected track and proposed interceptor."
+    }
+  ],
+  "engagement": {
+    "min_range_km": 0,
+    "max_range_km": 70,
+    "time_of_flight_note": "The system calculates interceptor time of flight and time to intercept automatically for a selected track and displays it alongside the probability of kill; the designer gave no fixed flight-time figures, so scenario timings should be derived from the range bands and target closing speed.",
+    "simultaneous_engagements_note": "A hard system limit of two simultaneous engagements — no more than two rockets may be in the air at once. A third engagement cannot begin until one of the two resolves as hit, kill or miss.",
+    "authority_note": "The designer described engagement authority only as the two-simultaneous-engagement system limit. On the evidence given, the console operator issues the fire or cease-fire command directly at the console; no external release authority or condition for changing it was described. This should be confirmed by the designer."
+  },
+  "operator_responsibilities": [
+    "Select a track on the situation display and read its full information in the side panel.",
+    "Change the target type of a selected track (jet, UAV, helicopter).",
+    "Change the classification of a selected track (enemy, friendly, our forces).",
+    "Issue the engagement command for a selected track (fire or cease fire).",
+    "Choose the interceptor type to be fired (long, medium or short range).",
+    "Choose which launcher the engagement is fired from.",
+    "Review the calculated time to intercept and probability of kill before committing.",
+    "Adjust the radar tilt to place coverage where it is needed within the fixed 120-degree sector."
+  ],
+  "automatic_functions": [
+    "Continuously tracks detected targets within the radar envelope without operator action.",
+    "Displays target information for all held tracks.",
+    "Calculates probability of kill and interceptor time of flight.",
+    "Recommends the relevant interceptor type and the relevant launcher for an engagement.",
+    "Computes and displays the kill envelope for a specific target from its altitude and heading.",
+    "Computes target track solutions, but only while the target is inside the radar envelope.",
+    "Ceases tracking a target once it is assessed as a good kill; defeated targets blink and disappear from the display.",
+    "Reports hit or kill outcomes and displays rocket launches, the target engaged, and the type of rocket launched."
+  ],
+  "workflow_steps": [
+    "Monitor the surveillance picture; the system detects and tracks automatically within the 120-degree sector.",
+    "Adjust radar tilt if coverage needs to be repositioned in elevation.",
+    "Select a track of interest and read its full details in the side information panel.",
+    "Correct the target type if the automatic classification is wrong (jet, helicopter, UAV).",
+    "Set or confirm the classification (enemy, friendly, our forces).",
+    "Review the system-recommended interceptor type and launcher, together with the displayed kill envelope, time to intercept and probability of kill.",
+    "Select the interceptor type and the launcher to be used.",
+    "Issue the fire command, respecting the limit of two rockets in the air at once, or issue cease fire.",
+    "Observe the fire status and the automatic hit or kill report; a good kill blinks and drops from the display."
+  ],
+  "general_notes": "Coverage: the radar does not rotate. It covers a fixed 120-degree sector whose tilt the operator can change. Detection range depends on target class — 150 km for jets, 100 km for helicopters, 50 km for UAVs. Track solutions can only be calculated while the target is inside the radar envelope, and targets cannot be intercepted below the radar tilt, so low-flying tracks may be undetectable or un-engageable until the tilt is adjusted.\n\nEngagement rings: 70 km long range, 50 km medium range, 20 km short range. Note that the long-range interceptor (70 km) exceeds the detection range for helicopters (100 km is adequate) but is longer than the 50 km UAV detection range, so UAV engagements will in practice begin inside 50 km; this follows from the designer's own figures and is not a correction.\n\nAssumptions made where the answers were silent: minimum engagement range was not stated and is recorded as 0 km — the real constraint the designer described is the radar tilt, not a minimum slant range, and this field should be confirmed. Speed and altitude bands for the three track classes were not given and have been generalised conservatively from the class names and the stated detection and engagement ranges.\n\nScreenshot conflicts and cautions: the screenshots show a monochrome green console with hostile/unresolved rows highlighted in red, whereas the designer states own aerial forces are blue and enemy forces are red. The designer's answer is followed; the colour scheme should be confirmed against the live console. The screenshots' track table shows a 'Friendly / Unknown' identification column, which supports the presence of an Unknown state not named in the answers; it has been included as a neutral state and should be confirmed. The screenshots also show a trajectory-analysis panel, an engagement table with altitude, velocity, probability of kill and Ps columns, a diagnostics and logistics page with radar, launcher and communication subsystem status, and F1–F12 function keys. None of these were described in the answers, so no capability or operator responsibility has been derived from them; the extra engagement-panel figures are consistent with the automatic Pk and time-of-flight calculation the designer did describe. Nothing has been removed from this profile on the grounds that a screenshot did not show it — the screenshots capture single moments, not the full inventory of track classes or identification states.\n\nAuthority remains the weakest point in the record: the designer answered the authority question only with the two-rockets-in-the-air limit. Debrief material should not assume any external release authority.",
+  "id": "75980758-63a4-42ec-bbd7-0d4e65a0c118",
+  "approved": true,
+  "source_answers": [
+    {
+      "question": "What does this system defend, and against what?",
+      "answer": "Our air defence system defense against air breathing enemy targets such as jets, helicopters, uav."
+    },
+    {
+      "question": "What kinds of tracks appear on the display, and what tells them apart?",
+      "answer": "Altitude of the targets, speed, call sign for our forces and track number for enemies, type of target "
+    },
+    {
+      "question": "What identification states exist, and what puts a track into each one?",
+      "answer": "Our aerial forces - blue. Enemy forces - red.\nDefeated targets - blink and disappear.\nRocket launches, to what target.\nType of rocket launched.\n"
+    },
+    {
+      "question": "What does the operator read for each track?",
+      "answer": "Track number, speed , altitude , type. Enemy or friend. Fire status(ready to shoot, rocket launched, miss…)"
+    },
+    {
+      "question": "What can the operator actually do, and in what order?",
+      "answer": "Select a track, see the target full information on the screen side, can change the type (jet, uav..). Can change the classification (enemy, friend, our forces). Can change the command (seas fire, fire). Can pick the right rocked type to shoot. Can choose from what launcher to shoot. \nGet information after selecting of the time to intercept and the probability of kill.\nCan calculate the track of target only inside the radar envelope "
+    },
+    {
+      "question": "What does the system do on its own, without the operator?",
+      "answer": "Keep tracking the targets, shows the targets information, calculate the pk and the time of flight for the rockets, recommend the relevant type of rocket and relevant launcher. Stop tracking if it is a good kill. Report hit or kill. Shows the killing envelope on the specific target (calculating by altitude and heading of the target "
+    },
+    {
+      "question": "What are the engagement constraints?",
+      "answer": "70 km for long range rocket, 50 km for medium range and 20 km for short range. Can intercept only inside the tilt of the radar (can’t intercept under the radar envelope ).\nThe radar range: jets - 150 km, helicopter- 100 km, uav - 50 km\n"
+    },
+    {
+      "question": "Who may authorise an engagement, and when does that change?",
+      "answer": "Only two engagements on the same time (2 rockets on air)- system limitations. \n"
+    }
+  ],
+  "created_at": "2026-08-29T13:49:43.379Z",
+  "approved_at": "2026-08-29T13:49:43.379Z"
+}
