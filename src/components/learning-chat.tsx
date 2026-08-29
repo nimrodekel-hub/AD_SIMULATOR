@@ -138,9 +138,14 @@ export function LearningChat({
       const response = await fetch("/api/designer/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // The opening message is scene-setting written by this component, not
-        // something the model said, so it is not part of the history it sees.
-        body: JSON.stringify({ messages: history.slice(1) }),
+        body: JSON.stringify({
+          // Which system this is about. The interviewer is handed its approved
+          // profile, so it stops asking for what has already been written down.
+          system_id: systemId,
+          // The opening message is scene-setting written by this component, not
+          // something the model said, so it is not part of the history it sees.
+          messages: history.slice(1),
+        }),
       });
 
       if (!response.ok || !response.body) {
