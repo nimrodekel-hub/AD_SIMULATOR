@@ -1,23 +1,35 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { missingSlots, sanitiseHtml } from "@/lib/ai/tasks/generate-gui";
-import { getGuiTemplate, saveGuiTemplate } from "@/lib/store/kb";
+import { getGuiTemplate, getSystem, saveGuiTemplate } from "@/lib/store/kb";
 import type { GuiTemplate } from "@/lib/domain/schemas";
 
-/** The single simulated-console template: read, save, approve. */
+/** One system's simulated console: read, save, approve. */
 
 const SaveSchema = z.object({
-  system_name_fictional: z.string().min(1),
   generated_ui_code: z.string().min(1),
   source_screenshots: z.array(z.string()),
   approved: z.boolean(),
 });
 
-export async function GET() {
-  return NextResponse.json({ template: await getGuiTemplate() });
+export async function GET(
+  _request: NextRequest,
+  ctx: RouteContext<"/api/systems/[systemId]/gui">,
+) {
+  const { systemId } = await ctx.params;
+  return NextResponse.json({ template: await getGuiTemplate(systemId) });
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  ctx: RouteContext<"/api/systems/[systemId]/gui">,
+) {
+  const { systemId } = await ctx.params;
+  const system = await getSystem(systemId);
+  if (!system) {
+    return NextResponse.json({ error: "System not found" }, { status: 404 });
+  }
+
   const parsed = SaveSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid template" }, { status: 400 });
@@ -39,10 +51,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const existing = await getGuiTemplate();
+  const existing = await getGuiTemplate(systemId);
   const template: GuiTemplate = {
-    id: existing?.id ?? crypto.randomUUID(),
-    system_name_fictional: parsed.data.system_name_fictional,
+    id: systemId,
     source_screenshots: parsed.data.source_screenshots,
     generated_ui_code: html,
     approved: parsed.data.approved,
@@ -50,7 +61,7 @@ export async function POST(request: NextRequest) {
   };
 
   try {
-    await saveGuiTemplate(template);
+    await saveGuiTemplate(systemId, template, system.name);
     return NextResponse.json({ template });
   } catch (reason) {
     return NextResponse.json(

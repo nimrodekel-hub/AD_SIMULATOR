@@ -25,11 +25,12 @@ the design decisions were made.
 | Storage | JSON files committed to this repository, written through the GitHub API |
 | AI | Anthropic API, seven integration points each with its own system prompt |
 
-**Everything lives in git.** The system behaviour profile, the dilemmas, the
-simulated-console template, the trainee roster and every training run are all
-JSON files in `data/`. There is no database to provision and nothing to keep in
-sync: one storage mechanism, one place to look, and a permanent inspectable
-history of both the operational knowledge and the training that came out of it.
+**Everything lives in git.** Every simulated system — its behaviour profile,
+its console template, its screenshots and its dilemmas — plus the trainee
+roster and every training run are all JSON files in `data/`. There is no
+database to provision and nothing to keep in sync: one storage mechanism, one
+place to look, and a permanent inspectable history of both the operational
+knowledge and the training that came out of it.
 
 The cost is that a training run makes a few commits and each write takes about a
 second. At the scale this is built for that is invisible, and the audit trail is
@@ -77,12 +78,14 @@ trigger a rebuild of the site.
 
 ## The four screens
 
-1. **System Designer** — a setup sequence, then the knowledge base: describe how
-   the system behaves, build its console from reference screenshots, then teach
-   dilemmas through conversation and approve the records extracted from them.
+1. **System Designer** — the list of simulated systems, and inside each one a
+   setup sequence: describe how it behaves, build its console from reference
+   screenshots, then teach dilemmas through conversation and approve the
+   records extracted from them.
 2. **Instructor** — trainee roster, scores, trend, and the full history of every
    session and debrief.
-3. **Trainee** — request training in plain language; the system matches, asks a
+3. **Trainee** — pick the system you operate, then request training in plain
+   language; the system matches within that system's dilemmas, asks a
    clarifying question if unsure, and generates a scenario.
 4. **Debrief** — score, what went wrong and why, and what to practise next.
 
@@ -90,11 +93,28 @@ Screens 1 and 4 are read while thinking, so they use a calm, roomy layout.
 Screens 2 and 3 are read under time pressure, so they use a dense
 operations-room layout. Both are defined as token sets in `src/app/globals.css`.
 
-## How the system behaves
+## Many systems, side by side
 
-A dilemma is a judgement call *within* a system, so the system has to be
-described first. The designer answers eight guided questions — what is defended
-and against what, what track classes exist and what tells them apart, what
+The app holds as many simulated systems as you like, and they are independent.
+Each one owns how it behaves, what its console looks like, the screenshots it
+was built from, and the dilemmas taught inside it — so a second system can be
+started before the first is finished, and neither leaks into the other.
+
+That separation is not tidiness, it is correctness. A dilemma's plausible
+numbers, its identification states and the actions it offers only mean anything
+inside one system, so a dilemma taught on one is never offered against another.
+A trainee therefore picks their system first, and matching only ever searches
+that system's approved dilemmas.
+
+The designer names each system when they create it. That name is the fictional
+one shown on the console and used in every prompt — the model never invents or
+changes it.
+
+## How a system behaves
+
+A dilemma is a judgement call *within* a system, so each system has to be
+described before its dilemmas. The designer answers eight guided questions —
+what is defended and against what, what track classes exist and what tells them apart, what
 identification states there are and what puts a track into each one, what the
 operator reads for every track, what the operator may do and in what order, what
 the system does by itself, the engagement envelope, and who authorises a shot —
@@ -117,9 +137,8 @@ guesses after that:
 
 Without this the model invents an air-defence system, and the scenarios look
 right without being right — the worst failure mode for a trainer, because nobody
-can see it. So the console step is blocked until the profile is approved, and
-the status board says plainly when scenarios are running against an invented
-system.
+can see it. So a system's console step is blocked until its profile is approved,
+and the status board says plainly which systems are ready and which are not.
 
 ## The simulated console
 
@@ -148,18 +167,24 @@ src/
     domain/schemas.ts   Zod schemas — validation and AI output format in one place
     store/
       repo-files.ts     git as the storage medium: GitHub API or local filesystem
-      kb.ts             the behaviour profile, dilemmas and the console template
+      kb.ts             systems, their profiles, consoles and dilemmas
       sessions.ts       training runs and the trainee roster
     stats.ts            the instructor's numbers, derived from the session log
     config.ts           the only module that reads process.env
 data/
-  kb/
-    system-profile.json how the simulated system behaves — read by everything
-    dilemmas/           one file per captured dilemma
-    gui/                the console template and its reference screenshots
-  sessions/             one file per training run
+  kb/systems/<id>/
+    system.json         the system's identity: name, note, when it was created
+    profile.json        how it behaves — read by everything downstream
+    gui.json            its console template
+    screenshots/        the references the console was built from
+    dilemmas/           one file per dilemma taught inside this system
+  sessions/             one file per training run, recording which system
   trainees.json         the roster (defaults are used until this file exists)
 ```
+
+Everything about one system sits in its own directory, so listing its dilemmas
+is a single directory read rather than a scan of every dilemma in the
+repository.
 
 ## Build status
 
@@ -172,3 +197,4 @@ data/
 | 5. Simulated console builder | Done |
 | 6. Instructor board | Done |
 | 7. System behaviour profile, and a console built from it | Done |
+| 8. Many simulated systems side by side | Done |

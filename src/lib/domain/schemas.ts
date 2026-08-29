@@ -110,6 +110,8 @@ export type DilemmaStatus = z.infer<typeof DilemmaStatusSchema>;
 
 export const DilemmaEntrySchema = DilemmaDraftSchema.extend({
   id: z.string(),
+  /** The simulated system this dilemma was taught inside. */
+  system_id: z.string(),
   status: DilemmaStatusSchema,
   /** Transcript of the learning conversation this entry was extracted from. */
   source_chat_log: z.string(),
@@ -119,12 +121,37 @@ export const DilemmaEntrySchema = DilemmaDraftSchema.extend({
 export type DilemmaEntry = z.infer<typeof DilemmaEntrySchema>;
 
 /* ------------------------------------------------------------------ */
+/* Simulated systems                                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One simulated system the app can train on. Several exist side by side.
+ *
+ * A system is the container for everything that only makes sense inside it:
+ * how it behaves, what its console looks like, and which dilemmas were taught
+ * within it. It exists as soon as it is named, so it can be listed and worked
+ * on before the profile has been extracted or the console built.
+ *
+ * The name is the *fictional* system name, given by the designer rather than
+ * invented by the model. It is the one name used everywhere — in the UI, in
+ * the console, and in every prompt — so there is nothing to drift out of sync.
+ */
+export const SimulatedSystemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  /** One line for the designer's own benefit when several systems are listed. */
+  note: z.string(),
+  created_at: z.string(),
+});
+export type SimulatedSystem = z.infer<typeof SimulatedSystemSchema>;
+
+/* ------------------------------------------------------------------ */
 /* System profile — how the simulated system actually behaves          */
 /* ------------------------------------------------------------------ */
 
 /**
- * Taught once, before any dilemma, and injected into every scenario and
- * debrief afterwards.
+ * Taught once per system, before any of its dilemmas, and injected into every
+ * scenario and debrief afterwards.
  *
  * Without it the model invents a system: it guesses what classifications exist,
  * what makes a track hostile, and what an operator can do. The scenarios then
@@ -170,9 +197,13 @@ export const EngagementDoctrineSchema = z.object({
 });
 export type EngagementDoctrine = z.infer<typeof EngagementDoctrineSchema>;
 
-/** The part the model extracts from the designer's answers. */
+/**
+ * The part the model extracts from the designer's answers.
+ *
+ * The system's name is not in here: the designer gives it when they create the
+ * system, and it is not the model's to invent or change.
+ */
 export const SystemProfileDraftSchema = z.object({
-  system_name_fictional: z.string(),
   /** What the system defends, and against what. */
   purpose: z.string(),
   track_classifications: z.array(TrackClassificationSchema),
@@ -192,6 +223,7 @@ export const SystemProfileDraftSchema = z.object({
 export type SystemProfileDraft = z.infer<typeof SystemProfileDraftSchema>;
 
 export const SystemProfileSchema = SystemProfileDraftSchema.extend({
+  /** Same value as the system's id — one profile per system. */
   id: z.string(),
   approved: z.boolean(),
   /** The designer's raw answers, kept so the extraction can be audited. */
@@ -208,8 +240,8 @@ export type SystemProfile = z.infer<typeof SystemProfileSchema>;
 /* ------------------------------------------------------------------ */
 
 export const GuiTemplateSchema = z.object({
+  /** Same value as the system's id — one console per system. */
   id: z.string(),
-  system_name_fictional: z.string(),
   /** Repo-relative paths of the uploaded reference screenshots. */
   source_screenshots: z.array(z.string()),
   /** Self-contained HTML/CSS for the simulated console shell. */
@@ -349,6 +381,9 @@ export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 export const SessionSchema = z.object({
   id: z.string(),
   trainee_id: z.string(),
+  /** Which simulated system this run was on. Fixed at creation: the console
+      and the profile it renders with must not change under a finished run. */
+  system_id: z.string(),
   dilemma_entry_id: z.string(),
   requested_text: z.string(),
   clarification_rounds: z.array(ClarificationRoundSchema),

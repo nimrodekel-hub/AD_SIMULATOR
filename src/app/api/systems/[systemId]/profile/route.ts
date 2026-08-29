@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { SystemProfileDraftSchema } from "@/lib/domain/schemas";
-import { getSystemProfile, saveSystemProfile } from "@/lib/store/kb";
+import { getSystem, getSystemProfile, saveSystemProfile } from "@/lib/store/kb";
 import type { SystemProfile } from "@/lib/domain/schemas";
 
-/** The single system behaviour profile: read, save, approve. */
+/** One system's behaviour profile: read, save, approve. */
 
 const SaveSchema = z.object({
   draft: SystemProfileDraftSchema,
@@ -14,11 +14,24 @@ const SaveSchema = z.object({
   approved: z.boolean(),
 });
 
-export async function GET() {
-  return NextResponse.json({ profile: await getSystemProfile() });
+export async function GET(
+  _request: NextRequest,
+  ctx: RouteContext<"/api/systems/[systemId]/profile">,
+) {
+  const { systemId } = await ctx.params;
+  return NextResponse.json({ profile: await getSystemProfile(systemId) });
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  ctx: RouteContext<"/api/systems/[systemId]/profile">,
+) {
+  const { systemId } = await ctx.params;
+  const system = await getSystem(systemId);
+  if (!system) {
+    return NextResponse.json({ error: "System not found" }, { status: 404 });
+  }
+
   const parsed = SaveSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
@@ -48,10 +61,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const existing = await getSystemProfile();
+  const existing = await getSystemProfile(systemId);
   const profile: SystemProfile = {
     ...draft,
-    id: existing?.id ?? crypto.randomUUID(),
+    // One profile per system, so they share an id. Nothing has to be looked up
+    // to know which system a profile describes.
+    id: systemId,
     approved: parsed.data.approved,
     source_answers: parsed.data.source_answers,
     created_at: existing?.created_at ?? new Date().toISOString(),
@@ -59,7 +74,7 @@ export async function POST(request: NextRequest) {
   };
 
   try {
-    await saveSystemProfile(profile);
+    await saveSystemProfile(systemId, profile, system.name);
     return NextResponse.json({ profile });
   } catch (reason) {
     return NextResponse.json(

@@ -36,9 +36,14 @@ const EXAMPLES = [
 ];
 
 export function TrainingRequest({
+  systemId,
+  systemName,
   trainees,
   preselectedTraineeId,
 }: {
+  /** The system chosen on the previous screen. Matching is scoped to it. */
+  systemId: string;
+  systemName: string;
   trainees: Trainee[];
   /** Set when an instructor started this run from a trainee's history. */
   preselectedTraineeId?: string;
@@ -62,7 +67,11 @@ export function TrainingRequest({
       const response = await fetch("/api/training/match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ request, clarifications: rounds }),
+        body: JSON.stringify({
+          system_id: systemId,
+          request,
+          clarifications: rounds,
+        }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Matching failed.");
@@ -113,6 +122,7 @@ export function TrainingRequest({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           trainee_id: traineeId,
+          system_id: systemId,
           dilemma_id: phase.dilemma.id,
           requested_text: request,
           clarifications,
@@ -284,9 +294,10 @@ export function TrainingRequest({
       {phase.kind === "no_dilemmas" ? (
         <div className="panel mt-4 p-4">
           <p className="text-sm">
-            The knowledge base has no approved dilemmas yet, so there is nothing
-            to match your request against. A system designer needs to teach and
-            approve at least one first.
+            {systemName} has no approved dilemmas yet, so there is nothing to
+            match your request against. A system designer needs to teach and
+            approve at least one for this system first — dilemmas taught on
+            another system do not carry across.
           </p>
         </div>
       ) : null}

@@ -36,6 +36,7 @@ function serialise(value: unknown): string {
 
 export async function createSession(input: {
   traineeId: string;
+  systemId: string;
   dilemmaEntryId: string;
   requestedText: string;
   clarificationRounds: ClarificationRound[];
@@ -45,6 +46,7 @@ export async function createSession(input: {
   const session: Session = {
     id: crypto.randomUUID(),
     trainee_id: input.traineeId,
+    system_id: input.systemId,
     dilemma_entry_id: input.dilemmaEntryId,
     requested_text: input.requestedText,
     clarification_rounds: input.clarificationRounds,

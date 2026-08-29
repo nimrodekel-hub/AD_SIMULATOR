@@ -22,6 +22,8 @@ import { config } from "../config";
 export interface RepoFiles {
   /** File names (not full paths) directly inside `dir`. Missing dir ⇒ []. */
   list(dir: string): Promise<string[]>;
+  /** Directory names directly inside `dir`. Missing dir ⇒ []. */
+  listDirs(dir: string): Promise<string[]>;
   /** UTF-8 contents, or null if the file does not exist. */
   read(filePath: string): Promise<string | null>;
   write(filePath: string, contents: string, message: string): Promise<void>;
@@ -60,6 +62,17 @@ class LocalFiles implements RepoFiles {
         withFileTypes: true,
       });
       return entries.filter((e) => e.isFile()).map((e) => e.name);
+    } catch {
+      return [];
+    }
+  }
+
+  async listDirs(dir: string): Promise<string[]> {
+    try {
+      const entries = await fs.readdir(this.absolute(dir), {
+        withFileTypes: true,
+      });
+      return entries.filter((e) => e.isDirectory()).map((e) => e.name);
     } catch {
       return [];
     }
@@ -145,10 +158,18 @@ class GitHubFiles implements RepoFiles {
   }
 
   async list(dir: string): Promise<string[]> {
+    return this.namesOfType(dir, "file");
+  }
+
+  async listDirs(dir: string): Promise<string[]> {
+    return this.namesOfType(dir, "dir");
+  }
+
+  private async namesOfType(dir: string, type: string): Promise<string[]> {
     const listing = await this.get(dir);
     if (!Array.isArray(listing)) return [];
     return (listing as GitHubEntry[])
-      .filter((entry) => entry.type === "file")
+      .filter((entry) => entry.type === type)
       .map((entry) => entry.name);
   }
 

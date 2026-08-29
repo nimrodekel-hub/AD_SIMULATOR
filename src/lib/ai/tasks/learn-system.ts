@@ -111,10 +111,11 @@ Everything downstream reads this record. Scenario generation uses it to decide w
 
 **general_notes carries what the questions did not ask about** — anything the designer added in the open section that does not belong in a named field, and anything you had to assume.
 
+**The system already has a name and it is not yours to change.** You are told what it is; use it if you need to refer to the system, and never invent another.
+
 Keep everything vendor-neutral: generic descriptions, no real system names, unit designations or classified performance figures.`;
 
 const MOCK_PROFILE: SystemProfileDraft = {
-  system_name_fictional: "Mock system — configure ANTHROPIC_API_KEY",
   purpose:
     "Placeholder profile produced in mock mode. Point defence of a fixed installation against air-breathing threats.",
   track_classifications: [
@@ -189,6 +190,7 @@ const MOCK_PROFILE: SystemProfileDraft = {
 };
 
 export async function extractSystemProfile(
+  systemName: string,
   answers: Array<{ question: string; answer: string }>,
   openNotes: string,
 ): Promise<SystemProfileDraft> {
@@ -203,6 +205,7 @@ export async function extractSystemProfile(
       {
         role: "user",
         content: [
+          `The system is called "${systemName}".`,
           `<answers>\n${transcript}\n</answers>`,
           openNotes.trim()
             ? `<additional_notes>\n${openNotes}\n</additional_notes>`

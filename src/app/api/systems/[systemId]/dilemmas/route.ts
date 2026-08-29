@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { DilemmaDraftSchema } from "@/lib/domain/schemas";
-import { createDilemmaDraft, listDilemmas } from "@/lib/store/kb";
+import { createDilemmaDraft, getSystem, listDilemmas } from "@/lib/store/kb";
 
-/** Collection endpoint for dilemma entries. */
+/** The dilemmas taught inside one simulated system. */
 
 const CreateSchema = z.object({
   draft: DilemmaDraftSchema,
@@ -11,11 +11,23 @@ const CreateSchema = z.object({
   transcript: z.string(),
 });
 
-export async function GET() {
-  return NextResponse.json({ dilemmas: await listDilemmas() });
+export async function GET(
+  _request: NextRequest,
+  ctx: RouteContext<"/api/systems/[systemId]/dilemmas">,
+) {
+  const { systemId } = await ctx.params;
+  return NextResponse.json({ dilemmas: await listDilemmas(systemId) });
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  ctx: RouteContext<"/api/systems/[systemId]/dilemmas">,
+) {
+  const { systemId } = await ctx.params;
+  if (!(await getSystem(systemId))) {
+    return NextResponse.json({ error: "System not found" }, { status: 404 });
+  }
+
   const parsed = CreateSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
@@ -26,6 +38,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const entry = await createDilemmaDraft(
+      systemId,
       parsed.data.draft,
       parsed.data.transcript,
     );

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { config, githubConfigProblems } from "@/lib/config";
-import { getGuiTemplate, getSystemProfile, listDilemmas } from "@/lib/store/kb";
+import { getSystemBundle, listSystems } from "@/lib/store/kb";
 import { isGitBacked } from "@/lib/store/repo-files";
 
 /* Reads the knowledge base on every request — this page is a live status
@@ -12,7 +12,7 @@ const ROLES = [
     href: "/designer",
     name: "System Designer",
     blurb:
-      "Teach the system an operational dilemma through conversation, review the structured record it extracts, and publish it. Also builds the simulated console.",
+      "Set up a simulated system: describe how it behaves, build its console from screenshots, and teach it operational dilemmas through conversation. As many systems as you need, side by side.",
     responsibility: "Owns the knowledge base",
   },
   {
@@ -26,19 +26,30 @@ const ROLES = [
     href: "/trainee",
     name: "Trainee",
     blurb:
-      "Ask for the training you want in your own words. The system finds the matching dilemma and builds a scenario around it.",
+      "Pick the system you operate, then ask for the training you want in your own words. It finds the matching dilemma and builds a scenario around it.",
     responsibility: "Runs the training",
   },
 ] as const;
 
 export default async function Home() {
-  const [dilemmas, gui, profile] = await Promise.all([
-    listDilemmas(),
-    getGuiTemplate(),
-    getSystemProfile(),
-  ]);
+  const systems = await listSystems();
+  const bundles = await Promise.all(
+    systems.map((system) => getSystemBundle(system.id)),
+  );
+
+  const dilemmas = bundles.flatMap((bundle) => bundle.dilemmas);
   const approved = dilemmas.filter((entry) => entry.status === "approved").length;
   const drafts = dilemmas.length - approved;
+
+  // A system is trainable only when its behaviour is in force and it has
+  // something to teach. Counting systems without that would report readiness
+  // the app does not have.
+  const trainable = bundles.filter(
+    (bundle) =>
+      bundle.profile?.approved === true &&
+      bundle.dilemmas.some((entry) => entry.status === "approved"),
+  ).length;
+  const consoles = bundles.filter((bundle) => bundle.gui?.approved === true).length;
 
   return (
     <div className="theme-work flex min-h-full flex-1 flex-col bg-bg text-ink">
@@ -85,39 +96,43 @@ export default async function Home() {
         </h2>
         <dl className="panel mt-4 divide-y divide-[var(--border)]">
           <StatusRow
+            label="Simulated systems"
+            value={
+              systems.length === 0
+                ? "None"
+                : `${systems.length} — ${trainable} ready for training`
+            }
+            tone={trainable > 0 ? "ok" : "warn"}
+            note={
+              systems.length === 0
+                ? "Nothing has been set up yet. A system is where everything else hangs."
+                : trainable === 0
+                  ? "A system is ready once its behaviour profile is approved and it has an approved dilemma."
+                  : systems
+                      .map((system) => system.name)
+                      .join(", ")
+            }
+          />
+          <StatusRow
             label="Knowledge base"
             value={`${approved} approved${drafts > 0 ? `, ${drafts} draft` : ""}`}
             tone={approved > 0 ? "ok" : "warn"}
             note={
               approved === 0
                 ? "No approved dilemmas yet — trainees have nothing to match against."
-                : undefined
+                : "Counted across every system. A dilemma only ever matches within its own."
             }
           />
           <StatusRow
-            label="System behaviour"
+            label="Simulated consoles"
             value={
-              profile?.approved
-                ? profile.system_name_fictional
-                : profile
-                  ? "Draft"
-                  : "Not described"
+              consoles === 0 ? "None built" : `${consoles} of ${systems.length}`
             }
-            tone={profile?.approved ? "ok" : "warn"}
+            tone={consoles > 0 ? "ok" : "warn"}
             note={
-              profile?.approved
-                ? "Scenarios and the console are built from this."
-                : "Until this is approved, scenarios are generated against a system the model invents."
-            }
-          />
-          <StatusRow
-            label="Simulated console"
-            value={gui ? gui.system_name_fictional : "Not built"}
-            tone={gui?.approved ? "ok" : "warn"}
-            note={
-              gui
+              consoles === systems.length && systems.length > 0
                 ? undefined
-                : "Training runs use the plain text console until a template is approved."
+                : "A system without an approved console falls back to the plain text one."
             }
           />
           <StatusRow

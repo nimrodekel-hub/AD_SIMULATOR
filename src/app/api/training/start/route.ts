@@ -15,6 +15,7 @@ export const maxDuration = 60;
 
 const BodySchema = z.object({
   trainee_id: z.string().min(1),
+  system_id: z.string().min(1),
   dilemma_id: z.string().min(1),
   requested_text: z.string().min(1),
   clarifications: z.array(ClarificationRoundSchema).default([]),
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const dilemma = await getDilemma(parsed.data.dilemma_id);
+  const dilemma = await getDilemma(parsed.data.system_id, parsed.data.dilemma_id);
   if (!dilemma) {
     return NextResponse.json({ error: "Dilemma not found" }, { status: 404 });
   }
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
   try {
     // Only an approved profile governs generation. A draft is the designer
     // still working, and half-taught doctrine is worse than none.
-    const profile = await getSystemProfile();
+    const profile = await getSystemProfile(parsed.data.system_id);
     const scenario = await generateScenario(
       dilemma,
       parsed.data.difficulty,
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
     );
     const session = await createSession({
       traineeId: parsed.data.trainee_id,
+      systemId: parsed.data.system_id,
       dilemmaEntryId: dilemma.id,
       requestedText: parsed.data.requested_text,
       clarificationRounds: parsed.data.clarifications,

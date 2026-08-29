@@ -24,9 +24,14 @@ type Phase = "answering" | "reviewing";
 const TONES: IffState["tone"][] = ["friendly", "neutral", "caution", "hostile"];
 
 export function SystemProfileForm({
+  systemId,
+  systemName,
   questions,
   existing,
 }: {
+  systemId: string;
+  /** Given by the designer when the system was created; not the model's to change. */
+  systemName: string;
   questions: GuidedQuestion[];
   existing: SystemProfile | null;
 }) {
@@ -59,7 +64,7 @@ export function SystemProfileForm({
     setError(undefined);
     setNotice(undefined);
     try {
-      const response = await fetch("/api/system/extract", {
+      const response = await fetch(`/api/systems/${systemId}/profile/extract`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ answers: answerList(), open_notes: openNotes }),
@@ -81,7 +86,7 @@ export function SystemProfileForm({
     setError(undefined);
     setNotice(undefined);
     try {
-      const response = await fetch("/api/system", {
+      const response = await fetch(`/api/systems/${systemId}/profile`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -215,14 +220,10 @@ export function SystemProfileForm({
         </button>
       </div>
 
-      <Section title="Identity" hint="What this system is and what it is for.">
-        <Labelled label="Fictional system name">
-          <input
-            className="field"
-            value={draft.system_name_fictional}
-            onChange={(e) => set("system_name_fictional", e.target.value)}
-          />
-        </Labelled>
+      <Section
+        title="Identity"
+        hint={`What ${systemName} is and what it is for.`}
+      >
         <Labelled label="Purpose">
           <textarea
             className="field min-h-20"
@@ -637,7 +638,6 @@ export function SystemProfileForm({
 
 function toDraft(profile: SystemProfile): SystemProfileDraft {
   return {
-    system_name_fictional: profile.system_name_fictional,
     purpose: profile.purpose,
     track_classifications: profile.track_classifications,
     iff_states: profile.iff_states,

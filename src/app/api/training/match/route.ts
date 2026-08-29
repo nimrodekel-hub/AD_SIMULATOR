@@ -7,20 +7,26 @@ import {
   matchDilemma,
 } from "@/lib/ai/tasks/match-dilemma";
 import { ClarificationRoundSchema } from "@/lib/domain/schemas";
-import { listApprovedDilemmas } from "@/lib/store/kb";
+import { getSystem, listApprovedDilemmas } from "@/lib/store/kb";
 
 /**
  * Routes a trainee's free-text request to a dilemma.
  *
+ * Matching is scoped to the system the trainee chose. A dilemma taught inside
+ * one system assumes that system's identification states, actions and numbers,
+ * so offering it against another would train someone on a procedure their
+ * console does not have.
+ *
  * Returns one of three shapes, and the client renders whichever it gets:
  *   - `needs_clarification` — the matcher is unsure and has one question.
  *   - `matched`             — confident enough, or out of clarification rounds.
- *   - `no_dilemmas`         — nothing approved in the knowledge base yet.
+ *   - `no_dilemmas`         — nothing approved for this system yet.
  */
 
 export const maxDuration = 60;
 
 const BodySchema = z.object({
+  system_id: z.string().min(1),
   request: z.string().min(1),
   clarifications: z.array(ClarificationRoundSchema).default([]),
 });
@@ -31,7 +37,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const dilemmas = await listApprovedDilemmas();
+  const system = await getSystem(parsed.data.system_id);
+  if (!system) {
+    return NextResponse.json({ error: "System not found" }, { status: 404 });
+  }
+
+  const dilemmas = await listApprovedDilemmas(parsed.data.system_id);
   if (dilemmas.length === 0) {
     return NextResponse.json({ status: "no_dilemmas" as const });
   }

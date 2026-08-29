@@ -7,10 +7,10 @@ import type { GuiTemplate } from "@/lib/domain/schemas";
 /**
  * Screen 1b — building the simulated console.
  *
- * Upload a handful of reference screenshots, name the fictional system, and the
- * model produces a console shell. The designer previews it, regenerates with
- * direction until it looks right, and approves it once. Every training run from
- * then on renders inside it.
+ * Upload a handful of reference screenshots and the model produces a console
+ * shell for this system. The designer previews it, regenerates with direction
+ * until it looks right, and approves it once. Every training run on this system
+ * from then on renders inside it.
  */
 
 const REQUIRED_SLOT_LABELS: Record<string, string> = {
@@ -21,12 +21,18 @@ const REQUIRED_SLOT_LABELS: Record<string, string> = {
   decision: "decision panel",
 };
 
-export function GuiBuilder({ existing }: { existing: GuiTemplate | null }) {
+export function GuiBuilder({
+  systemId,
+  systemName,
+  existing,
+}: {
+  systemId: string;
+  /** The system's own fictional name. The console is titled with it. */
+  systemName: string;
+  existing: GuiTemplate | null;
+}) {
   const router = useRouter();
 
-  const [systemName, setSystemName] = useState(
-    existing?.system_name_fictional ?? "",
-  );
   const [files, setFiles] = useState<File[]>([]);
   const [guidance, setGuidance] = useState("");
 
@@ -48,14 +54,13 @@ export function GuiBuilder({ existing }: { existing: GuiTemplate | null }) {
 
     try {
       const form = new FormData();
-      form.set("system_name", systemName);
       form.set("guidance", guidance);
       // Sending the previous attempt makes a regenerate a refinement rather
       // than a fresh roll of the dice.
       if (html) form.set("previous_html", html);
       for (const file of files) form.append("screenshots", file);
 
-      const response = await fetch("/api/gui/generate", {
+      const response = await fetch(`/api/systems/${systemId}/gui/generate`, {
         method: "POST",
         body: form,
       });
@@ -79,11 +84,10 @@ export function GuiBuilder({ existing }: { existing: GuiTemplate | null }) {
     setNotice(undefined);
 
     try {
-      const response = await fetch("/api/gui", {
+      const response = await fetch(`/api/systems/${systemId}/gui`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system_name_fictional: systemName,
           generated_ui_code: html,
           source_screenshots: screenshots,
           approved,
@@ -106,7 +110,7 @@ export function GuiBuilder({ existing }: { existing: GuiTemplate | null }) {
   }
 
   const enoughFiles = files.length >= 2 && files.length <= 5;
-  const canGenerate = systemName.trim().length > 0 && enoughFiles && !busy;
+  const canGenerate = enoughFiles && !busy;
 
   return (
     <div className="space-y-8">
@@ -117,7 +121,7 @@ export function GuiBuilder({ existing }: { existing: GuiTemplate | null }) {
           </span>
           <p className="flex-1 text-sm text-muted">
             {existing.approved
-              ? `"${existing.system_name_fictional}" is in use for training runs.`
+              ? `In use for every training run on ${systemName}.`
               : "Not yet in use — training runs still use the built-in console."}
           </p>
         </div>
@@ -133,16 +137,6 @@ export function GuiBuilder({ existing }: { existing: GuiTemplate | null }) {
         </p>
 
         <div className="mt-4 space-y-4">
-          <label className="block">
-            <span className="label">Fictional system name</span>
-            <input
-              className="field"
-              value={systemName}
-              placeholder="e.g. SENTINEL-C2"
-              onChange={(event) => setSystemName(event.target.value)}
-            />
-          </label>
-
           <label className="block">
             <span className="label">Screenshots</span>
             <input

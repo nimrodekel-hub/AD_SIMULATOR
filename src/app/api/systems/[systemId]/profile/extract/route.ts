@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { describeAiError } from "@/lib/ai/client";
 import { extractSystemProfile } from "@/lib/ai/tasks/learn-system";
+import { getSystem } from "@/lib/store/kb";
 
-/** Turns the designer's answers into a structured behaviour profile. */
+/** Turns one system's answers into a structured behaviour profile. */
 
 export const maxDuration = 60;
 
@@ -12,7 +13,16 @@ const BodySchema = z.object({
   open_notes: z.string(),
 });
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  ctx: RouteContext<"/api/systems/[systemId]/profile/extract">,
+) {
+  const { systemId } = await ctx.params;
+  const system = await getSystem(systemId);
+  if (!system) {
+    return NextResponse.json({ error: "System not found" }, { status: 404 });
+  }
+
   const parsed = BodySchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
@@ -30,6 +40,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const draft = await extractSystemProfile(
+      system.name,
       parsed.data.answers,
       parsed.data.open_notes,
     );

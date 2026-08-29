@@ -11,7 +11,13 @@ import type { DilemmaDraft, DilemmaEntry } from "@/lib/domain/schemas";
  * Approval is what makes an entry visible to trainees, so it is a separate,
  * deliberate action rather than a side effect of saving.
  */
-export function DilemmaEditor({ entry }: { entry: DilemmaEntry }) {
+export function DilemmaEditor({
+  systemId,
+  entry,
+}: {
+  systemId: string;
+  entry: DilemmaEntry;
+}) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -23,7 +29,7 @@ export function DilemmaEditor({ entry }: { entry: DilemmaEntry }) {
     setError(undefined);
     setNotice(undefined);
     try {
-      const response = await fetch(`/api/dilemmas/${entry.id}`, {
+      const response = await fetch(`/api/systems/${systemId}/dilemmas/${entry.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ draft }),
@@ -43,7 +49,7 @@ export function DilemmaEditor({ entry }: { entry: DilemmaEntry }) {
     setApproving(true);
     setError(undefined);
     try {
-      const response = await fetch(`/api/dilemmas/${entry.id}/approve`, {
+      const response = await fetch(`/api/systems/${systemId}/dilemmas/${entry.id}/approve`, {
         method: "POST",
       });
       const payload = await response.json();

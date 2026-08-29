@@ -21,7 +21,7 @@ export default async function DebriefPage({
   const session = await getSession(sessionId);
   if (!session) notFound();
 
-  const dilemma = await getDilemma(session.dilemma_entry_id);
+  const dilemma = await getDilemma(session.system_id, session.dilemma_entry_id);
   const outcome = session.outcome;
 
   if (session.status !== "completed" || !outcome) {

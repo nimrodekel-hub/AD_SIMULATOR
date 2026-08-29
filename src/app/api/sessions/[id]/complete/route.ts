@@ -41,7 +41,7 @@ export async function POST(
 
   await recordDecisions(id, parsed.data.decisions);
 
-  const dilemma = await getDilemma(session.dilemma_entry_id);
+  const dilemma = await getDilemma(session.system_id, session.dilemma_entry_id);
   if (!dilemma) {
     return NextResponse.json(
       { error: "The dilemma this session was built from no longer exists." },

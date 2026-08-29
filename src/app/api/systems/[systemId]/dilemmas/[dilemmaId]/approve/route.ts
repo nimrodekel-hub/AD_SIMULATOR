@@ -8,11 +8,11 @@ import { approveDilemma } from "@/lib/store/kb";
  */
 export async function POST(
   _request: NextRequest,
-  ctx: RouteContext<"/api/dilemmas/[id]/approve">,
+  ctx: RouteContext<"/api/systems/[systemId]/dilemmas/[dilemmaId]/approve">,
 ) {
-  const { id } = await ctx.params;
+  const { systemId, dilemmaId } = await ctx.params;
   try {
-    const entry = await approveDilemma(id);
+    const entry = await approveDilemma(systemId, dilemmaId);
     if (!entry) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ entry });
   } catch (reason) {

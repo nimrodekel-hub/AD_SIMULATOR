@@ -30,8 +30,8 @@ export default async function RunPage({
   // Only approved artefacts reach a trainee. A draft is the designer still
   // working, and the knowledge base follows the same rule.
   const [template, profile] = await Promise.all([
-    getGuiTemplate(),
-    getSystemProfile(),
+    getGuiTemplate(session.system_id),
+    getSystemProfile(session.system_id),
   ]);
   const templateHtml = template?.approved
     ? template.generated_ui_code

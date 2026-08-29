@@ -4,10 +4,10 @@ import {
   generateGuiTemplate,
   missingSlots,
 } from "@/lib/ai/tasks/generate-gui";
-import { getSystemProfile, saveScreenshot } from "@/lib/store/kb";
+import { getSystem, getSystemProfile, saveScreenshot } from "@/lib/store/kb";
 
 /**
- * Turns reference screenshots into a console shell.
+ * Turns one system's reference screenshots into its console shell.
  *
  * Runs once per template, not per training run — the brief rules out generating
  * a GUI at runtime.
@@ -23,7 +23,16 @@ const MAX_BYTES_EACH = 4 * 1024 * 1024;
 
 const ACCEPTED = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  ctx: RouteContext<"/api/systems/[systemId]/gui/generate">,
+) {
+  const { systemId } = await ctx.params;
+  const system = await getSystem(systemId);
+  if (!system) {
+    return NextResponse.json({ error: "System not found" }, { status: 404 });
+  }
+
   let form: FormData;
   try {
     form = await request.formData();
@@ -34,23 +43,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const systemName = String(form.get("system_name") ?? "").trim();
-  if (!systemName) {
-    return NextResponse.json(
-      { error: "Give the simulated system a name first." },
-      { status: 400 },
-    );
-  }
-
   // The console is built from the screenshots and the profile together. Without
   // the profile it would only look right, and a console that looks right while
   // behaving wrong is the failure this whole step exists to prevent.
-  const profile = await getSystemProfile();
+  const profile = await getSystemProfile(systemId);
   if (!profile?.approved) {
     return NextResponse.json(
       {
         error:
-          "Teach and approve the system profile first — the console is built from how the system behaves, not only from how it looks.",
+          "Teach and approve this system's behaviour profile first — the console is built from how the system behaves, not only from how it looks.",
       },
       { status: 409 },
     );
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
     const stored = await Promise.all(
       files.map(async (file) => {
         const bytes = new Uint8Array(await file.arrayBuffer());
-        const path = await saveScreenshot(file.name, bytes);
+        const path = await saveScreenshot(systemId, file.name, bytes);
         return {
           path,
           mediaType: file.type,
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
     const draft = await generateGuiTemplate({
       screenshots: stored.map(({ mediaType, base64 }) => ({ mediaType, base64 })),
       profile,
-      systemNameFictional: systemName,
+      systemNameFictional: system.name,
       guidance: String(form.get("guidance") ?? "").trim(),
       previousHtml: String(form.get("previous_html") ?? "") || undefined,
     });
