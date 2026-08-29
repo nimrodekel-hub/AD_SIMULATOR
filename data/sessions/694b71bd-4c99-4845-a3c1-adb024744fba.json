@@ -1,0 +1,198 @@
+{
+  "id": "694b71bd-4c99-4845-a3c1-adb024744fba",
+  "trainee_id": "zz-timing",
+  "system_id": "e7f4d85e-4802-44ca-87fa-03ed58ef702f",
+  "dilemma_entry_id": "f21f741c-7e20-4992-a511-dfef0d0031ee",
+  "requested_text": "Practise holding fire on an unidentified low slow track when a civilian aircraft might be in the corridor.",
+  "clarification_rounds": [],
+  "difficulty_level": "medium",
+  "scenario_instance": {
+    "scenario_name": "Corridor Watch — Unresolved Medevac Lane, Sector East",
+    "situation_brief": "You are the console operator at a forward point-defence site. The site sits under the eastern arm of a charted humanitarian corridor nominally reserved for medical evacuation traffic; the corridor's activation status for this period has not been confirmed by the airspace control authority. Two slow, low-altitude tracks have correlated on the corridor axis inbound to the defended area. Neither has returned an interrogation response. You hold two ready launchers and four effectors, one electro-optical identification asset that can be cued to a single track at a time, and a voice circuit to the airspace control authority. The system engagement envelope is 8 to 100 km; inside 8 km no shot is available. Battery commander authorisation is required unless you are acting in self-defence.",
+    "time_window_seconds": 180,
+    "tracks": [
+      {
+        "designator": "TRK 4471",
+        "iff_status": "Unknown",
+        "classification": "UAV",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "4471"
+          },
+          {
+            "label": "ID",
+            "value": "Unknown"
+          },
+          {
+            "label": "TYPE",
+            "value": "UAV"
+          },
+          {
+            "label": "BRG",
+            "value": "041°"
+          },
+          {
+            "label": "RNG",
+            "value": "27 km"
+          },
+          {
+            "label": "ALT",
+            "value": "900 ft"
+          },
+          {
+            "label": "SPD",
+            "value": "195 kts"
+          },
+          {
+            "label": "TTI",
+            "value": "269 s"
+          }
+        ],
+        "notes": "Lead track. Steady heading down the corridor centreline, no manoeuvre since correlation. No interrogation response. Profile fits both a small uncrewed strike vehicle and a rotary medical flight running low and slow. Crosses the 8 km inner engagement limit in approximately 189 s from now."
+      },
+      {
+        "designator": "TRK 4478",
+        "iff_status": "Unknown",
+        "classification": "UAV",
+        "readouts": [
+          {
+            "label": "TRK",
+            "value": "4478"
+          },
+          {
+            "label": "ID",
+            "value": "Unknown"
+          },
+          {
+            "label": "TYPE",
+            "value": "UAV"
+          },
+          {
+            "label": "BRG",
+            "value": "047°"
+          },
+          {
+            "label": "RNG",
+            "value": "41 km"
+          },
+          {
+            "label": "ALT",
+            "value": "1400 ft"
+          },
+          {
+            "label": "SPD",
+            "value": "170 kts"
+          },
+          {
+            "label": "TTI",
+            "value": "469 s"
+          }
+        ],
+        "notes": "Trail track, offset roughly 6° north of the lead and slightly higher. Same corridor axis, same absence of interrogation response. Ranked below TRK 4471 by the automatic threat ranking on time to impact alone."
+      }
+    ],
+    "resources": [
+      {
+        "name": "ready effectors available to the engaging fire unit",
+        "unit": "rounds",
+        "available": 4,
+        "total": 4
+      },
+      {
+        "name": "visual or electro-optical identification assets able to be cued onto the track",
+        "unit": "assets",
+        "available": 1,
+        "total": 1
+      },
+      {
+        "name": "time remaining before the lead track reaches the defended-asset keep-out boundary",
+        "unit": "seconds",
+        "available": 189,
+        "total": 189
+      },
+      {
+        "name": "attempts made to raise the airspace control authority for corridor status",
+        "unit": "queries",
+        "available": 0,
+        "total": 4
+      }
+    ],
+    "decision_points": [
+      {
+        "kb_decision_point_index": 0,
+        "situation_rendered": "T+0. TRK 4471 is at 27 km on bearing 041°, 900 ft, 195 kts, TTI 269 s, tracking steadily down the centreline of the medevac corridor. TRK 4478 sits 14 km behind it at 41 km on a near-identical profile. Both are Unknown; neither has returned an interrogation response, and the airspace control authority has not yet been asked whether the corridor is active for this period. Both tracks are inside the 8 to 100 km envelope now and the firing geometry on TRK 4471 is as good as it will get, with roughly 189 s before it crosses the 8 km inner limit. You hold four effectors, two ready launchers, and one electro-optical identification asset that can be cued to one track at a time.",
+        "actions": [
+          {
+            "label": "Hold fire and take no further action until the track declares itself",
+            "description": "Assume the corridor implies protected status, break off active prosecution, and wait for the track to either identify itself or manoeuvre before reconsidering."
+          },
+          {
+            "label": "Hold fire, hand off for visual identification, and simultaneously query the airspace authority for corridor status",
+            "description": "Withhold the engagement, cue any available visual or electro-optical asset onto the track, and open a parallel request to the controlling authority to confirm whether the medevac corridor is active and whether the track correlates to a scheduled flight. Keep the fire solution maintained throughout."
+          },
+          {
+            "label": "Declare the track hostile on kinematics alone and pass it to a higher echelon for the engagement decision",
+            "description": "Classify on the slow, low profile, then transfer the decision upward rather than resolving identification locally, accepting the delay that referral introduces."
+          },
+          {
+            "label": "Engage now at maximum range while the geometry is optimal",
+            "description": "Treat the absence of an interrogation response and the unconfirmed corridor as sufficient grounds for hostile classification, and commit an effector immediately to maximise standoff from the defended asset."
+          }
+        ]
+      },
+      {
+        "kb_decision_point_index": 1,
+        "situation_rendered": "T+92. The electro-optical asset has been cued to TRK 4471 but is fighting haze at low elevation and has not resolved the airframe. The airspace control authority answered on the third query: a medical rotary flight is scheduled in this corridor for the current period, but the authority cannot confirm its present position or correlate it to either track. TRK 4471 is now at 18 km, 900 ft, 195 kts, TTI 179 s — about 100 s before it crosses the 8 km inner limit, inside which no shot exists. TRK 4478 is at 33 km, still Unknown, still on the corridor axis. Both launchers remain ready; the identification asset can only work one track at a time.",
+        "actions": [
+          {
+            "label": "Continue identification to the last defensible engagement point, with a pre-declared decision rule for what happens there",
+            "description": "Press the identification effort right up to the pre-computed last-shot point, having stated in advance what action will be taken if identification is still unresolved when that point is reached, and what track behaviours would trigger an earlier engagement."
+          },
+          {
+            "label": "Break the engagement and shift to protecting the defended asset by other means",
+            "description": "Accept that identification will not resolve in time, decline the engagement entirely, and rely on passive protection and layered defences behind this fire unit."
+          },
+          {
+            "label": "Engage immediately on the grounds that the confirmation window is closing",
+            "description": "Accept the partial corridor information as insufficient and release an effector now, before the track crosses the last point at which an engagement is assured."
+          },
+          {
+            "label": "Attempt warning or diversion measures to force the track to declare its intent",
+            "description": "Use available warning or challenge procedures to see whether the track responds in a way that resolves its identity, treating compliance as identification and non-compliance as an indicator."
+          }
+        ]
+      },
+      {
+        "kb_decision_point_index": 2,
+        "situation_rendered": "T+150. The electro-optical asset breaks through and resolves TRK 4471: uncrewed strike airframe, no medical markings, external stores. It has descended to 600 ft and drifted off the corridor centreline onto a bearing that runs directly at the defended asset. Identification is set to Confirmed hostile. Range is now 12 km, TTI 120 s — roughly 40 s of engagement window remains before it crosses the 8 km inner limit, well inside the range at which the shot was first offered. TRK 4478 is still Unknown at 28 km on the corridor axis, same slow low profile, no interrogation response, and the identification asset is now free to be re-cued. Four effectors remain and both launchers are available.",
+        "actions": [
+          {
+            "label": "Engage the identified hostile and classify the remaining tracks hostile by association with it",
+            "description": "Treat the confirmed hostile as evidence that the corridor is being exploited, and prosecute the other slow tracks on the same profile without repeating the identification process."
+          },
+          {
+            "label": "Distribute the limited effectors evenly across all tracks to hedge against the worst case",
+            "description": "Assign effectors across the unknown and known tracks so that no single track is left unengaged, accepting reduced probability of kill on each."
+          },
+          {
+            "label": "Engage the identified hostile immediately and re-enter the identification cycle for the remaining unknowns",
+            "description": "Commit against the track whose identity is resolved, then apply the same withhold-and-identify discipline to the new unknowns rather than carrying the hostile classification across to them by association."
+          },
+          {
+            "label": "Hold all engagements until every track in the corridor is individually identified",
+            "description": "Refuse to commit effectors until the whole picture is resolved, to guarantee that no protected flight is engaged."
+          }
+        ]
+      }
+    ]
+  },
+  "decisions_made": [],
+  "outcome": null,
+  "score": null,
+  "debrief_text": "",
+  "recommendations": [],
+  "status": "in_progress",
+  "created_at": "2026-08-29T16:13:11.670Z",
+  "completed_at": null
+}
