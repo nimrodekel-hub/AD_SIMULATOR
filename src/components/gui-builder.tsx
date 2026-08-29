@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { GuiTemplate } from "@/lib/domain/schemas";
+import { MAX_REQUEST_BYTES, formatBytes, readJson } from "@/lib/http";
+import { prepareImage } from "@/lib/images";
 
 /**
  * Screen 1b — building the simulated console.
@@ -12,6 +14,13 @@ import type { GuiTemplate } from "@/lib/domain/schemas";
  * until it looks right, and approves it once. Every training run on this system
  * from then on renders inside it.
  */
+
+/* Room left under the platform's request limit for the form's other fields
+   and multipart overhead. */
+const UPLOAD_BUDGET = MAX_REQUEST_BYTES - 256 * 1024;
+
+/** Kept in step with the route's own limit. */
+const MAX_SCREENSHOTS = 8;
 
 const REQUIRED_SLOT_LABELS: Record<string, string> = {
   "system-name": "system name",
@@ -34,6 +43,8 @@ export function GuiBuilder({
   const router = useRouter();
 
   const [files, setFiles] = useState<File[]>([]);
+  const [originalBytes, setOriginalBytes] = useState(0);
+  const [preparing, setPreparing] = useState(false);
   const [guidance, setGuidance] = useState("");
 
   const [html, setHtml] = useState(existing?.generated_ui_code ?? "");
@@ -46,6 +57,25 @@ export function GuiBuilder({
   const [busy, setBusy] = useState<"generating" | "saving" | null>(null);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
+
+  /**
+   * Scales the chosen screenshots down before anything is sent.
+   *
+   * Done on selection rather than on submit so the size shown next to the
+   * chooser is the size that will actually be uploaded, and so a selection that
+   * still does not fit says so before the button is pressed.
+   */
+  async function choose(chosen: File[]) {
+    setPreparing(true);
+    setError(undefined);
+    try {
+      const prepared = await Promise.all(chosen.map(prepareImage));
+      setFiles(prepared.map((entry) => entry.file));
+      setOriginalBytes(prepared.reduce((sum, e) => sum + e.originalBytes, 0));
+    } finally {
+      setPreparing(false);
+    }
+  }
 
   async function generate() {
     setBusy("generating");
@@ -64,7 +94,13 @@ export function GuiBuilder({
         method: "POST",
         body: form,
       });
-      const payload = await response.json();
+      const payload = await readJson<{
+        error?: string;
+        html: string;
+        design_notes: string;
+        screenshots: string[];
+        missing_slots?: string[];
+      }>(response);
       if (!response.ok) throw new Error(payload.error ?? "Generation failed.");
 
       setHtml(payload.html);
@@ -93,7 +129,7 @@ export function GuiBuilder({
           approved,
         }),
       });
-      const payload = await response.json();
+      const payload = await readJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(payload.error ?? "Save failed.");
 
       setNotice(
@@ -109,8 +145,16 @@ export function GuiBuilder({
     }
   }
 
-  const enoughFiles = files.length >= 2 && files.length <= 5;
-  const canGenerate = enoughFiles && !busy;
+  const enoughFiles = files.length >= 2 && files.length <= MAX_SCREENSHOTS;
+
+  /* The serverless limit applies to the request as a whole, so four ordinary
+     phone screenshots can exceed it while every single one is well inside the
+     per-file cap. Caught here, before the upload, because the platform rejects
+     an oversized body before the app can explain itself. */
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+  const tooLarge = totalBytes > UPLOAD_BUDGET;
+  const canGenerate = enoughFiles && !tooLarge && !busy && !preparing;
+  const saved = originalBytes - totalBytes;
 
   return (
     <div className="space-y-8">
@@ -131,9 +175,9 @@ export function GuiBuilder({
       <section>
         <h2 className="text-sm font-semibold">Reference</h2>
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
-          Two to five screenshots of a console. Layout, palette and density are
-          reproduced; identifying content is not — no vendor names, unit
-          markings or real call signs are carried across.
+          Two to {MAX_SCREENSHOTS} screenshots of a console. Layout, palette and
+          density are reproduced; identifying content is not — no vendor names,
+          unit markings or real call signs are carried across.
         </p>
 
         <div className="mt-4 space-y-4">
@@ -144,13 +188,27 @@ export function GuiBuilder({
               className="field"
               accept="image/png,image/jpeg,image/gif,image/webp"
               multiple
-              onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+              onChange={(event) =>
+                void choose(Array.from(event.target.files ?? []))
+              }
             />
             <span className="mt-1.5 block text-xs text-muted">
-              {files.length === 0
-                ? "None chosen."
-                : `${files.length} chosen${enoughFiles ? "" : " — need between 2 and 5"}.`}
+              {preparing
+                ? "Scaling them down…"
+                : files.length === 0
+                  ? `None chosen. Up to ${MAX_SCREENSHOTS}; they are scaled down here before upload, so file size is rarely a problem.`
+                  : `${files.length} chosen, ${formatBytes(totalBytes)}${
+                      saved > 0 ? ` (down from ${formatBytes(originalBytes)})` : ""
+                    }${enoughFiles ? "" : ` — need between 2 and ${MAX_SCREENSHOTS}`}.`}
             </span>
+            {tooLarge ? (
+              <span className="mt-1.5 block text-xs text-warn">
+                That is over the {formatBytes(UPLOAD_BUDGET)} the server accepts
+                in one request. Choose fewer screenshots, or scale them down —
+                the console only needs layout and colour, so a smaller image
+                loses nothing.
+              </span>
+            ) : null}
           </label>
 
           {html ? (
@@ -171,11 +229,13 @@ export function GuiBuilder({
             disabled={!canGenerate}
             onClick={() => void generate()}
           >
-            {busy === "generating"
-              ? "Reading the screenshots…"
-              : html
-                ? "Regenerate"
-                : "Generate console"}
+            {preparing
+              ? "Preparing…"
+              : busy === "generating"
+                ? "Reading the screenshots…"
+                : html
+                  ? "Regenerate"
+                  : "Generate console"}
           </button>
         </div>
       </section>

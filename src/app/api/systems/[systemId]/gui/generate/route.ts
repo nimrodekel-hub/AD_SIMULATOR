@@ -15,10 +15,16 @@ import { getSystem, getSystemProfile, saveScreenshot } from "@/lib/store/kb";
 
 export const maxDuration = 60;
 
-/** The brief asks for 2-5 screenshots. */
+/**
+ * The brief asks for two to five screenshots; the ceiling is a little higher
+ * because the browser scales each one to what the model actually reads before
+ * uploading it, so a sixth costs very little. More than this stops adding
+ * information about a single console and only adds tokens to every generation.
+ */
 const MIN_SCREENSHOTS = 2;
-const MAX_SCREENSHOTS = 5;
-/** Comfortably inside the API's request ceiling, with five images in flight. */
+const MAX_SCREENSHOTS = 8;
+
+/** Generous once the browser has scaled them; a guard, not a working limit. */
 const MAX_BYTES_EACH = 4 * 1024 * 1024;
 
 const ACCEPTED = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
