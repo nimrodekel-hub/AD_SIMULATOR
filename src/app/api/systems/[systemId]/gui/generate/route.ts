@@ -17,7 +17,17 @@ import { getSystem, getSystemProfile, loadScreenshots } from "@/lib/store/kb";
  * a GUI at runtime.
  */
 
-export const maxDuration = 60;
+/**
+ * Longer than the rest of the app on purpose.
+ *
+ * This call reads several screenshots and writes a whole console shell, which
+ * is the largest single piece of output the app asks for; sixty seconds was not
+ * enough and the request came back cut off. Nothing is gained by returning
+ * early and finishing in the background — on this platform the function *is*
+ * the worker, and work scheduled after the response still runs inside the same
+ * budget. The budget itself has to be bigger.
+ */
+export const maxDuration = 300;
 
 export async function POST(
   request: NextRequest,
