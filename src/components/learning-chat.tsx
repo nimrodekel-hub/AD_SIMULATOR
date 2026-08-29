@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { DilemmaForm } from "@/components/dilemma-form";
 import type { DilemmaDraft } from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
+import { type JobView, formatWait, useBackgroundJob } from "@/lib/use-job";
 
 /**
  * Screen 1a — the designer teaches the system a dilemma.
@@ -13,11 +14,24 @@ import { readJson } from "@/lib/http";
  * actually comes out. Then a structured record extracted from that conversation
  * and shown as an editable form, because the brief is explicit that the agent
  * must hand back something reviewable rather than say "got it, thanks".
+ *
+ * The extraction between the two phases is the slow part — reading a whole
+ * interview takes a minute and a half or more, which is longer than a phone
+ * will hold a connection open. So it does not hold one: the press starts the
+ * work on the server and this screen asks every few seconds whether it has
+ * finished. The transcript comes back with the draft, so returning to this page
+ * after the conversation itself is gone still gives you something to save.
  */
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+}
+
+/** What the extraction hands back once it finishes. */
+interface ExtractionResult {
+  draft: DilemmaDraft;
+  transcript: string;
 }
 
 /** Names the system, so the designer answers about that one and not in general. */
@@ -29,10 +43,13 @@ const openingMessage = (systemName: string): ChatMessage => ({
 export function LearningChat({
   systemId,
   systemName,
+  initialJob,
 }: {
   /** The system this dilemma is being taught inside. It is filed under it. */
   systemId: string;
   systemName: string;
+  /** Whatever extraction was under way, or finished, when this page loaded. */
+  initialJob: JobView<ExtractionResult>;
 }) {
   const router = useRouter();
 
@@ -42,10 +59,20 @@ export function LearningChat({
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
-  const [draft, setDraft] = useState<DilemmaDraft | null>(null);
-  const [extracting, setExtracting] = useState(false);
+  const [draft, setDraft] = useState<DilemmaDraft | null>(
+    initialJob.result?.draft ?? null,
+  );
+  /**
+   * The conversation the draft came from, as it will be filed.
+   *
+   * Taken from the extraction rather than rebuilt from the messages on screen,
+   * because a page reopened after a locked phone has a draft and no messages.
+   */
+  const [extractedFrom, setExtractedFrom] = useState(
+    initialJob.result?.transcript ?? "",
+  );
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string>();
+  const [chatError, setChatError] = useState<string>();
 
   const scrollAnchor = useRef<HTMLDivElement>(null);
 
@@ -59,6 +86,24 @@ export function LearningChat({
       .map((m) => `${m.role === "user" ? "EXPERT" : "INTERVIEWER"}: ${m.content}`)
       .join("\n\n");
 
+  const {
+    running: extracting,
+    waited,
+    error: extractError,
+    setError: setExtractError,
+    start: startExtraction,
+  } = useBackgroundJob<ExtractionResult>({
+    startUrl: `/api/systems/${systemId}/dilemmas/extract`,
+    initial: initialJob,
+    onDone: (result) => {
+      setDraft(result.draft);
+      setExtractedFrom(result.transcript);
+    },
+  });
+
+  /** Whichever thing went wrong most recently. Only one is ever on screen. */
+  const error = chatError ?? extractError;
+
   async function send() {
     const text = input.trim();
     if (!text || streaming) return;
@@ -67,7 +112,7 @@ export function LearningChat({
     setMessages(history);
     setInput("");
     setStreaming(true);
-    setError(undefined);
+    setChatError(undefined);
 
     try {
       const response = await fetch("/api/designer/chat", {
@@ -101,52 +146,67 @@ export function LearningChat({
         setMessages([...history, { role: "assistant", content: assembled }]);
       }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Something went wrong.");
+      setChatError(
+        reason instanceof Error ? reason.message : "Something went wrong.",
+      );
       setMessages(history);
     } finally {
       setStreaming(false);
     }
   }
 
-  async function extract() {
-    setExtracting(true);
-    setError(undefined);
-    try {
-      const response = await fetch("/api/designer/extract", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript: transcript() }),
-      });
-      const payload = await readJson<{ error?: string; draft: DilemmaDraft }>(
-        response,
-      );
-      if (!response.ok) throw new Error(payload.error ?? "Extraction failed.");
-      setDraft(payload.draft as DilemmaDraft);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Extraction failed.");
-    } finally {
-      setExtracting(false);
-    }
+  function extract() {
+    setChatError(undefined);
+    return startExtraction({ transcript: transcript() });
+  }
+
+  /**
+   * Puts the conversation back in charge.
+   *
+   * The stored extraction is dropped too, so that coming back to this screen
+   * later does not present a draft the designer has already turned down.
+   */
+  async function discardDraft() {
+    setDraft(null);
+    setExtractedFrom("");
+    setExtractError(undefined);
+    await fetch(`/api/systems/${systemId}/dilemmas/extract`, {
+      method: "DELETE",
+    }).catch(() => {
+      // Worth trying, not worth blocking on: the record is overwritten by the
+      // next extraction anyway.
+    });
   }
 
   async function save(edited: DilemmaDraft) {
     setSaving(true);
-    setError(undefined);
+    setChatError(undefined);
     try {
       const response = await fetch(`/api/systems/${systemId}/dilemmas`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ draft: edited, transcript: transcript() }),
+        body: JSON.stringify({
+          draft: edited,
+          // What the draft was actually extracted from, which after a reload is
+          // no longer what is on screen.
+          transcript: extractedFrom || transcript(),
+        }),
       });
       const payload = await readJson<{ error?: string; entry: { id: string } }>(
         response,
       );
       if (!response.ok) throw new Error(payload.error ?? "Save failed.");
+
+      // Saved: the extraction has been reviewed and is no longer pending.
+      await fetch(`/api/systems/${systemId}/dilemmas/extract`, {
+        method: "DELETE",
+      }).catch(() => undefined);
+
       router.push(
         `/designer/systems/${systemId}/dilemmas/${payload.entry.id}`,
       );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Save failed.");
+      setChatError(reason instanceof Error ? reason.message : "Save failed.");
       setSaving(false);
     }
   }
@@ -173,7 +233,7 @@ export function LearningChat({
             <button
               type="button"
               className="btn"
-              onClick={() => setDraft(null)}
+              onClick={() => void discardDraft()}
               disabled={saving}
             >
               Back to conversation
@@ -198,6 +258,20 @@ export function LearningChat({
         ) : null}
         <div ref={scrollAnchor} />
       </div>
+
+      {extracting ? (
+        <div className="panel mt-6 p-4">
+          <p className="text-sm">
+            Reading the conversation
+            {waited > 0 ? ` — ${formatWait(waited)} so far` : "…"}
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-muted">
+            A minute or two is normal. It is running on the server, so you can
+            lock your phone, switch tabs or close this page — the extracted
+            record will be waiting here when you come back.
+          </p>
+        </div>
+      ) : null}
 
       {error ? (
         <p className="chip status-danger mt-4 !normal-case">{error}</p>

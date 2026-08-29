@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { GuiTemplate } from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
+import { type JobView, formatWait, useBackgroundJob } from "@/lib/use-job";
 
 /**
  * Setup step 3 — building the simulated console.
@@ -29,20 +30,11 @@ const REQUIRED_SLOT_LABELS: Record<string, string> = {
   decision: "decision panel",
 };
 
-/** Often enough to feel responsive, rare enough to be free. */
-const POLL_MS = 3000;
-
 interface JobResult {
   html: string;
   design_notes: string;
   screenshots: string[];
   missing_slots: string[];
-}
-
-interface Job {
-  status: "idle" | "running" | "done" | "failed";
-  error?: string | null;
-  result?: JobResult | null;
 }
 
 export function GuiBuilder({
@@ -59,7 +51,7 @@ export function GuiBuilder({
   screenshotCount: number;
   existing: GuiTemplate | null;
   /** Whatever generation was already under way when this page loaded. */
-  initialJob: Job;
+  initialJob: JobView<JobResult>;
 }) {
   const router = useRouter();
 
@@ -75,81 +67,34 @@ export function GuiBuilder({
     initialJob.result?.missing_slots ?? [],
   );
 
-  const [generating, setGenerating] = useState(initialJob.status === "running");
-  const [waited, setWaited] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | undefined>(
-    initialJob.status === "failed" ? (initialJob.error ?? undefined) : undefined,
-  );
   const [notice, setNotice] = useState<string>();
 
-  /* ---- Ask the server how it is getting on ----------------------- */
-  useEffect(() => {
-    if (!generating) return;
-    let cancelled = false;
-    const startedAt = Date.now();
+  const {
+    running: generating,
+    waited,
+    error,
+    setError,
+    start,
+  } = useBackgroundJob<JobResult>({
+    startUrl: `/api/systems/${systemId}/gui/generate`,
+    initial: initialJob,
+    onDone: (result) => {
+      setHtml(result.html);
+      setNotes(result.design_notes);
+      setScreenshots(result.screenshots);
+      setMissingSlots(result.missing_slots);
+    },
+  });
 
-    const clock = setInterval(
-      () => setWaited(Math.round((Date.now() - startedAt) / 1000)),
-      1000,
-    );
-
-    const poll = setInterval(async () => {
-      try {
-        const response = await fetch(
-          `/api/systems/${systemId}/gui/generate`,
-          { cache: "no-store" },
-        );
-        const job = await readJson<Job>(response);
-        if (cancelled) return;
-
-        if (job.status === "done" && job.result) {
-          setHtml(job.result.html);
-          setNotes(job.result.design_notes);
-          setScreenshots(job.result.screenshots);
-          setMissingSlots(job.result.missing_slots);
-          setGenerating(false);
-        } else if (job.status === "failed") {
-          setError(job.error ?? "Generation failed.");
-          setGenerating(false);
-        } else if (job.status === "idle") {
-          setGenerating(false);
-        }
-      } catch {
-        // A dropped poll says nothing about the work. Keep waiting — that is
-        // the whole point of not holding the connection open.
-      }
-    }, POLL_MS);
-
-    return () => {
-      cancelled = true;
-      clearInterval(clock);
-      clearInterval(poll);
-    };
-  }, [generating, systemId]);
-
-  async function generate() {
-    setError(undefined);
+  function generate() {
     setNotice(undefined);
-    setWaited(0);
-
-    try {
-      const response = await fetch(`/api/systems/${systemId}/gui/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          guidance,
-          // Sending the previous attempt makes a regenerate a refinement rather
-          // than a fresh roll of the dice.
-          previous_html: html || undefined,
-        }),
-      });
-      const job = await readJson<Job & { error?: string }>(response);
-      if (!response.ok) throw new Error(job.error ?? "Could not start.");
-      setGenerating(true);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not start.");
-    }
+    return start({
+      guidance,
+      // Sending the previous attempt makes a regenerate a refinement rather
+      // than a fresh roll of the dice.
+      previous_html: html || undefined,
+    });
   }
 
   async function save(approved: boolean) {
@@ -322,9 +267,4 @@ export function GuiBuilder({
       ) : null}
     </div>
   );
-}
-
-function formatWait(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
 }

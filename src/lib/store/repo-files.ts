@@ -125,6 +125,20 @@ class LocalFiles implements RepoFiles {
 /* GitHub Contents API                                                 */
 /* ------------------------------------------------------------------ */
 
+/**
+ * How many times a refused write will re-read the parent and try again.
+ *
+ * The queue below orders one instance's writes. Production has many instances:
+ * a designer approving a profile while a trainee's scenario job records its
+ * result is two writers on one branch, and the second commit is refused because
+ * its parent moved. The losing write is never wrong, only late — so re-read and
+ * repeat it rather than surfacing a conflict the user cannot act on.
+ */
+const CONFLICT_ATTEMPTS = 5;
+
+/** A write refused only because the branch moved under it. */
+class BranchMovedError extends Error {}
+
 interface GitHubEntry {
   name: string;
   path: string;
@@ -244,7 +258,30 @@ class GitHubFiles implements RepoFiles {
   }
 
   private put(filePath: string, base64: string, message: string): Promise<void> {
-    return this.oneAtATime(() => this.putNow(filePath, base64, message));
+    return this.oneAtATime(() =>
+      this.retryingConflicts(() => this.putNow(filePath, base64, message)),
+    );
+  }
+
+  /**
+   * Repeats a write that lost a race for the branch.
+   *
+   * Each attempt re-reads the parent sha, so repeating is all that is needed.
+   * The wait grows and is jittered, so two writers that collided once do not
+   * march back into each other in step.
+   */
+  private async retryingConflicts(work: () => Promise<void>): Promise<void> {
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await work();
+      } catch (reason) {
+        if (!(reason instanceof BranchMovedError)) throw reason;
+        if (attempt === CONFLICT_ATTEMPTS) throw reason;
+        await new Promise((resolve) =>
+          setTimeout(resolve, attempt * 150 + Math.random() * 150),
+        );
+      }
+    }
   }
 
   private async putNow(
@@ -263,6 +300,9 @@ class GitHubFiles implements RepoFiles {
         sha: await this.shaOf(filePath),
       }),
     });
+    if (response.status === 409) {
+      throw new BranchMovedError(`Branch moved while writing ${filePath}`);
+    }
     if (!response.ok) {
       throw new Error(await describeWriteFailure(response, filePath));
     }
@@ -281,7 +321,9 @@ class GitHubFiles implements RepoFiles {
   }
 
   remove(filePath: string, message: string): Promise<void> {
-    return this.oneAtATime(() => this.removeNow(filePath, message));
+    return this.oneAtATime(() =>
+      this.retryingConflicts(() => this.removeNow(filePath, message)),
+    );
   }
 
   private async removeNow(filePath: string, message: string): Promise<void> {
@@ -293,6 +335,9 @@ class GitHubFiles implements RepoFiles {
       cache: "no-store",
       body: JSON.stringify({ message, sha, branch: this.branch }),
     });
+    if (response.status === 409) {
+      throw new BranchMovedError(`Branch moved while deleting ${filePath}`);
+    }
     if (!response.ok) {
       throw new Error(await describeWriteFailure(response, filePath));
     }

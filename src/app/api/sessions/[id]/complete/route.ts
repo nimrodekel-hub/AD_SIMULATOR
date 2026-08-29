@@ -22,9 +22,13 @@ import {
  * Every route that calls the model gets the long ceiling.
  *
  * A model call is the only thing here that takes minutes, and the platform
- * kills the function when this elapses. Returning early and finishing in the
- * background does not help: on this platform the function *is* the worker, and
- * work scheduled after the response still runs inside the same budget.
+ * kills the function when this elapses. Raising the ceiling is not the same as
+ * surviving a slow step, though: past about a minute it is the browser that
+ * gives up, not the server. Measured against production this route stays well
+ * inside that, so it answers in the request. The three that do not — extracting
+ * a dilemma, generating a scenario and building a console — hand back a job
+ * record instead and let the page ask how it is getting on. See
+ * `lib/store/job.ts`.
  */
 export const maxDuration = 300;
 

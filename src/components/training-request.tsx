@@ -8,6 +8,7 @@ import type {
   Trainee,
 } from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
+import { formatWait, useBackgroundJob } from "@/lib/use-job";
 
 /**
  * Screen 3, the front half: the trainee asks for training in their own words.
@@ -15,6 +16,12 @@ import { readJson } from "@/lib/http";
  * This is the interaction the POC exists to test, so the screen is deliberately
  * a blank box rather than a menu of scenarios. If the trainee has to pick from
  * a list, the matching engine is never exercised.
+ *
+ * Matching is quick. Building the scenario is not — it runs for over a minute,
+ * which is longer than a phone will hold a connection open, and the trainee is
+ * the person here most likely to be on one. So pressing "Begin training" starts
+ * the work on the server and this screen asks every few seconds whether it is
+ * ready, rather than waiting on a request that a locked screen would kill.
  */
 
 type Phase =
@@ -74,6 +81,20 @@ export function TrainingRequest({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
+  const {
+    running: building,
+    waited,
+    error: buildError,
+    start: startScenario,
+  } = useBackgroundJob<{ session_id: string }>({
+    startUrl: "/api/training/start",
+    pollUrl: `/api/training/start?trainee_id=${encodeURIComponent(traineeId)}`,
+    onDone: ({ session_id }) => router.push(`/trainee/${session_id}`),
+  });
+
+  /** Whichever step failed most recently. Only one is ever on screen. */
+  const shownError = error ?? buildError;
+
   async function match(rounds: ClarificationRound[]) {
     setBusy(true);
     setError(undefined);
@@ -126,32 +147,17 @@ export function TrainingRequest({
     await match(rounds);
   }
 
-  async function begin() {
+  function begin() {
     if (phase.kind !== "matched") return;
-    setBusy(true);
     setError(undefined);
-    try {
-      const response = await fetch("/api/training/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          trainee_id: traineeId,
-          system_id: systemId,
-          dilemma_id: phase.dilemma.id,
-          requested_text: request,
-          clarifications,
-          difficulty: phase.difficulty,
-        }),
-      });
-      const payload = await readJson<{ error?: string; session_id: string }>(
-        response,
-      );
-      if (!response.ok) throw new Error(payload.error ?? "Could not start.");
-      router.push(`/trainee/${payload.session_id}`);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not start.");
-      setBusy(false);
-    }
+    return startScenario({
+      trainee_id: traineeId,
+      system_id: systemId,
+      dilemma_id: phase.dilemma.id,
+      requested_text: request,
+      clarifications,
+      difficulty: phase.difficulty,
+    });
   }
 
   function restart() {
@@ -293,15 +299,35 @@ export function TrainingRequest({
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={busy}
+                disabled={busy || building}
                 onClick={() => void begin()}
               >
-                {busy ? "Building the scenario…" : "Begin training"}
+                {building ? "Building the scenario…" : "Begin training"}
               </button>
-              <button type="button" className="btn" onClick={restart} disabled={busy}>
+              <button
+                type="button"
+                className="btn"
+                onClick={restart}
+                disabled={busy || building}
+              >
                 Ask for something else
               </button>
             </div>
+
+            {building ? (
+              <div className="panel mt-4 p-4">
+                <p className="text-sm">
+                  Building your scenario
+                  {waited > 0 ? ` — ${formatWait(waited)} so far` : "…"}
+                </p>
+                <p className="mt-2 text-xs leading-relaxed text-muted">
+                  A minute or two is normal — the situation is written for this
+                  request, not picked off a shelf. It is running on the server,
+                  so you can lock your phone or switch tabs; this screen opens
+                  the run as soon as it is ready.
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -318,8 +344,8 @@ export function TrainingRequest({
         </div>
       ) : null}
 
-      {error ? (
-        <p className="chip status-danger mt-4 !normal-case">{error}</p>
+      {shownError ? (
+        <p className="chip status-danger mt-4 !normal-case">{shownError}</p>
       ) : null}
     </div>
   );
