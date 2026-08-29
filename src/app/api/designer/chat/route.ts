@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { designerChatStream } from "@/lib/ai/tasks/learn-dilemma";
+import { getSystem, getSystemProfile } from "@/lib/store/kb";
 
 /**
  * The designer's learning conversation.
@@ -25,6 +26,14 @@ import { designerChatStream } from "@/lib/ai/tasks/learn-dilemma";
 export const maxDuration = 300;
 
 const BodySchema = z.object({
+  /**
+   * Which system this dilemma is being taught inside.
+   *
+   * The interviewer is given that system's approved profile, so it does not
+   * spend the expert's turns asking for identification states and readouts
+   * they have already written down and approved.
+   */
+  system_id: z.string().min(1),
   messages: z
     .array(
       z.object({
@@ -46,13 +55,29 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return new Response(designerChatStream(parsed.data.messages), {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-      // Stops intermediate proxies from holding the response until it completes.
-      "X-Accel-Buffering": "no",
+  const [system, profile] = await Promise.all([
+    getSystem(parsed.data.system_id),
+    getSystemProfile(parsed.data.system_id),
+  ]);
+  if (!system) {
+    return NextResponse.json({ error: "System not found" }, { status: 404 });
+  }
+
+  return new Response(
+    designerChatStream(parsed.data.messages, {
+      name: system.name,
+      // Only an approved profile is fact. A draft is the designer still
+      // working, and half-taught behaviour is worse than none.
+      profile: profile?.approved ? profile : null,
+    }),
+    {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        // Stops intermediate proxies from holding the response until it completes.
+        "X-Accel-Buffering": "no",
+      },
     },
-  });
+  );
 }
