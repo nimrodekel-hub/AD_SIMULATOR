@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { DilemmaForm } from "@/components/dilemma-form";
 import type { DilemmaDraft } from "@/lib/domain/schemas";
+import { readJson } from "@/lib/http";
 
 /**
  * Screen 1a — the designer teaches the system a dilemma.
@@ -78,8 +79,12 @@ export function LearningChat({
       });
 
       if (!response.ok || !response.body) {
-        const detail = await response.json().catch(() => null);
-        throw new Error(detail?.error ?? `Request failed (${response.status})`);
+        // A streamed route still answers with JSON when it refuses, but a
+        // platform-level failure answers with neither.
+        const detail = await readJson<{ error?: string }>(response).catch(
+          (reason: Error) => ({ error: reason.message }),
+        );
+        throw new Error(detail.error ?? `Request failed (${response.status})`);
       }
 
       // Open an empty assistant turn, then fill it as chunks arrive.
@@ -112,7 +117,9 @@ export function LearningChat({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript: transcript() }),
       });
-      const payload = await response.json();
+      const payload = await readJson<{ error?: string; draft: DilemmaDraft }>(
+        response,
+      );
       if (!response.ok) throw new Error(payload.error ?? "Extraction failed.");
       setDraft(payload.draft as DilemmaDraft);
     } catch (reason) {
@@ -131,7 +138,9 @@ export function LearningChat({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ draft: edited, transcript: transcript() }),
       });
-      const payload = await response.json();
+      const payload = await readJson<{ error?: string; entry: { id: string } }>(
+        response,
+      );
       if (!response.ok) throw new Error(payload.error ?? "Save failed.");
       router.push(
         `/designer/systems/${systemId}/dilemmas/${payload.entry.id}`,

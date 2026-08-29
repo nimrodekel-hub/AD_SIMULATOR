@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DilemmaForm } from "@/components/dilemma-form";
 import type { DilemmaDraft, DilemmaEntry } from "@/lib/domain/schemas";
+import { readJson } from "@/lib/http";
 
 /**
  * Review an existing entry, correct it, and — when it is right — approve it.
@@ -34,7 +35,7 @@ export function DilemmaEditor({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ draft }),
       });
-      const payload = await response.json();
+      const payload = await readJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(payload.error ?? "Save failed.");
       setNotice("Saved.");
       router.refresh();
@@ -52,7 +53,7 @@ export function DilemmaEditor({
       const response = await fetch(`/api/systems/${systemId}/dilemmas/${entry.id}/approve`, {
         method: "POST",
       });
-      const payload = await response.json();
+      const payload = await readJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(payload.error ?? "Approval failed.");
       router.refresh();
     } catch (reason) {

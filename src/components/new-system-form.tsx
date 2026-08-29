@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { readJson } from "@/lib/http";
 
 /**
  * Naming a new simulated system.
@@ -28,7 +29,9 @@ export function NewSystemForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), note: note.trim() }),
       });
-      const payload = await response.json();
+      const payload = await readJson<{ error?: string; system: { id: string } }>(
+        response,
+      );
       if (!response.ok) throw new Error(payload.error ?? "Could not create it.");
 
       // Straight into setup: naming a system is the start of the work, not the

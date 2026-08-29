@@ -57,6 +57,11 @@ writes through the GitHub API instead — see below.
 2. Add the environment variables below.
 3. Deploy. Every later push to `main` rebuilds automatically.
 
+Setting this up from scratch — creating the `data` branch, issuing a GitHub
+token with the right permissions, and what each failure means — is written out
+step by step in [`ARCHITECTURE.md`](ARCHITECTURE.md), section 9, including a
+symptom-cause-fix table for every problem we actually hit.
+
 ### Environment variables
 
 | Variable | Required | Purpose |
@@ -142,7 +147,7 @@ and the status board says plainly which systems are ready and which are not.
 
 ## The simulated console
 
-The designer uploads two to five screenshots of a real console and the model
+The designer uploads up to eight screenshots of a real console and the model
 reproduces its look and feel as a static HTML shell — layout, palette, density
 and typography, but explicitly not identifying content. Where the screenshots
 and the behaviour profile disagree, the profile wins: the screenshots show one
