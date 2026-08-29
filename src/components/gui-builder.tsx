@@ -178,6 +178,13 @@ export function GuiBuilder({
                 ? "Regenerate"
                 : "Generate console"}
           </button>
+
+          {busy === "generating" ? (
+            <p className="text-xs text-muted">
+              This is the longest step in the app — a minute or two is normal.
+              Leave the page open.
+            </p>
+          ) : null}
         </div>
       </section>
 
