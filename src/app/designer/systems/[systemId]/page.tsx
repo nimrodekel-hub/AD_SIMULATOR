@@ -69,7 +69,7 @@ export default async function SystemSetupPage({
             state={
               consoleReady ? "In use" : gui ? "Draft, not approved" : "Not built"
             }
-            blurb="Upload two to five screenshots. The console is generated from the screenshots and the behaviour profile together, so it shows the right columns and the right controls — not just the right colours."
+            blurb="Upload up to eight screenshots. The console is generated from the screenshots and the behaviour profile together, so it shows the right columns and the right controls — not just the right colours."
             blockedNote="Needs the behaviour profile first."
           />
           <SetupStep
