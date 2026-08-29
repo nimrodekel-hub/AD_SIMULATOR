@@ -154,6 +154,7 @@ export async function generateGuiTemplate({
     schema: GuiDraftSchema,
     effort: "high",
     maxTokens: 16000,
+    label: "console",
     mock: () => ({
       html: MOCK_HTML,
       design_notes:
