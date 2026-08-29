@@ -1,31 +1,42 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { describeAiError } from "@/lib/ai/client";
 import {
   generateGuiTemplate,
   missingSlots,
 } from "@/lib/ai/tasks/generate-gui";
 import { getSystem, getSystemProfile, loadScreenshots } from "@/lib/store/kb";
+import {
+  asReported,
+  failGuiJob,
+  finishGuiJob,
+  isStale,
+  readGuiJob,
+  startGuiJob,
+} from "@/lib/store/gui-job";
 
 /**
  * Turns one system's stored references into its console shell.
  *
- * The screenshots are not uploaded here any more — they belong to the system
- * and were stored before it was described, so that the same images could inform
- * the behaviour profile. This step reads them back.
+ * The browser does not wait for this. Generation takes a minute or more, and a
+ * phone will not hold a connection that long — the screen locks, the tab is
+ * suspended, and the request dies with a bare "Load failed" even though the
+ * server was working perfectly. So POST starts the work and returns at once,
+ * the work continues here until it is done, and GET reports where it got to.
+ * Closing the page and coming back is now free.
  *
- * Runs once per template, not per training run — the brief rules out generating
- * a GUI at runtime.
+ * The screenshots are not uploaded here — they belong to the system and were
+ * stored before it was described, so that the same images could inform the
+ * behaviour profile. This step reads them back.
+ *
+ * Runs once per template, not per training run — the brief rules out
+ * generating a GUI at runtime.
  */
 
 /**
- * Longer than the rest of the app on purpose.
+ * The ceiling for the work scheduled with `after`, not for the response.
  *
- * This call reads several screenshots and writes a whole console shell, which
- * is the largest single piece of output the app asks for; sixty seconds was not
- * enough and the request came back cut off. Nothing is gained by returning
- * early and finishing in the background — on this platform the function *is*
- * the worker, and work scheduled after the response still runs inside the same
- * budget. The budget itself has to be bigger.
+ * `after` runs inside this budget, so it is what actually bounds a generation.
+ * The POST itself answers in about a second.
  */
 export const maxDuration = 300;
 
@@ -71,29 +82,49 @@ export async function POST(
     );
   }
 
-  try {
-    const draft = await generateGuiTemplate({
-      screenshots: screenshots.map(({ mediaType, base64 }) => ({
-        mediaType,
-        base64,
-      })),
-      profile,
-      systemNameFictional: system.name,
-      guidance: String(body.guidance ?? "").trim(),
-      previousHtml: String(body.previous_html ?? "") || undefined,
-    });
-
-    // A shell without its slots cannot host a scenario. Report it rather than
-    // letting the designer approve something that will render empty.
-    const missing = missingSlots(draft.html);
-
-    return NextResponse.json({
-      html: draft.html,
-      design_notes: draft.design_notes,
-      screenshots: screenshots.map((shot) => shot.path),
-      missing_slots: missing,
-    });
-  } catch (reason) {
-    return NextResponse.json({ error: describeAiError(reason) }, { status: 502 });
+  // Two tabs, or a reload followed by a second press, must not start two
+  // generations against the same system.
+  const existing = await readGuiJob(systemId);
+  if (existing?.status === "running" && !isStale(existing)) {
+    return NextResponse.json(asReported(existing), { status: 202 });
   }
+
+  const job = await startGuiJob(systemId, system.name);
+
+  after(async () => {
+    try {
+      const draft = await generateGuiTemplate({
+        screenshots: screenshots.map(({ mediaType, base64 }) => ({
+          mediaType,
+          base64,
+        })),
+        profile,
+        systemNameFictional: system.name,
+        guidance: String(body.guidance ?? "").trim(),
+        previousHtml: String(body.previous_html ?? "") || undefined,
+      });
+
+      await finishGuiJob(systemId, system.name, {
+        html: draft.html,
+        design_notes: draft.design_notes,
+        screenshots: screenshots.map((shot) => shot.path),
+        // A shell without its slots cannot host a scenario. Recorded rather
+        // than thrown, so the designer sees what is wrong and can regenerate.
+        missing_slots: missingSlots(draft.html),
+      });
+    } catch (reason) {
+      await failGuiJob(systemId, system.name, describeAiError(reason));
+    }
+  });
+
+  return NextResponse.json(job, { status: 202 });
+}
+
+/** Where the current generation got to. Safe to call as often as you like. */
+export async function GET(
+  _request: NextRequest,
+  ctx: RouteContext<"/api/systems/[systemId]/gui/generate">,
+) {
+  const { systemId } = await ctx.params;
+  return NextResponse.json(asReported(await readGuiJob(systemId)));
 }
