@@ -110,7 +110,8 @@
     }
   ],
   "engagement": {
-    "min_range_km": 0,
+    "detection_range_km": null,
+    "min_range_km": 5,
     "max_range_km": 70,
     "time_of_flight_note": "The system calculates interceptor time of flight and time to intercept automatically for a selected track and displays it alongside the probability of kill; the designer gave no fixed flight-time figures, so scenario timings should be derived from the range bands and target closing speed.",
     "simultaneous_engagements_note": "A hard system limit of two simultaneous engagements — no more than two rockets may be in the air at once. A third engagement cannot begin until one of the two resolves as hit, kill or miss.",
@@ -176,8 +177,8 @@
       "answer": "Keep tracking the targets, shows the targets information, calculate the pk and the time of flight for the rockets, recommend the relevant type of rocket and relevant launcher. Stop tracking if it is a good kill. Report hit or kill. Shows the killing envelope on the specific target (calculating by altitude and heading of the target "
     },
     {
-      "question": "What are the engagement constraints?",
-      "answer": "70 km for long range rocket, 50 km for medium range and 20 km for short range. Can intercept only inside the tilt of the radar (can’t intercept under the radar envelope ).\nThe radar range: jets - 150 km, helicopter- 100 km, uav - 50 km\n"
+      "question": "How far can it see, how far can it shoot, and how many at once?",
+      "answer": ""
     },
     {
       "question": "Who may authorise an engagement, and when does that change?",
@@ -185,5 +186,5 @@
     }
   ],
   "created_at": "2026-08-29T13:49:43.379Z",
-  "approved_at": "2026-08-29T13:49:43.379Z"
+  "approved_at": "2026-08-29T18:34:23.824Z"
 }
