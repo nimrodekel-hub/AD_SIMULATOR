@@ -1,10 +1,25 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { describeAiError } from "@/lib/ai/client";
-import { extractSystemProfile } from "@/lib/ai/tasks/learn-system";
+import { extractSystemNarrative } from "@/lib/ai/tasks/learn-system";
+import {
+  EngagementDoctrineSchema,
+  IffStateSchema,
+  SensorCoverageSchema,
+  TrackClassificationSchema,
+  TrackReadoutFieldSchema,
+} from "@/lib/domain/schemas";
 import { getSystem, loadScreenshots } from "@/lib/store/kb";
 
-/** Turns one system's answers into a structured behaviour profile. */
+/**
+ * Turns one system's written answers into the prose half of its profile.
+ *
+ * The measured half — sensor coverage, track classes, readout columns, the
+ * engagement envelope — never reaches the model. The designer entered those
+ * into fields, so they are already exact; this route takes them only to hand
+ * back untouched, so the caller assembles one complete draft from one response.
+ * A number cannot be misread if nothing reads it.
+ */
 
 /**
  * Every route that calls the model gets the long ceiling.
@@ -21,19 +36,26 @@ import { getSystem, loadScreenshots } from "@/lib/store/kb";
 export const maxDuration = 300;
 
 /**
- * How many references the model is shown while reading the answers.
+ * How many references the model is shown.
  *
- * Images are the expensive part of this call, and three is enough for what the
- * screenshots are here to settle — the column labels, their order, the
- * identification colours — because those are the same in every view of the same
- * console. A fourth costs seconds and says nothing new. The console step, which
- * cares about the whole look rather than the wording, still gets all of them.
+ * Images are the expensive part of this call, and it now needs them for less
+ * than it did: the columns and the identification states are typed in rather
+ * than read off. What is left is context for the prose, and three views give
+ * that as well as eight.
  */
 const MAX_REFERENCES_READ = 3;
 
 const BodySchema = z.object({
   answers: z.array(z.object({ question: z.string(), answer: z.string() })),
   open_notes: z.string(),
+  /** What the designer entered directly. Passed through, never interpreted. */
+  spec: z.object({
+    track_classifications: z.array(TrackClassificationSchema),
+    iff_states: z.array(IffStateSchema),
+    track_readout_fields: z.array(TrackReadoutFieldSchema),
+    sensor: SensorCoverageSchema,
+    engagement: EngagementDoctrineSchema,
+  }),
 });
 
 export async function POST(
@@ -48,7 +70,10 @@ export async function POST(
 
   const parsed = BodySchema.safeParse(await request.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid request body", issues: z.treeifyError(parsed.error) },
+      { status: 400 },
+    );
   }
 
   const answered = parsed.data.answers.filter(
@@ -56,27 +81,30 @@ export async function POST(
   );
   if (answered.length === 0 && parsed.data.open_notes.trim().length === 0) {
     return NextResponse.json(
-      { error: "Answer at least one question before extracting." },
+      { error: "Answer at least one question before building the profile." },
       { status: 400 },
     );
   }
 
   try {
-    // The system's stored references, if it has any. They settle what the
-    // display actually reads while the answers are being interpreted, rather
-    // than only later when the console is drawn.
     const screenshots = (await loadScreenshots(systemId)).slice(
       0,
       MAX_REFERENCES_READ,
     );
 
-    const draft = await extractSystemProfile(
+    const narrative = await extractSystemNarrative(
       system.name,
       parsed.data.answers,
       parsed.data.open_notes,
+      parsed.data.spec,
       screenshots,
     );
-    return NextResponse.json({ draft });
+
+    // One complete draft back: the designer's own numbers, unchanged, plus the
+    // prose the model wrote. The caller never has to stitch the two halves.
+    return NextResponse.json({
+      draft: { ...parsed.data.spec, ...narrative },
+    });
   } catch (reason) {
     return NextResponse.json({ error: describeAiError(reason) }, { status: 502 });
   }

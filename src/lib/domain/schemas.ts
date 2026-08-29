@@ -187,19 +187,35 @@ export const TrackReadoutFieldSchema = z.object({
 });
 export type TrackReadoutField = z.infer<typeof TrackReadoutFieldSchema>;
 
+/**
+ * What the system can see, which is a different question from what it can hit.
+ *
+ * Detection decides how much warning an operator gets, and therefore the clock
+ * on every dilemma about time. Coverage decides whether they get any warning at
+ * all from a given direction: a rotating radar sees all round, a fixed array
+ * watches a sector and is blind behind it, and a threat arriving through the
+ * gap is a completely different training problem.
+ *
+ * Every field is nullable, because a designer may know the detection range
+ * without knowing the altitude ceiling, and a half-filled sensor section is
+ * more useful than an empty one. Profiles approved before this section existed
+ * carry none of it and must keep loading.
+ */
+export const SensorCoverageSchema = z.object({
+  /** How far out it detects. Not the engagement range. */
+  max_range_km: z.number().nullable().default(null),
+  /** A close-in blind zone, where there is one. */
+  min_range_km: z.number().nullable().default(null),
+  /** 360 for a rotating radar; 120 for a fixed sector, and so on. */
+  azimuth_coverage_deg: z.number().nullable().default(null),
+  /** The altitude band it can see, in feet. */
+  altitude_ft: RangeSchema.nullable().default(null),
+  /** Terrain shadows, arcs, anything the numbers do not carry. */
+  note: z.string().default(""),
+});
+export type SensorCoverage = z.infer<typeof SensorCoverageSchema>;
+
 export const EngagementDoctrineSchema = z.object({
-  /**
-   * How far out the system sees, which is not how far it can shoot.
-   *
-   * Detection range is what decides how much warning an operator gets, so it
-   * sets the clock on every dilemma about time. It varies enormously between
-   * systems and must come from the designer rather than be assumed.
-   *
-   * Nullable and defaulted because profiles approved before this field existed
-   * do not carry it, and an old profile must keep loading rather than break the
-   * system it belongs to.
-   */
-  detection_range_km: z.number().nullable().default(null),
   /** The closest a target can be and still be engaged. */
   min_range_km: z.number(),
   /** The furthest a target can be and still be engaged. */
@@ -225,6 +241,14 @@ export const SystemProfileDraftSchema = z.object({
   iff_states: z.array(IffStateSchema),
   /** The columns the console shows for every track, in display order. */
   track_readout_fields: z.array(TrackReadoutFieldSchema),
+  /** What the radar sees, and from where. */
+  sensor: SensorCoverageSchema.default({
+    max_range_km: null,
+    min_range_km: null,
+    azimuth_coverage_deg: null,
+    altitude_ft: null,
+    note: "",
+  }),
   engagement: EngagementDoctrineSchema,
   /** What the operator decides. */
   operator_responsibilities: z.array(z.string()),
@@ -429,6 +453,27 @@ export const InstructorSchema = z.object({
   created_at: z.string(),
 });
 export type Instructor = z.infer<typeof InstructorSchema>;
+
+/**
+ * The half of the profile a model is still useful for.
+ *
+ * Everything measurable — sensor coverage, track classes and their bands, the
+ * readout columns, the engagement envelope — is now entered directly by the
+ * designer, because a number typed into a box cannot be misread and costs
+ * nothing to produce. What is left is the prose: what the system is for, what
+ * the operator decides, what happens without them, and in what order.
+ *
+ * That is the part where a model earns its place, turning a paragraph into
+ * tidy lists without changing what it says.
+ */
+export const SystemNarrativeSchema = z.object({
+  purpose: z.string(),
+  operator_responsibilities: z.array(z.string()),
+  automatic_functions: z.array(z.string()),
+  workflow_steps: z.array(z.string()),
+  general_notes: z.string(),
+});
+export type SystemNarrative = z.infer<typeof SystemNarrativeSchema>;
 
 /* ------------------------------------------------------------------ */
 /* General knowledge — the step before any system                      */
