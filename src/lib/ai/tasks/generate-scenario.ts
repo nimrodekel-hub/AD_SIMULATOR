@@ -33,6 +33,7 @@ When a profile is supplied it is not advice, it is the specification:
 - **Every track's classification must be one of the profile's declared classifications, by name.** Never invent a class.
 - **Every track's iff_status must be one of the profile's declared identification states, by name.** Never invent a state, and never use a state in a way its \`how_determined\` rules out.
 - **Speed and altitude must sit inside the band the profile gives for that classification.**
+- **A track on the display must be inside what \`sensor\` can see.** Nothing appears further out than the detection range, closer than a stated blind zone, or above or below the altitude band. Where an azimuth coverage of less than 360° is given, the system watches an arc and is blind behind it — a threat coming through the gap is seen late or not at all, and that is a scenario worth building deliberately, never one to write by accident.
 - **Ranges must sit inside the engagement envelope**, and the geometry must respect the stated time of flight. A threat that cannot be reached in time is only a valid scenario element if the dilemma is *about* that.
 - **readouts must contain exactly one entry per \`track_readout_fields\`, in the same order, using the same labels.** The value is the number with its unit, as the console would show it — "62 km", "047°", "94 s". Nothing else goes in that array.
 - **A decision point may only ask the trainee to do things the profile lists as operator responsibilities.** Never ask them to do something the profile says the system does automatically.
