@@ -3,6 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { GuidedQuestion } from "@/lib/ai/tasks/learn-system";
+import {
+  emptySpec,
+  type SystemSpec,
+  SystemSpecFields,
+} from "@/components/system-spec-fields";
 import type {
   IffState,
   SystemProfile,
@@ -14,10 +19,19 @@ import { readJson } from "@/lib/http";
 /**
  * Teaching the system how the system works.
  *
- * Two phases. First a set of guided questions plus an open section — a
- * specification is better collected by asking for it than by drawing it out of
- * a conversation. Then the extracted profile, fully editable, because this
- * record silently shapes every scenario a trainee will ever see.
+ * Two phases. The first collects the specification, in two halves that are
+ * deliberately different in kind. Measured things — what the radar sees, which
+ * track classes exist and in what bands, which columns the console shows, what
+ * the weapon can reach — are typed straight into fields and never shown to a
+ * model: a number in a box cannot be misread, and asking a model to find
+ * "5 to 40 km" inside a paragraph buys nothing but a chance to get it wrong.
+ * Described things — what the system is for, what the operator decides, what
+ * happens without them — stay prose, because that is the part where a person
+ * writing freely says more than any form would have asked for, and turning
+ * prose into lists is what a model is actually good at.
+ *
+ * Then the extracted profile, fully editable, because this record silently
+ * shapes every scenario a trainee will ever see.
  */
 
 type Phase = "answering" | "reviewing";
@@ -48,6 +62,14 @@ export function SystemProfileForm({
   });
   const [openNotes, setOpenNotes] = useState("");
 
+  /**
+   * The measured half, held apart from the answers because it is not an answer.
+   * Seeded from an approved profile so editing one is editing, not retyping.
+   */
+  const [spec, setSpec] = useState<SystemSpec>(() =>
+    existing ? toSpec(existing) : emptySpec(),
+  );
+
   const [draft, setDraft] = useState<SystemProfileDraft | null>(
     existing ? toDraft(existing) : null,
   );
@@ -68,7 +90,11 @@ export function SystemProfileForm({
       const response = await fetch(`/api/systems/${systemId}/profile/extract`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: answerList(), open_notes: openNotes }),
+        body: JSON.stringify({
+          answers: answerList(),
+          open_notes: openNotes,
+          spec,
+        }),
       });
       const payload = await readJson<{ error?: string; draft: SystemProfileDraft }>(
         response,
@@ -123,14 +149,28 @@ export function SystemProfileForm({
       <div className="space-y-8">
         <div className="panel p-4">
           <p className="prose-block text-sm">
-            Answer what you can in your own words. Everything here shapes every
-            scenario a trainee will ever see — what tracks can appear, what
-            numbers are plausible, what the operator is allowed to do.
+            Everything here shapes every scenario a trainee will ever see — what
+            tracks can appear, what numbers are plausible, what the operator is
+            allowed to do.
           </p>
           <p className="mt-2 text-xs text-muted">
-            You do not have to answer all of them. Anything left blank, the
-            system fills in with its best reading of the rest — and you can
-            correct it on the next screen.
+            The numbered sections below are the figures: fill them in and they
+            reach the knowledge base exactly as you typed them, unread by
+            anything. The questions after them are the parts no form can ask
+            well — answer those in your own words, and leave blank anything you
+            would rather not say. You can correct all of it on the next screen.
+          </p>
+        </div>
+
+        {/* ---- The measured half: entered, never interpreted ---------- */}
+        <SystemSpecFields spec={spec} onChange={setSpec} />
+
+        {/* ---- The described half: still open questions --------------- */}
+        <div className="border-t border-line pt-8">
+          <h2 className="text-sm font-semibold">In your own words</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
+            The rest is what a form cannot ask for. Write as much as you like;
+            this is the part that gets read carefully.
           </p>
         </div>
 
@@ -218,7 +258,21 @@ export function SystemProfileForm({
             ? "This is what scenarios and the console are built from."
             : "Not yet driving anything. Approve it to put it into use."}
         </p>
-        <button type="button" className="btn" onClick={() => setPhase("answering")}>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            // Whatever was corrected here is what the questions should show.
+            setSpec({
+              sensor: draft.sensor,
+              track_classifications: draft.track_classifications,
+              iff_states: draft.iff_states,
+              track_readout_fields: draft.track_readout_fields,
+              engagement: draft.engagement,
+            });
+            setPhase("answering");
+          }}
+        >
           Back to the questions
         </button>
       </div>
@@ -232,6 +286,88 @@ export function SystemProfileForm({
             className="field min-h-20"
             value={draft.purpose}
             onChange={(e) => set("purpose", e.target.value)}
+          />
+        </Labelled>
+      </Section>
+
+      {/* ---- Sensor coverage ---------------------------------------- */}
+      <Section
+        title="What the radar sees"
+        hint="Detection range decides how much warning the operator gets; the arc decides whether they get any from a given direction. Both are yours — nothing reads them but the scenario generator."
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Labelled label="Detection range (km)">
+            <NullableNumber
+              value={draft.sensor.max_range_km}
+              ariaLabel="Detection range"
+              onChange={(max_range_km) =>
+                set("sensor", { ...draft.sensor, max_range_km })
+              }
+            />
+          </Labelled>
+          <Labelled label="Close-in blind zone (km)">
+            <NullableNumber
+              value={draft.sensor.min_range_km}
+              ariaLabel="Close-in blind zone"
+              onChange={(min_range_km) =>
+                set("sensor", { ...draft.sensor, min_range_km })
+              }
+            />
+          </Labelled>
+          <Labelled label="Azimuth coverage (°)" hint="360 for a rotating radar.">
+            <NullableNumber
+              value={draft.sensor.azimuth_coverage_deg}
+              ariaLabel="Azimuth coverage"
+              onChange={(azimuth_coverage_deg) =>
+                set("sensor", { ...draft.sensor, azimuth_coverage_deg })
+              }
+            />
+          </Labelled>
+          <div>
+            <span className="label">Altitude covered (ft)</span>
+            {draft.sensor.altitude_ft ? (
+              <div className="flex items-center gap-2">
+                <NumberInput
+                  value={draft.sensor.altitude_ft.min}
+                  ariaLabel="Altitude covered minimum"
+                  onChange={(min) =>
+                    set("sensor", {
+                      ...draft.sensor,
+                      altitude_ft: { min, max: draft.sensor.altitude_ft!.max },
+                    })
+                  }
+                />
+                <span className="text-muted">–</span>
+                <NumberInput
+                  value={draft.sensor.altitude_ft.max}
+                  ariaLabel="Altitude covered maximum"
+                  onChange={(max) =>
+                    set("sensor", {
+                      ...draft.sensor,
+                      altitude_ft: { min: draft.sensor.altitude_ft!.min, max },
+                    })
+                  }
+                />
+                <RemoveButton
+                  label="Clear the altitude band"
+                  onClick={() => set("sensor", { ...draft.sensor, altitude_ft: null })}
+                />
+              </div>
+            ) : (
+              <AddButton
+                label="Give a band"
+                onClick={() =>
+                  set("sensor", { ...draft.sensor, altitude_ft: { min: 0, max: 0 } })
+                }
+              />
+            )}
+          </div>
+        </div>
+        <Labelled label="Anything the numbers do not carry">
+          <textarea
+            className="field min-h-20"
+            value={draft.sensor.note}
+            onChange={(e) => set("sensor", { ...draft.sensor, note: e.target.value })}
           />
         </Labelled>
       </Section>
@@ -645,11 +781,28 @@ function toDraft(profile: SystemProfile): SystemProfileDraft {
     track_classifications: profile.track_classifications,
     iff_states: profile.iff_states,
     track_readout_fields: profile.track_readout_fields,
+    sensor: profile.sensor,
     engagement: profile.engagement,
     operator_responsibilities: profile.operator_responsibilities,
     automatic_functions: profile.automatic_functions,
     workflow_steps: profile.workflow_steps,
     general_notes: profile.general_notes,
+  };
+}
+
+/**
+ * The measured half of a profile, pulled back out for editing.
+ *
+ * Everything here was typed by the designer in the first place, so coming back
+ * to the questions shows them what they entered rather than an empty form.
+ */
+function toSpec(profile: SystemProfile): SystemSpec {
+  return {
+    sensor: profile.sensor,
+    track_classifications: profile.track_classifications,
+    iff_states: profile.iff_states,
+    track_readout_fields: profile.track_readout_fields,
+    engagement: profile.engagement,
   };
 }
 
@@ -766,6 +919,34 @@ function NumberInput({
       className="field data w-28"
       value={Number.isFinite(value) ? value : 0}
       onChange={(e) => onChange(Number(e.target.value))}
+    />
+  );
+}
+
+/**
+ * The same input, for a figure that may legitimately be unknown.
+ *
+ * Empty and zero are different answers here: a radar with no stated ceiling is
+ * not a radar that sees to zero feet, and storing one as the other would put a
+ * limit into the scenario generator that nobody ever claimed.
+ */
+function NullableNumber({
+  value,
+  ariaLabel,
+  onChange,
+}: {
+  value: number | null;
+  ariaLabel: string;
+  onChange: (next: number | null) => void;
+}) {
+  return (
+    <input
+      type="number"
+      aria-label={ariaLabel}
+      className="field data"
+      placeholder="—"
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
     />
   );
 }
