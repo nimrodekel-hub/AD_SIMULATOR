@@ -1,7 +1,191 @@
 {
-  "status": "running",
+  "status": "done",
   "started_at": "2026-08-29T16:48:36.008Z",
-  "finished_at": null,
+  "finished_at": "2026-08-29T16:49:55.785Z",
   "error": null,
-  "result": null
+  "result": {
+    "draft": {
+      "title": "Silent Low-Slow Track in a Cleared Medevac Corridor",
+      "sub_domain_tag": "iff_ambiguity_low_slow_track",
+      "trigger_conditions": "Route a trainee here when the scenario involves a single low, slow, non-responding air track approaching a defended point along a corridor that a civilian or humanitarian flight was cleared through and has not reported clear of. Matching vocabulary includes: no IFF, silent transponder, no squawk, non-responder, low and slow, 300 metres and 180 knots, slow cruise missile versus helicopter, medevac helicopter unaccounted for, red cross flight overdue, corridor overflies a village, track already inside the envelope, commander off net, handover, self-defence authority only, hostile intent, turn onto the site, climb then dive, request visual from the OP, hold or engage, four minutes to the defended point, last launch opportunity, ambiguous profile, can't tell if it's a missile or a helo.",
+      "key_variables": {
+        "threat_count_range": {
+          "min": 1,
+          "max": 3
+        },
+        "time_window_seconds": {
+          "min": 60,
+          "max": 300
+        },
+        "iff_certainty_levels": [
+          "No IFF response at all — transponder silent, no correlation to any filed track",
+          "Ambiguous kinematic profile — speed, altitude and heading fit both a slow cruise missile and a civilian rotary-wing aircraft",
+          "Unresolved corridor conflict — a cleared civilian flight in the same corridor has not reported clear",
+          "Visual identification obtained — external observer reports rotary-wing, white, red cross markings",
+          "Hostile intent observed — track turns onto the site, or climbs and then dives"
+        ],
+        "resource_levels": [
+          {
+            "name": "Ready launchers",
+            "unit": "launchers",
+            "min": 1,
+            "max": 2
+          },
+          {
+            "name": "Engagement envelope depth against the track",
+            "unit": "km",
+            "min": 8,
+            "max": 100
+          },
+          {
+            "name": "External visual identification sources with line of sight to the corridor",
+            "unit": "observation posts",
+            "min": 0,
+            "max": 1
+          },
+          {
+            "name": "Time to the defended point at current track speed",
+            "unit": "minutes",
+            "min": 1,
+            "max": 5
+          }
+        ]
+      },
+      "decision_points": [
+        {
+          "situation": "A track appears at roughly 40 km from the north-east, at about 300 metres altitude and about 180 knots, with no IFF response of any kind. It is already inside the engagement envelope, roughly four minutes from the defended point. A civilian medevac helicopter was cleared through the same corridor twenty minutes earlier and has not reported clear. The corridor runs directly over a village. The battery commander is off net for a handover; the operator holds self-defence authority only, releasable on observed hostile intent.",
+          "valid_actions": [
+            {
+              "label": "Hold fire, task the observation post for visual identification, and maintain a continuous firing solution",
+              "description": "Do not commit. Immediately request a visual identification from the observation post on the ridge that overlooks the corridor, keep the track locked with a live firing solution on the ready launchers, and fix in advance the range or time at which you will fire without the visual."
+            },
+            {
+              "label": "Engage now on the non-responding track before it closes further",
+              "description": "Treat the total absence of IFF response plus a profile consistent with a slow cruise missile as sufficient, and engage while the geometry is still favourable and well clear of the village."
+            },
+            {
+              "label": "Continue attempts to raise the battery commander and withhold action until authority is restored",
+              "description": "Keep the track tracked but take no engagement steps until the commander is back on net and can issue a release decision, on the basis that this identification problem exceeds self-defence authority."
+            },
+            {
+              "label": "Hold fire and wait for the track to demonstrate hostile intent",
+              "description": "Rely solely on the self-defence trigger: withhold everything, do not task external identification, and act only if the track turns onto the site or climbs and dives."
+            }
+          ],
+          "preferred_action": "Hold fire, task the observation post for visual identification, and maintain a continuous firing solution",
+          "rationale": "The profile is genuinely dual-use: at that altitude and speed it fits both a slow cruise missile and the medevac helicopter that was cleared through this corridor and has not reported clear. Absence of an IFF response is not identification — it is missing information, and here there is a known, specific, plausible friendly explanation for the silence. The correct move is to buy identification without buying delay: task the one asset that can actually resolve the ambiguity, the observation post with eyes on the corridor, while keeping the launchers on a live solution so that holding costs nothing in reaction time. This is what the operator on the day did, and the visual came back at three minutes as rotary, white, red cross. Note that the hold was correct only because the identification request was running in parallel with a maintained firing solution and a pre-set commit point; a bare hold with no identification effort would have been the same decision made for no reason.",
+          "common_errors": [
+            "Reading silent IFF as positive hostile identification. No response is an information gap, and in this corridor there is a named civilian flight that plausibly explains it.",
+            "Engaging early to preserve favourable geometry while ignoring that the corridor overflies a village — the debris and mis-identification consequences of a wrong shot are borne by non-combatants on the ground.",
+            "Holding without tasking identification. The hold is only defensible as a means of obtaining information; passive waiting surrenders the time without gaining anything.",
+            "Dropping the firing solution while the identification request is out, so that if the visual comes back hostile or comes back not at all, the launchers cannot be brought to bear inside the remaining time.",
+            "Suspending all action pending the commander's return. The commander being off net does not extend the closure time, and self-defence authority exists precisely for this window.",
+            "Failing to set an explicit commit point in advance, which turns a bounded hold into an open-ended one."
+          ]
+        },
+        {
+          "situation": "Two and a half to three minutes to the defended point. The observation post has not yet answered, or has answered that it cannot see the track. The engagement geometry is degrading and the pre-set commit point is approaching. Still no IFF, no corridor deconfliction, no commander on net.",
+          "valid_actions": [
+            {
+              "label": "Engage at the pre-set commit point under self-defence authority",
+              "description": "Fire at the last point that still protects the defended area, on the basis that identification could not be obtained inside the available time and the consequence of being wrong about a missile is loss of the site."
+            },
+            {
+              "label": "Push the commit point later and keep working the identification",
+              "description": "Accept a degraded intercept geometry in exchange for more identification time, re-tasking the observation post and any other observer while continuing to hold."
+            },
+            {
+              "label": "Attempt a warning or divert action against the track and observe the response",
+              "description": "Use any available means of prompting a reaction from a manned aircraft — corridor broadcast, warning measures — and treat compliance or non-compliance as identification."
+            },
+            {
+              "label": "Hand the problem up and hold indefinitely pending higher release",
+              "description": "Declare the identification unresolvable at operator level and withhold engagement until a higher authority accepts the decision."
+            }
+          ],
+          "preferred_action": "Engage at the pre-set commit point under self-defence authority",
+          "rationale": "The commit point exists because a low-slow track that is in fact a cruise missile leaves no recovery once it is past it — as the expert put it, holding for the visual would have cost the site. Having set the commit point as the price of the hold, the operator must honour it. Firing at the commit point is the decision that is defensible on the information actually available: identification was pursued with the only asset capable of providing it, it did not arrive in time, and the residual case for a threat is a fully fuelled slow cruise missile on a run into the defended point. This is the uncomfortable core of the dilemma the expert described — the same hold was right and wrong depending on something the operator could not see. The trainee is being assessed on whether the hold was bounded and reasoned, not on whether the coin landed favourably.",
+          "common_errors": [
+            "Sliding the commit point later and later because no new information has arrived, which converts a disciplined hold into a default of inaction and gives away the site if the track is a missile.",
+            "Treating non-compliance with a warning as identification. A civilian medevac crew may not be on the relevant net, may be masked at 300 metres, or may be running silent for its own reasons.",
+            "Escalating to higher authority as a way of avoiding the decision. Self-defence authority was delegated for exactly this situation and the closure clock does not pause for staff work.",
+            "Firing before the commit point out of accumulated anxiety, discarding identification time that had already been paid for.",
+            "Failing to record the identification attempts and the reasoning behind the commit point, which is what makes the engagement reviewable afterwards either way."
+          ]
+        },
+        {
+          "situation": "At about three minutes the observation post reports the track as rotary-wing, white, with red cross markings. Launchers are on a live solution and the operator is, in the expert's words, one nod from committing.",
+          "valid_actions": [
+            {
+              "label": "Break the engagement, hold the track, and push the identification and corridor conflict up the chain",
+              "description": "Immediately stop the engagement sequence, keep the track under observation and non-lethal control, report the positive visual identification and the unresolved corridor clearance, and re-establish deconfliction so the same track cannot be re-presented as an unknown minutes later."
+            },
+            {
+              "label": "Break the engagement but take no further reporting action",
+              "description": "Stand down the launchers on the strength of the visual and return to routine surveillance without escalating the corridor deconfliction failure."
+            },
+            {
+              "label": "Maintain the engagement solution because a single visual report does not overturn a total IFF failure",
+              "description": "Treat one observer's call as insufficient against the absence of any IFF response and keep the launchers committed until the track leaves the envelope or a second source corroborates."
+            },
+            {
+              "label": "Break the engagement and clear the launchers to a safe state before confirming the track's behaviour",
+              "description": "Fully safe the system on receipt of the visual and stop tracking, on the basis that the identification question is now closed."
+            }
+          ],
+          "preferred_action": "Break the engagement, hold the track, and push the identification and corridor conflict up the chain",
+          "rationale": "A specific, discriminating visual — rotary-wing, white, red cross — resolves the ambiguity in the direction the corridor record already suggested, and it does so with the one source that can actually distinguish a helicopter from a missile. The engagement must be broken. But the underlying failure is not the track: it is that a cleared civilian flight was in the corridor without having reported clear, and that the battery had no commander on net during a handover. Both must be reported, and the corridor must be deconflicted, or the same aircraft will re-enter as another unknown against an operator with less time. The track should stay under observation rather than be forgotten, because identification is a state that can change.",
+          "common_errors": [
+            "Standing down the launchers without reporting, leaving the corridor deconfliction failure and the authority gap during handover uncorrected.",
+            "Refusing to accept a discriminating visual because IFF is still silent. IFF silence had an already-plausible explanation; the visual describes features a cruise missile cannot present.",
+            "Safing the system completely and dropping the track, so that any subsequent change in its behaviour is picked up late.",
+            "Treating the good outcome as validation of the operator's judgement rather than of the process, and therefore not examining how close to the commit point the decision ran."
+          ]
+        }
+      ],
+      "difficulty_scaling": {
+        "easy": {
+          "description": "A single non-responding low-slow track on the corridor axis. The observation post has clear line of sight and answers promptly, well before the commit point. Both launchers are ready and the corridor clearance record is retrievable, showing the overdue civilian flight.",
+          "threat_count": {
+            "min": 1,
+            "max": 1
+          },
+          "time_window_seconds": {
+            "min": 240,
+            "max": 300
+          },
+          "pressure_note": "Identification is obtainable inside the available time. The trainee is being tested on whether they think to task the visual and hold in a bounded way rather than firing on IFF silence alone."
+        },
+        "medium": {
+          "description": "One or two non-responding tracks on similar profiles along the corridor. The battery commander is off net for a handover and the observation post's line of sight is partly obscured, so the visual is late and initially inconclusive. The corridor clearance record is ambiguous about whether the civilian flight has cleared.",
+          "threat_count": {
+            "min": 1,
+            "max": 2
+          },
+          "time_window_seconds": {
+            "min": 120,
+            "max": 240
+          },
+          "pressure_note": "Identification may not arrive before the commit point. The trainee must set and then honour a commit point under self-defence authority with no higher release available."
+        },
+        "hard": {
+          "description": "Two or three non-responding low-slow tracks entering on staggered timings along the corridor that overflies the village, with only one ready launcher available and the second unserviceable. The observation post can cover only one track at a time and reports late. The commander remains off net and the corridor clearance record cannot be confirmed at all.",
+          "threat_count": {
+            "min": 2,
+            "max": 3
+          },
+          "time_window_seconds": {
+            "min": 60,
+            "max": 120
+          },
+          "pressure_note": "Identification capacity is scarcer than the number of unknowns and there is one shot's worth of interception available. The trainee must allocate the single visual asset, accept that at least one track will reach its commit point unidentified, and justify the ordering under self-defence authority alone."
+        }
+      },
+      "evaluation_criteria": {
+        "success_condition": "The trainee treats absent IFF as missing information rather than hostile identification; immediately tasks the available external observer for visual identification while keeping a live firing solution; sets an explicit commit point that still protects the defended point and honours it if identification does not arrive; breaks the engagement promptly and completely on a discriminating visual identification; and reports both the positive identification and the underlying corridor-deconfliction and authority-handover failures.",
+        "scoring_notes": "Score the process, not the outcome. A bounded hold with active identification and a maintained solution scores full marks whether or not the visual arrives, and an engagement at a correctly reasoned commit point scores full marks even if the track turns out to have been the medevac helicopter — the expert's own framing is that the same hold was right or wrong depending on something the operator could not see. Deduct heavily for firing on IFF silence alone, for an unbounded hold with no identification effort, for dropping the firing solution while waiting, for deferring to an off-net commander while the closure clock runs, and for standing down after the visual without reporting the corridor conflict. On hard settings, credit explicit prioritisation of the single identification asset and an articulated reason for which unknown is engaged first."
+      }
+    },
+    "transcript": "EXPERT: A track came in from the north-east at about 40 km, low, around 300 metres, doing roughly 180 knots. No IFF response at all.\nINTERVIEWER: What made it a dilemma rather than a routine engagement?\nEXPERT: A civilian medevac helicopter was cleared through that same corridor twenty minutes earlier and had not reported clear. The profile fitted both a slow cruise missile and that helicopter, and the corridor runs straight over a village.\nINTERVIEWER: What did the operator have available?\nEXPERT: Two ready launchers, 8 to 100 km, the track already inside the envelope, about four minutes to the defended point.\nINTERVIEWER: Who could authorise?\nEXPERT: Normally the battery commander, but he was off net for a handover. The operator had self-defence authority only on hostile intent — a turn onto the site, or a climb followed by a dive.\nINTERVIEWER: What actually happened?\nEXPERT: He held, requested a visual from the observation post on the ridge, got back \"rotary, white, red cross\" at three minutes, and did not engage. Right answer, but he was one nod from committing.\nINTERVIEWER: What would have made it wrong?\nEXPERT: If it had been a cruise missile, holding for the visual would have cost the site. Same hold, right and wrong depending on something he could not see."
+  }
 }
