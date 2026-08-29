@@ -14,6 +14,53 @@ import { config } from "../config";
 
 export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
 
+/** What one call actually consumed. The only ground truth about cost. */
+export interface Usage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_input_tokens: number;
+  cache_creation_input_tokens: number;
+}
+
+/**
+ * Records what a call cost, so that "why is the bill this size" is answerable.
+ *
+ * Output tokens include the model's thinking, which is invisible in the reply
+ * and is usually the larger half of the bill on a conversational call. Without
+ * this line there is no way to see that from inside the app.
+ *
+ * `input_tokens` is the *uncached remainder* only — the full prompt is the sum
+ * of all three input figures. A healthy cached turn shows a large `cached` and
+ * a small `in`.
+ */
+function reportUsage(label: string, usage: Usage | null | undefined): void {
+  if (!usage) return;
+  console.log(
+    `[ai:usage] ${label} in=${usage.input_tokens} ` +
+      `cached=${usage.cache_read_input_tokens ?? 0} ` +
+      `written=${usage.cache_creation_input_tokens ?? 0} ` +
+      `out=${usage.output_tokens}`,
+  );
+}
+
+/**
+ * Everything the model is told that does not change between calls.
+ *
+ * Marked for caching: it sits at the very front of every prompt, so it is the
+ * one part that can be paid for once and read back cheaply. The hour-long
+ * lifetime is chosen for the interview, where the expert takes minutes to write
+ * each answer and a five-minute entry would be cold by the next turn.
+ */
+function cacheableSystem(system: string): Anthropic.TextBlockParam[] {
+  return [
+    {
+      type: "text",
+      text: system,
+      cache_control: { type: "ephemeral", ttl: "1h" },
+    },
+  ];
+}
+
 let client: Anthropic | undefined;
 
 function anthropic(): Anthropic {
@@ -69,6 +116,8 @@ export interface StructuredRequest<T> {
    */
   effort?: Effort;
   maxTokens?: number;
+  /** Names this call in the usage log, so spend can be attributed to a step. */
+  label?: string;
   /**
    * Canned result used when the app runs without an API key, so the screens can
    * be clicked through end-to-end before one is configured. Never consulted
@@ -90,6 +139,7 @@ export async function structured<T>({
   schema,
   effort = "high",
   maxTokens = 16000,
+  label = "structured",
   mock,
 }: StructuredRequest<T>): Promise<T> {
   if (config.anthropic.mock && mock) return mock();
@@ -98,13 +148,15 @@ export async function structured<T>({
     model: config.anthropic.model,
     max_tokens: maxTokens,
     thinking: { type: "adaptive" },
-    system,
+    system: cacheableSystem(system),
     messages,
     output_config: {
       effort,
       format: zodOutputFormat(schema),
     },
   });
+
+  reportUsage(label, response.usage as Usage);
 
   if (response.stop_reason === "refusal") {
     throw new Error(
@@ -129,6 +181,8 @@ export interface StreamRequest {
   messages: Anthropic.MessageParam[];
   effort?: Effort;
   maxTokens?: number;
+  /** Names this call in the usage log, so spend can be attributed to a step. */
+  label?: string;
   /** Canned reply for keyless operation — see `StructuredRequest.mock`. */
   mock?: string;
 }
@@ -156,6 +210,7 @@ export function streamChat({
   messages,
   effort = "high",
   maxTokens = 16000,
+  label = "chat",
   mock,
 }: StreamRequest): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -174,9 +229,15 @@ export function streamChat({
           model: config.anthropic.model,
           max_tokens: maxTokens,
           thinking: { type: "adaptive" },
-          system,
+          system: cacheableSystem(system),
           messages,
           output_config: { effort },
+          // A conversation re-sends everything said so far on every single
+          // turn, so its cost grows with the square of its length. Caching the
+          // growing tail as well as the system prompt is what stops that: the
+          // breakpoint moves forward by itself as turns are appended, so each
+          // turn pays full price only for what was just added.
+          cache_control: { type: "ephemeral" },
         });
 
         // Keep the connection warm while the model is still thinking. Stopped
@@ -200,6 +261,8 @@ export function streamChat({
         } finally {
           clearInterval(keepAlive);
         }
+
+        reportUsage(label, (await stream.finalMessage()).usage as Usage);
         controller.close();
       } catch (reason) {
         // Headers are already sent by the time this runs, so the error cannot
