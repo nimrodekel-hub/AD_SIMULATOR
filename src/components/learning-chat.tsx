@@ -104,15 +104,35 @@ export function LearningChat({
   /** Whichever thing went wrong most recently. Only one is ever on screen. */
   const error = chatError ?? extractError;
 
-  async function send() {
-    const text = input.trim();
+  /**
+   * Sends one turn and streams the reply back.
+   *
+   * A phone drops connections — a locked screen, a switch from wifi to
+   * cellular, a tunnel — and this is the screen where losing one costs the
+   * most, because the conversation lives nowhere but here. So a broken stream
+   * is not treated as a failed turn:
+   *
+   *   - whatever arrived is kept, marked as cut off, rather than deleted;
+   *   - the question is retried once by itself, since most drops are transient;
+   *   - a retry re-sends the same turn instead of appending a second copy of
+   *     it, which is what left two identical questions on screen before.
+   */
+  async function send(retry?: { text: string; history: ChatMessage[] }) {
+    const text = (retry?.text ?? input).trim();
     if (!text || streaming) return;
 
-    const history = [...messages, { role: "user" as const, content: text }];
+    // The retry carries the conversation with it rather than reading state:
+    // this closure still holds the messages from the render that created it,
+    // which are the ones from *before* this turn was added.
+    const history =
+      retry?.history ?? [...messages, { role: "user" as const, content: text }];
+
     setMessages(history);
-    setInput("");
+    if (!retry) setInput("");
     setStreaming(true);
     setChatError(undefined);
+
+    let assembled = "";
 
     try {
       const response = await fetch("/api/designer/chat", {
@@ -137,19 +157,45 @@ export function LearningChat({
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let assembled = "";
 
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
         assembled += decoder.decode(value, { stream: true });
-        setMessages([...history, { role: "assistant", content: assembled }]);
+        // Leading spaces are the server's keep-alive, sent while the model is
+        // still thinking. They are not part of the reply.
+        setMessages([
+          ...history,
+          { role: "assistant", content: assembled.trimStart() },
+        ]);
       }
     } catch (reason) {
-      setChatError(
-        reason instanceof Error ? reason.message : "Something went wrong.",
-      );
-      setMessages(history);
+      const message =
+        reason instanceof Error ? reason.message : "Something went wrong.";
+
+      if (assembled.trim().length > 0) {
+        // Words did arrive. Losing them would cost the expert real work, so
+        // keep them and say plainly that the answer is incomplete.
+        setMessages([
+          ...history,
+          { role: "assistant", content: assembled.trimStart() },
+        ]);
+        setChatError(
+          "The connection dropped part-way through the answer. What arrived is kept above — send anything to carry on.",
+        );
+      } else if (!retry) {
+        // Nothing arrived and this was the first attempt. Most drops on a
+        // phone are transient, so try the same turn once more by itself.
+        setStreaming(false);
+        await send({ text, history });
+        return;
+      } else {
+        // The retry failed too. Hand the question back rather than stranding
+        // it in the conversation with no answer.
+        setMessages(history.slice(0, -1));
+        setInput(text);
+        setChatError(`${message} Your question is back in the box — nothing was lost.`);
+      }
     } finally {
       setStreaming(false);
     }
