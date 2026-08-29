@@ -185,8 +185,8 @@
   },
   "id": "f21f741c-7e20-4992-a511-dfef0d0031ee",
   "system_id": "e7f4d85e-4802-44ca-87fa-03ed58ef702f",
-  "status": "draft",
+  "status": "approved",
   "source_chat_log": "Designer: low slow unknown at 40 km in an unresolved medevac corridor; the operator held for a visual and did not engage.",
   "created_at": "2026-08-29T16:11:30.579Z",
-  "approved_at": null
+  "approved_at": "2026-08-29T16:11:31.890Z"
 }
