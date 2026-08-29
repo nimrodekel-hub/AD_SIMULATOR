@@ -4,30 +4,20 @@ import {
   generateGuiTemplate,
   missingSlots,
 } from "@/lib/ai/tasks/generate-gui";
-import { getSystem, getSystemProfile, saveScreenshot } from "@/lib/store/kb";
+import { getSystem, getSystemProfile, loadScreenshots } from "@/lib/store/kb";
 
 /**
- * Turns one system's reference screenshots into its console shell.
+ * Turns one system's stored references into its console shell.
+ *
+ * The screenshots are not uploaded here any more — they belong to the system
+ * and were stored before it was described, so that the same images could inform
+ * the behaviour profile. This step reads them back.
  *
  * Runs once per template, not per training run — the brief rules out generating
  * a GUI at runtime.
  */
 
 export const maxDuration = 60;
-
-/**
- * The brief asks for two to five screenshots; the ceiling is a little higher
- * because the browser scales each one to what the model actually reads before
- * uploading it, so a sixth costs very little. More than this stops adding
- * information about a single console and only adds tokens to every generation.
- */
-const MIN_SCREENSHOTS = 2;
-const MAX_SCREENSHOTS = 8;
-
-/** Generous once the browser has scaled them; a guard, not a working limit. */
-const MAX_BYTES_EACH = 4 * 1024 * 1024;
-
-const ACCEPTED = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 
 export async function POST(
   request: NextRequest,
@@ -39,14 +29,11 @@ export async function POST(
     return NextResponse.json({ error: "System not found" }, { status: 404 });
   }
 
-  let form: FormData;
+  let body: { guidance?: string; previous_html?: string };
   try {
-    form = await request.formData();
+    body = await request.json();
   } catch {
-    return NextResponse.json(
-      { error: "Expected a multipart form with screenshots." },
-      { status: 400 },
-    );
+    body = {};
   }
 
   // The console is built from the screenshots and the profile together. Without
@@ -63,53 +50,27 @@ export async function POST(
     );
   }
 
-  const files = form.getAll("screenshots").filter((f): f is File => f instanceof File);
-
-  if (files.length < MIN_SCREENSHOTS || files.length > MAX_SCREENSHOTS) {
+  const screenshots = await loadScreenshots(systemId);
+  if (screenshots.length === 0) {
     return NextResponse.json(
       {
-        error: `Upload between ${MIN_SCREENSHOTS} and ${MAX_SCREENSHOTS} screenshots — you sent ${files.length}.`,
+        error:
+          "This system has no reference screenshots stored. Upload them in the reference step first.",
       },
-      { status: 400 },
+      { status: 409 },
     );
-  }
-
-  for (const file of files) {
-    if (!ACCEPTED.has(file.type)) {
-      return NextResponse.json(
-        { error: `${file.name} is a ${file.type || "unknown"} file. Use PNG, JPEG, GIF or WebP.` },
-        { status: 400 },
-      );
-    }
-    if (file.size > MAX_BYTES_EACH) {
-      return NextResponse.json(
-        { error: `${file.name} is larger than 4 MB. Scale it down and try again.` },
-        { status: 400 },
-      );
-    }
   }
 
   try {
-    // Keep the references alongside the template: a future regenerate, or an
-    // argument about what the console was based on, both need the originals.
-    const stored = await Promise.all(
-      files.map(async (file) => {
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        const path = await saveScreenshot(systemId, file.name, bytes);
-        return {
-          path,
-          mediaType: file.type,
-          base64: Buffer.from(bytes).toString("base64"),
-        };
-      }),
-    );
-
     const draft = await generateGuiTemplate({
-      screenshots: stored.map(({ mediaType, base64 }) => ({ mediaType, base64 })),
+      screenshots: screenshots.map(({ mediaType, base64 }) => ({
+        mediaType,
+        base64,
+      })),
       profile,
       systemNameFictional: system.name,
-      guidance: String(form.get("guidance") ?? "").trim(),
-      previousHtml: String(form.get("previous_html") ?? "") || undefined,
+      guidance: String(body.guidance ?? "").trim(),
+      previousHtml: String(body.previous_html ?? "") || undefined,
     });
 
     // A shell without its slots cannot host a scenario. Report it rather than
@@ -119,7 +80,7 @@ export async function POST(
     return NextResponse.json({
       html: draft.html,
       design_notes: draft.design_notes,
-      screenshots: stored.map((shot) => shot.path),
+      screenshots: screenshots.map((shot) => shot.path),
       missing_slots: missing,
     });
   } catch (reason) {

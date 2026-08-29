@@ -1,26 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { GuiTemplate } from "@/lib/domain/schemas";
-import { MAX_REQUEST_BYTES, formatBytes, readJson } from "@/lib/http";
-import { prepareImage } from "@/lib/images";
+import { readJson } from "@/lib/http";
 
 /**
- * Screen 1b — building the simulated console.
+ * Setup step 3 — building the simulated console.
  *
- * Upload a handful of reference screenshots and the model produces a console
- * shell for this system. The designer previews it, regenerates with direction
- * until it looks right, and approves it once. Every training run on this system
- * from then on renders inside it.
+ * The screenshots were uploaded and stored in step 1, so nothing is chosen or
+ * transferred here: the model is handed the system's stored references and its
+ * approved behaviour profile, and returns a console shell. The designer
+ * previews it, regenerates with direction until it looks right, and approves it
+ * once. Every training run on this system from then on renders inside it.
  */
-
-/* Room left under the platform's request limit for the form's other fields
-   and multipart overhead. */
-const UPLOAD_BUDGET = MAX_REQUEST_BYTES - 256 * 1024;
-
-/** Kept in step with the route's own limit. */
-const MAX_SCREENSHOTS = 8;
 
 const REQUIRED_SLOT_LABELS: Record<string, string> = {
   "system-name": "system name",
@@ -33,20 +27,19 @@ const REQUIRED_SLOT_LABELS: Record<string, string> = {
 export function GuiBuilder({
   systemId,
   systemName,
+  screenshotCount,
   existing,
 }: {
   systemId: string;
   /** The system's own fictional name. The console is titled with it. */
   systemName: string;
+  /** How many references are stored. Shown so the source is never a mystery. */
+  screenshotCount: number;
   existing: GuiTemplate | null;
 }) {
   const router = useRouter();
 
-  const [files, setFiles] = useState<File[]>([]);
-  const [originalBytes, setOriginalBytes] = useState(0);
-  const [preparing, setPreparing] = useState(false);
   const [guidance, setGuidance] = useState("");
-
   const [html, setHtml] = useState(existing?.generated_ui_code ?? "");
   const [notes, setNotes] = useState("");
   const [screenshots, setScreenshots] = useState<string[]>(
@@ -58,41 +51,21 @@ export function GuiBuilder({
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
 
-  /**
-   * Scales the chosen screenshots down before anything is sent.
-   *
-   * Done on selection rather than on submit so the size shown next to the
-   * chooser is the size that will actually be uploaded, and so a selection that
-   * still does not fit says so before the button is pressed.
-   */
-  async function choose(chosen: File[]) {
-    setPreparing(true);
-    setError(undefined);
-    try {
-      const prepared = await Promise.all(chosen.map(prepareImage));
-      setFiles(prepared.map((entry) => entry.file));
-      setOriginalBytes(prepared.reduce((sum, e) => sum + e.originalBytes, 0));
-    } finally {
-      setPreparing(false);
-    }
-  }
-
   async function generate() {
     setBusy("generating");
     setError(undefined);
     setNotice(undefined);
 
     try {
-      const form = new FormData();
-      form.set("guidance", guidance);
-      // Sending the previous attempt makes a regenerate a refinement rather
-      // than a fresh roll of the dice.
-      if (html) form.set("previous_html", html);
-      for (const file of files) form.append("screenshots", file);
-
       const response = await fetch(`/api/systems/${systemId}/gui/generate`, {
         method: "POST",
-        body: form,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          guidance,
+          // Sending the previous attempt makes a regenerate a refinement rather
+          // than a fresh roll of the dice.
+          previous_html: html || undefined,
+        }),
       });
       const payload = await readJson<{
         error?: string;
@@ -145,17 +118,6 @@ export function GuiBuilder({
     }
   }
 
-  const enoughFiles = files.length >= 2 && files.length <= MAX_SCREENSHOTS;
-
-  /* The serverless limit applies to the request as a whole, so four ordinary
-     phone screenshots can exceed it while every single one is well inside the
-     per-file cap. Caught here, before the upload, because the platform rejects
-     an oversized body before the app can explain itself. */
-  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
-  const tooLarge = totalBytes > UPLOAD_BUDGET;
-  const canGenerate = enoughFiles && !tooLarge && !busy && !preparing;
-  const saved = originalBytes - totalBytes;
-
   return (
     <div className="space-y-8">
       {existing ? (
@@ -171,46 +133,27 @@ export function GuiBuilder({
         </div>
       ) : null}
 
-      {/* ---- Inputs -------------------------------------------------- */}
+      {/* ---- What it is built from ---------------------------------- */}
       <section>
-        <h2 className="text-sm font-semibold">Reference</h2>
+        <h2 className="text-sm font-semibold">Sources</h2>
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
-          Two to {MAX_SCREENSHOTS} screenshots of a console. Layout, palette and
-          density are reproduced; identifying content is not — no vendor names,
-          unit markings or real call signs are carried across.
+          Built from the {screenshotCount} stored screenshot
+          {screenshotCount === 1 ? "" : "s"} and the approved behaviour profile
+          together. The screenshots give it a look; the profile decides which
+          columns appear, what each identification colour means, and which
+          controls the operator gets. Where they disagree, the profile wins — a
+          screenshot shows one moment.
+        </p>
+        <p className="mt-2 text-xs text-muted">
+          <Link
+            href={`/designer/systems/${systemId}/screenshots`}
+            className="hover:text-accent"
+          >
+            Change the screenshots →
+          </Link>
         </p>
 
         <div className="mt-4 space-y-4">
-          <label className="block">
-            <span className="label">Screenshots</span>
-            <input
-              type="file"
-              className="field"
-              accept="image/png,image/jpeg,image/gif,image/webp"
-              multiple
-              onChange={(event) =>
-                void choose(Array.from(event.target.files ?? []))
-              }
-            />
-            <span className="mt-1.5 block text-xs text-muted">
-              {preparing
-                ? "Scaling them down…"
-                : files.length === 0
-                  ? `None chosen. Up to ${MAX_SCREENSHOTS}; they are scaled down here before upload, so file size is rarely a problem.`
-                  : `${files.length} chosen, ${formatBytes(totalBytes)}${
-                      saved > 0 ? ` (down from ${formatBytes(originalBytes)})` : ""
-                    }${enoughFiles ? "" : ` — need between 2 and ${MAX_SCREENSHOTS}`}.`}
-            </span>
-            {tooLarge ? (
-              <span className="mt-1.5 block text-xs text-warn">
-                That is over the {formatBytes(UPLOAD_BUDGET)} the server accepts
-                in one request. Choose fewer screenshots, or scale them down —
-                the console only needs layout and colour, so a smaller image
-                loses nothing.
-              </span>
-            ) : null}
-          </label>
-
           {html ? (
             <label className="block">
               <span className="label">Direction for the next attempt</span>
@@ -226,16 +169,14 @@ export function GuiBuilder({
           <button
             type="button"
             className="btn btn-primary"
-            disabled={!canGenerate}
+            disabled={busy !== null}
             onClick={() => void generate()}
           >
-            {preparing
-              ? "Preparing…"
-              : busy === "generating"
-                ? "Reading the screenshots…"
-                : html
-                  ? "Regenerate"
-                  : "Generate console"}
+            {busy === "generating"
+              ? "Reading the screenshots…"
+              : html
+                ? "Regenerate"
+                : "Generate console"}
           </button>
         </div>
       </section>

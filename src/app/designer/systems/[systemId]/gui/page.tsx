@@ -2,7 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GuiBuilder } from "@/components/gui-builder";
 import { ScreenShell } from "@/components/screen-shell";
-import { getGuiTemplate, getSystem, getSystemProfile } from "@/lib/store/kb";
+import {
+  getGuiTemplate,
+  getSystem,
+  getSystemProfile,
+  listScreenshots,
+} from "@/lib/store/kb";
 
 export const dynamic = "force-dynamic";
 
@@ -10,24 +15,28 @@ export default async function GuiBuilderPage({
   params,
 }: PageProps<"/designer/systems/[systemId]/gui">) {
   const { systemId } = await params;
-  const [system, existing, profile] = await Promise.all([
+  const [system, existing, profile, screenshots] = await Promise.all([
     getSystem(systemId),
     getGuiTemplate(systemId),
     getSystemProfile(systemId),
+    listScreenshots(systemId),
   ]);
   if (!system) notFound();
 
-  // The route refuses to generate without an approved profile. Deciding that
-  // here as well means the refusal arrives before the work, not after a
-  // selection has been made and an upload has been waited on.
-  const profileReady = profile?.approved === true;
+  // The route refuses to generate without both of these. Deciding it here as
+  // well means the refusal arrives before the work rather than after it.
+  const missing = !profile?.approved
+    ? ("profile" as const)
+    : screenshots.length === 0
+      ? ("screenshots" as const)
+      : null;
 
   return (
     <ScreenShell
       theme="work"
       eyebrow={system.name}
       title="Simulated console"
-      subtitle="Built once from reference screenshots, then used by every run on this system"
+      subtitle="Built once from the stored references and the behaviour profile, then used by every run"
     >
       <p className="mb-8">
         <Link
@@ -38,18 +47,21 @@ export default async function GuiBuilderPage({
         </Link>
       </p>
 
-      {profileReady ? (
+      {missing === null ? (
         <GuiBuilder
           systemId={systemId}
           systemName={system.name}
+          screenshotCount={screenshots.length}
           existing={existing}
         />
       ) : (
         <div className="panel p-6">
           <span className="chip status-warn !normal-case">
-            {profile
-              ? "The behaviour profile is saved but not approved yet."
-              : `${system.name} has not been described yet.`}
+            {missing === "screenshots"
+              ? `${system.name} has no reference screenshots stored.`
+              : profile
+                ? "The behaviour profile is saved but not approved yet."
+                : `${system.name} has not been described yet.`}
           </span>
 
           <p className="prose-block mt-4 max-w-2xl text-sm">
@@ -61,16 +73,19 @@ export default async function GuiBuilderPage({
             the one failure nobody notices.
           </p>
 
-          <p className="mt-3 max-w-2xl text-sm text-muted">
-            It is eight questions and takes a few minutes. Anything left blank
-            is filled in from the rest, and you correct it before approving.
-          </p>
-
           <Link
-            href={`/designer/systems/${systemId}/profile`}
+            href={
+              missing === "screenshots"
+                ? `/designer/systems/${systemId}/screenshots`
+                : `/designer/systems/${systemId}/profile`
+            }
             className="btn btn-primary mt-5"
           >
-            {profile ? "Review and approve the profile" : "Describe the system first"}
+            {missing === "screenshots"
+              ? "Upload the screenshots first"
+              : profile
+                ? "Review and approve the profile"
+                : "Describe the system first"}
           </Link>
         </div>
       )}

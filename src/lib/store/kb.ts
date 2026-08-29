@@ -188,6 +188,27 @@ export async function saveGuiTemplate(
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Reference screenshots — evidence, read twice                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The screenshots belong to the system, not to the console step.
+ *
+ * They are shown to the model twice: once when it reads the designer's answers
+ * about how the system behaves, and again when the console is generated. A
+ * screenshot settles what the columns are called and in what order they sit far
+ * better than a sentence describing them, so it is worth having in hand while
+ * the answers are being interpreted — not only afterwards.
+ */
+
+export interface StoredScreenshot {
+  /** Repo-relative path, kept on the template as its provenance. */
+  path: string;
+  mediaType: string;
+  base64: string;
+}
+
 /** Stores an uploaded reference screenshot and returns its repo-relative path. */
 export async function saveScreenshot(
   systemId: string,
@@ -199,6 +220,69 @@ export async function saveScreenshot(
   await repoFiles().writeBinary(filePath, bytes, `Add console reference ${safeName}`);
   return filePath;
 }
+
+/** File names of the stored references, oldest upload first. */
+export async function listScreenshots(systemId: string): Promise<string[]> {
+  const names = await repoFiles().list(systemPaths(systemId).screenshots);
+  return names.filter((name) => MEDIA_TYPES[extensionOf(name)] !== undefined).sort();
+}
+
+/** The stored references as image blocks, ready to hand to the model. */
+export async function loadScreenshots(
+  systemId: string,
+): Promise<StoredScreenshot[]> {
+  const root = systemPaths(systemId).screenshots;
+  const names = await listScreenshots(systemId);
+
+  const loaded = await Promise.all(
+    names.map(async (name) => {
+      const base64 = await repoFiles().readBase64(`${root}/${name}`);
+      return base64
+        ? { path: `${root}/${name}`, mediaType: MEDIA_TYPES[extensionOf(name)], base64 }
+        : null;
+    }),
+  );
+
+  // A reference that cannot be read back is dropped rather than failing the
+  // step: the remaining ones are still worth showing the model.
+  return loaded.filter((shot): shot is StoredScreenshot => shot !== null);
+}
+
+/**
+ * Replaces the whole reference set.
+ *
+ * Uploading is "these are the screenshots of this system", not "add one more",
+ * so a second upload supersedes the first rather than accumulating a pile
+ * nobody remembers the order of.
+ */
+export async function replaceScreenshots(
+  systemId: string,
+  files: Array<{ name: string; bytes: Uint8Array }>,
+): Promise<string[]> {
+  const root = systemPaths(systemId).screenshots;
+  const existing = await repoFiles().list(root);
+
+  await Promise.all(
+    existing.map((name) =>
+      repoFiles().remove(`${root}/${name}`, "Replace console references"),
+    ),
+  );
+
+  return Promise.all(
+    files.map((file) => saveScreenshot(systemId, file.name, file.bytes)),
+  );
+}
+
+const MEDIA_TYPES: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+};
+
+const extensionOf = (name: string) =>
+  name.slice(name.lastIndexOf(".") + 1).toLowerCase();
 
 /* ------------------------------------------------------------------ */
 /* Dilemmas — one system's captured expertise                          */

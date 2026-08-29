@@ -54,3 +54,6 @@ next-env.d.ts
 # To undo: delete these lines and commit the lockfile from an environment where
 # `git push` works.
 package-lock.json
+
+# local development data — in production this lives on the `data` branch
+/data/

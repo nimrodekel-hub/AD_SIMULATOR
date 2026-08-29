@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { describeAiError } from "@/lib/ai/client";
 import { extractSystemProfile } from "@/lib/ai/tasks/learn-system";
-import { getSystem } from "@/lib/store/kb";
+import { getSystem, loadScreenshots } from "@/lib/store/kb";
 
 /** Turns one system's answers into a structured behaviour profile. */
 
@@ -39,10 +39,16 @@ export async function POST(
   }
 
   try {
+    // The system's stored references, if it has any. They settle what the
+    // display actually reads while the answers are being interpreted, rather
+    // than only later when the console is drawn.
+    const screenshots = await loadScreenshots(systemId);
+
     const draft = await extractSystemProfile(
       system.name,
       parsed.data.answers,
       parsed.data.open_notes,
+      screenshots,
     );
     return NextResponse.json({ draft });
   } catch (reason) {

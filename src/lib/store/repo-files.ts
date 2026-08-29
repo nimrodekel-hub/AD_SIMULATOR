@@ -26,6 +26,15 @@ export interface RepoFiles {
   listDirs(dir: string): Promise<string[]>;
   /** UTF-8 contents, or null if the file does not exist. */
   read(filePath: string): Promise<string | null>;
+  /**
+   * Base64 contents, or null if the file does not exist.
+   *
+   * Stored screenshots are read back this way: they are shown to the model
+   * twice — once when interpreting the designer's answers, once when the
+   * console is generated — so they have to come out of storage as bytes, not
+   * as text.
+   */
+  readBase64(filePath: string): Promise<string | null>;
   write(filePath: string, contents: string, message: string): Promise<void>;
   writeBinary(filePath: string, bytes: Uint8Array, message: string): Promise<void>;
   remove(filePath: string, message: string): Promise<void>;
@@ -81,6 +90,15 @@ class LocalFiles implements RepoFiles {
   async read(filePath: string): Promise<string | null> {
     try {
       return await fs.readFile(this.absolute(filePath), "utf8");
+    } catch {
+      return null;
+    }
+  }
+
+  async readBase64(filePath: string): Promise<string | null> {
+    try {
+      const bytes = await fs.readFile(this.absolute(filePath));
+      return bytes.toString("base64");
     } catch {
       return null;
     }
@@ -179,6 +197,27 @@ class GitHubFiles implements RepoFiles {
       | null;
     if (!file?.content) return null;
     return Buffer.from(file.content, "base64").toString("utf8");
+  }
+
+  async readBase64(filePath: string): Promise<string | null> {
+    const file = (await this.get(filePath)) as
+      | { content?: string; sha?: string }
+      | null;
+    if (!file) return null;
+
+    // The API wraps base64 at 60 columns; the SDK wants it unbroken.
+    if (file.content) return file.content.replace(/\s+/g, "");
+
+    // Past a megabyte the Contents API returns the metadata without the body.
+    // The blob endpoint still has it, and we already know the sha.
+    if (!file.sha) return null;
+    const response = await fetch(
+      `${this.base.replace(/\/contents$/, "/git/blobs")}/${file.sha}`,
+      { headers: this.headers, cache: "no-store" },
+    );
+    if (!response.ok) return null;
+    const blob = (await response.json()) as { content?: string };
+    return blob.content ? blob.content.replace(/\s+/g, "") : null;
   }
 
   private async put(

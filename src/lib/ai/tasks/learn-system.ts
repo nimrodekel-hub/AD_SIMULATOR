@@ -103,6 +103,20 @@ Everything downstream reads this record. Scenario generation uses it to decide w
 
 **track_readout_fields is the console's column list.** Take the labels from what the designer said their display shows, in their order, in their wording — abbreviated the way a console abbreviates ("RNG", not "Range to target"). If they gave units, carry them.
 
+## Screenshots, when there are any
+
+You may be shown screenshots of the real console. They are **evidence about the display, never authority about the system.**
+
+**A screenshot is one moment.** What is on screen is a sample, not an inventory. Never conclude that the only identification states are the ones visible, that the only track classes are the ones flying, or that a capability is absent because nothing is currently using it. Nothing may be *removed* from the profile because a screenshot did not happen to show it.
+
+**Where they are worth trusting: what is written on the display.** Column labels, their order, their units, and the colours attached to identification states. Here a screenshot is better evidence than a sentence, because the designer is describing from memory something they are looking at every day. Prefer the wording and order you can actually read.
+
+**A visible control is not proof of who decides.** A button on screen says the system can do a thing; it does not say the operator is the one who chooses it, or when. Operator responsibilities and automatic functions come from the answers alone.
+
+**Where a screenshot contradicts an answer, follow the answer** and record the disagreement in general_notes, naming both readings. The designer knows things a screenshot cannot show, and they review this record before approving it — a flagged conflict gets resolved, a silently chosen one does not.
+
+**Never carry identifying content across.** Vendor names, unit markings, real call signs, place names and serial numbers appear in screenshots and must not reach the profile.
+
 **iff_states.tone maps each state onto the console's status palette.** Use \`friendly\` for confirmed friendly, \`hostile\` for confirmed hostile, \`caution\` for anything leaning hostile but unresolved, and \`neutral\` for genuinely unknown or unclassified. This is what makes the display readable at a glance, so it has to match how an operator actually reads urgency.
 
 **Separate what the operator decides from what the system does.** If the system correlates tracks automatically, that is not an operator responsibility, and a scenario must not ask a trainee to do it.
@@ -193,11 +207,25 @@ export async function extractSystemProfile(
   systemName: string,
   answers: Array<{ question: string; answer: string }>,
   openNotes: string,
+  /** The system's stored references, when it has any. Evidence, not authority. */
+  screenshots: Array<{ mediaType: string; base64: string }> = [],
 ): Promise<SystemProfileDraft> {
   const transcript = answers
     .filter((entry) => entry.answer.trim().length > 0)
     .map((entry) => `Q: ${entry.question}\nA: ${entry.answer}`)
     .join("\n\n");
+
+  const prose = [
+    `The system is called "${systemName}".`,
+    `<answers>\n${transcript}\n</answers>`,
+    openNotes.trim()
+      ? `<additional_notes>\n${openNotes}\n</additional_notes>`
+      : "<additional_notes>none</additional_notes>",
+    screenshots.length > 0
+      ? `The ${screenshots.length} image${screenshots.length === 1 ? "" : "s"} above ${screenshots.length === 1 ? "is a screenshot" : "are screenshots"} of this system's real console. Read them as evidence of what the display shows — they are not a description of how the system behaves, and the designer's answers outrank them.`
+      : "No screenshots of the console were provided.",
+    "Produce the system behaviour profile.",
+  ].join("\n\n");
 
   return structured({
     system: EXTRACTION_SYSTEM,
@@ -205,13 +233,18 @@ export async function extractSystemProfile(
       {
         role: "user",
         content: [
-          `The system is called "${systemName}".`,
-          `<answers>\n${transcript}\n</answers>`,
-          openNotes.trim()
-            ? `<additional_notes>\n${openNotes}\n</additional_notes>`
-            : "<additional_notes>none</additional_notes>",
-          "Produce the system behaviour profile.",
-        ].join("\n\n"),
+          // Images first: the answers read differently once the display they
+          // describe is on the table.
+          ...screenshots.map((shot) => ({
+            type: "image" as const,
+            source: {
+              type: "base64" as const,
+              media_type: shot.mediaType as "image/png",
+              data: shot.base64,
+            },
+          })),
+          { type: "text" as const, text: prose },
+        ],
       },
     ],
     schema: SystemProfileDraftSchema,
