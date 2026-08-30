@@ -556,11 +556,63 @@
     "mean_reaction_s": 79.9,
     "met_criteria": false
   },
-  "outcome": null,
-  "score": null,
-  "debrief_text": "",
-  "recommendations": [],
-  "status": "in_progress",
+  "outcome": {
+    "success": false,
+    "summary": "Run failed outright. At T+203 and again at T+215 you launched on TRK-7024, a track the commander had already resolved to Friendly at T+130, and destroyed it at T+290. Two friendly engagements cap the score regardless of anything else. Beneath that: all three jets were eventually killed but late and with a duplicated shot, six hostile UAVs reached the defended area, one round was thrown away breaking a committed engagement, and mean reaction time was 79.9 s.",
+    "per_decision": [
+      {
+        "decision_point_index": 0,
+        "chosen_action": "Held the first launch until T+046, then put both available rounds onto TRK-4102 (T+046 and T+061), leaving TRK-4101 unengaged until T+125",
+        "preferred_action": "Fire the lead jet at the earliest valid firing solution, then the next jet, keeping the two-in-flight limit spread across separate fast closers",
+        "correct": false,
+        "comment": "T+000–061. TRK-4101 was at 87 km and TRK-4102 at 81 km at detection; both crossed the 70 km ring well before T+046. The record is explicit that the scenario is only solvable if the jets are committed at the very first moment the system offers a solution, because every second of delay keeps the two-rockets limit occupied when the UAV wave crosses the short ring. Doubling up on 4102 compounded it: 4101 sat unengaged for two full minutes."
+      },
+      {
+        "decision_point_index": 0,
+        "chosen_action": "Attempted a launch at 73 km (refused, beyond 70 km reach)",
+        "preferred_action": "Fire when the system permits it — target within system capability and a solution exists",
+        "correct": false,
+        "comment": "T+051. This is the mirror image of holding too long: a shot pushed out beyond the ring while the two genuinely valid solutions on the lead jets were being under-serviced. Lost seconds on a timeline that had none to give."
+      },
+      {
+        "decision_point_index": 1,
+        "chosen_action": "Held while both rockets were committed against jets and UAVs crossed the short ring (refusals at T+069, T+087, T+151)",
+        "preferred_action": "Hold and wait for a fire status to resolve",
+        "correct": true,
+        "comment": "T+069–151. Holding here was the correct behaviour and is not scored as inaction. But the record also says this moment is decided upstream — the reason it became unwinnable was the late and duplicated jet commitment, not anything you did in this window."
+      },
+      {
+        "decision_point_index": 3,
+        "chosen_action": "Let UAVs close inside 5 km before committing — four refusals for minimum range at T+176, 180, 184, 188, then a launch at 5 km with Pk 0% at T+195",
+        "preferred_action": "Mop up by earliest available valid solution inside the shorter rings, keeping both rockets continuously employed",
+        "correct": false,
+        "comment": "T+176–199. These refusals are evidence, not faults: you had let the wave reach the inner limit. The Pk 0% launch at T+195 was a round spent on a geometry the system had already told you was dead. TRK-5206 and 5207 leaked at T+213 and T+202."
+      },
+      {
+        "decision_point_index": 2,
+        "chosen_action": "Launched on TRK-7024 at T+203 and T+215; it had been resolved to Friendly at T+130",
+        "preferred_action": "Withhold fire on anything not standing as Enemy; act on the commander's answer when it arrives",
+        "correct": false,
+        "comment": "T+203 and T+215. This is the documented worst outcome in the scenario, and worse than the version the record anticipates — you did not fire on an unresolved Unknown, you fired on a track the commander had classified Friendly 73 seconds earlier. The aggressive-looking profile of the Unknowns is described in the record as exactly the bait."
+      },
+      {
+        "decision_point_index": 1,
+        "chosen_action": "Broke off the engagement against TRK-7024 at T+212, wasting one round, then re-launched at T+215",
+        "preferred_action": "Do not break or switch a committed engagement under time pressure",
+        "correct": false,
+        "comment": "T+212. Breaking a committed engagement is scored as an error even where the outcome is favourable. Here the outcome was not favourable either — the round was wasted and you re-fired on the same friendly, then hit the no-rounds wall at T+218 with four hostile UAVs still inbound."
+      }
+    ]
+  },
+  "score": 5,
+  "debrief_text": "The run was decided at T+203. You launched on TRK-7024 and, after breaking that engagement and wasting a round, launched on it again at T+215 and destroyed it at T+290. The commander had answered on that track at T+130 — resolved to Friendly. This is not the near-miss the record warns about, where an Unknown's aggressive profile tempts a self-classification; the answer was already on your display and you fired anyway. Two friendly engagements fail the run outright, whatever the kill count, and they also consumed your last rounds: the refusal at T+218 for no rounds remaining came with four hostile UAVs still inbound.\n\nUnderneath that, the sequencing failed in the way the record predicts. Both lead jets were inside the 70 km ring well before your first launch at T+046, and when you did commit you put both available rounds onto TRK-4102 while TRK-4101 sat unengaged until T+125. That is the documented error of delaying jet commitment for a better picture, made worse by spending the second launcher on a target already covered. The out-of-range attempt at T+051 cost more seconds. You did kill all three jets — 4102 at T+120, 4103 at T+163, 4101 at T+173 — but two minutes later than the timeline allowed, so the two-in-flight limit was still occupied straight through the UAV wave's arrival inside the short ring.\n\nYour holds at T+069, T+087 and T+151 were correct and I am not marking them as inaction; the record treats holding with both rockets committed as right behaviour. The problem is that by the time a launcher freed up, the wave was at the inner limit. Four consecutive refusals for minimum range between T+176 and T+188, then a launch at 5 km with a stated Pk of 0% at T+195, are the arithmetic of a queue that was already broken. Six UAVs reached the defended area. Some UAV leakage is tolerable in a run that took the jets first and kept identification discipline; this run did neither.\n\nOne thing the record does not speak to is the two friendly overflights, TRK-7038 at T+168 and TRK-7011 at T+191. Those are counted as leakers in your tally and I will not argue with the count, but the doctrine entry only requires that Unknowns be referred and left alone until classified Enemy — it says nothing about preventing friendly tracks transiting the site, so I have no basis to call that a handling error either way.",
+  "recommendations": [
+    "Treat a resolved classification as binding the moment it appears. TRK-7024 stood as Friendly from T+130; build the habit of re-reading the track's current standing on the display immediately before every launch commit, not the impression you formed of it earlier.",
+    "Commit the lead jet at the first valid solution inside 70 km — in this run that was well before T+046 — and put the second round on a different fast closer, not a second shot at the same one. Practise runs where the only measure is time-to-first-launch on each jet.",
+    "Never break a committed engagement to re-aim. The cease at T+212 cost a round and left you at zero by T+218 with four hostiles inbound. Let the fire status resolve, then re-plan.",
+    "Stop letting UAVs run inside 5 km. You had four minimum-range refusals and a Pk 0% launch; work drills that take the next available valid solution in the medium and short rings rather than waiting for the nearest track to present a stronger one."
+  ],
+  "status": "completed",
   "created_at": "2026-08-30T12:46:05.565Z",
-  "completed_at": null
+  "completed_at": "2026-08-30T12:58:22.650Z"
 }
