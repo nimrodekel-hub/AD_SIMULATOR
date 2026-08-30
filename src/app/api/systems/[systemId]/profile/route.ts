@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { gapMessage, simulationGaps } from "@/lib/domain/profile-readiness";
 import { SystemProfileDraftSchema } from "@/lib/domain/schemas";
 import { getSystem, getSystemProfile, saveSystemProfile } from "@/lib/store/kb";
 import type { SystemProfile } from "@/lib/domain/schemas";
@@ -42,20 +43,17 @@ export async function POST(
 
   const { draft } = parsed.data;
 
-  // Everything downstream reads these three lists. A profile missing any of
-  // them cannot drive a console or a scenario, so approval is refused rather
-  // than left to fail later in a way nobody can trace.
+  // Approval is what puts a profile in front of trainees, so it is where the
+  // figures the simulation runs on stop being optional. The form refuses
+  // first and says exactly what is missing; this refuses again, because a tab
+  // left open since before the rule existed would otherwise walk straight
+  // past it. Saving a draft stays open — a draft is work in progress and
+  // drives nothing.
   if (parsed.data.approved) {
-    const gaps: string[] = [];
-    if (draft.track_classifications.length === 0) gaps.push("track classifications");
-    if (draft.iff_states.length === 0) gaps.push("identification states");
-    if (draft.track_readout_fields.length === 0) gaps.push("track readout fields");
-
+    const gaps = simulationGaps(draft);
     if (gaps.length > 0) {
       return NextResponse.json(
-        {
-          error: `Cannot approve: the profile has no ${gaps.join(", no ")}. Scenarios and the console are built from these.`,
-        },
+        { error: gapMessage(gaps), gaps },
         { status: 409 },
       );
     }
