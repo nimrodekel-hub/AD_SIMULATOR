@@ -215,6 +215,25 @@ export const SensorCoverageSchema = z.object({
 });
 export type SensorCoverage = z.infer<typeof SensorCoverageSchema>;
 
+/**
+ * One kind of interceptor the system shoots.
+ *
+ * Systems that carry more than one round have an operator decision built into
+ * the choice — a long-range round spent on a close target is a round that is
+ * not there for the next one — so this is a list rather than a single set of
+ * figures. A system with one round type declares one entry, and nothing about
+ * the simulation changes.
+ */
+export const InterceptorTypeSchema = z.object({
+  /** As the console labels it, e.g. "long range". */
+  name: z.string(),
+  min_range_km: z.number(),
+  max_range_km: z.number(),
+  /** Average speed over the flight, in knots. Sets the time of flight. */
+  speed_kts: z.number(),
+});
+export type InterceptorType = z.infer<typeof InterceptorTypeSchema>;
+
 export const EngagementDoctrineSchema = z.object({
   /** The closest a target can be and still be engaged. */
   min_range_km: z.number(),
@@ -225,6 +244,21 @@ export const EngagementDoctrineSchema = z.object({
   simultaneous_engagements_note: z.string(),
   /** Who may authorise an engagement, and when that changes. */
   authority_note: z.string(),
+
+  /* ---- The figures the simulation needs to actually run --------- */
+  /**
+   * These three used to live inside the prose above, which was fine while a
+   * run was a quiz and useless once it became a simulation: "no more than two
+   * rockets in the air" has to be a number before anything can enforce it.
+   * All nullable, because a profile written before the simulator existed has
+   * none of them and must keep working — the engine falls back to a plain
+   * single-round model when they are missing.
+   */
+  interceptors: z.array(InterceptorTypeSchema).default([]),
+  /** Interceptors that may be in the air at the same time. */
+  max_simultaneous: z.number().int().nullable().default(null),
+  /** Rounds available for the whole run. */
+  magazine_depth: z.number().int().nullable().default(null),
 });
 export type EngagementDoctrine = z.infer<typeof EngagementDoctrineSchema>;
 
@@ -337,14 +371,166 @@ export const ScenarioDecisionPointSchema = z.object({
 });
 export type ScenarioDecisionPoint = z.infer<typeof ScenarioDecisionPointSchema>;
 
+/* ------------------------------------------------------------------ */
+/* The live air picture — a scenario that actually runs                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A track with motion, rather than a row of pre-rendered numbers.
+ *
+ * The earlier model stored what the console should *say* about a track —
+ * "62 km", "047°" — which is fine for a quiz and useless for a simulation.
+ * An operator's job is to watch something close, judge how long they have,
+ * and act before it is too late; none of that exists unless the track has a
+ * position and a velocity and the clock moves it.
+ *
+ * So this stores the physical facts and lets the console derive every readout
+ * from them at the moment it draws. Range, bearing, time to impact and time
+ * to intercept are all computed, never authored, which also means they can
+ * never disagree with each other.
+ */
+export const LiveTrackSchema = z.object({
+  /** Shown on the display, e.g. "TK-4471". Invented; never a real call sign. */
+  designator: z.string(),
+  /** One of the profile's declared track classifications, by name. */
+  classification: z.string(),
+
+  /* ---- Where it starts, in polar coordinates about the site ---- */
+  /** Bearing from the site when it first appears, 0–360, 0 = north. */
+  spawn_bearing_deg: z.number(),
+  /** Range from the site when it first appears, in km. */
+  spawn_range_km: z.number(),
+  /** Altitude in feet. Constant for the run — climbs are not modelled. */
+  altitude_ft: z.number(),
+
+  /* ---- Where it is going ---------------------------------------- */
+  /** The direction it flies, 0–360. A track attacking the site flies toward it. */
+  heading_deg: z.number(),
+  /** Ground speed in knots, inside the band its classification declares. */
+  speed_kts: z.number(),
+
+  /* ---- Identity: what it is, and what the operator can see ------ */
+  /**
+   * What the track really is. **Never shown.** Scoring uses it: engaging a
+   * track whose truth is friendly is fratricide however it was labelled at
+   * the time, and that is exactly the judgement being trained.
+   */
+  truth_iff: z.string(),
+  /** The state it is displayed in when first detected. Often "unknown". */
+  initial_iff: z.string(),
+  /**
+   * When the system resolves it by itself, in seconds from the start, or null
+   * if it never does and the operator has to decide without help. A dilemma
+   * about identification under time pressure lives entirely in this field.
+   */
+  resolves_at_s: z.number().nullable().default(null),
+
+  /** Seconds from the start before it appears. 0 means it is up from the off. */
+  appears_at_s: z.number().default(0),
+  /** Anything that makes this track notable or ambiguous. */
+  notes: z.string().default(""),
+});
+export type LiveTrack = z.infer<typeof LiveTrackSchema>;
+
+/**
+ * What the run is judged on.
+ *
+ * Deliberately a short list of hard, countable outcomes rather than free-form
+ * goals: a trainee should be able to read this before the clock starts and
+ * know exactly what winning means, and the grader should not have to interpret
+ * anything. Judgement about *how* they got there is the debrief's job, and it
+ * has the whole event log to work from.
+ */
+export const SuccessCriteriaSchema = z.object({
+  /** Hostile tracks allowed to reach the defended area. Usually 0. */
+  max_leakers: z.number().int().default(0),
+  /** Interceptors the operator may spend and still be judged efficient. */
+  max_interceptors_spent: z.number().int().default(99),
+  /** What success means here, in one sentence, for the trainee to read. */
+  statement: z.string().default(""),
+});
+export type SuccessCriteria = z.infer<typeof SuccessCriteriaSchema>;
+
+/**
+ * One thing that happened during a run.
+ *
+ * This is the record the debrief is built from, and it replaces the old list
+ * of chosen answers. It says what the operator did, when, and what came of it
+ * — including the commands the system refused, because being told "inside
+ * minimum range" at the wrong moment is a lesson, not an error to hide.
+ */
+export const SimEventSchema = z.object({
+  /** Seconds from the start of the run. */
+  t: z.number(),
+  kind: z.enum([
+    "detected",
+    "resolved",
+    "classified",
+    "launched",
+    "refused",
+    "hit",
+    "miss",
+    "leaked",
+    "ceased",
+    "ended",
+  ]),
+  /** The track it concerns, where it concerns one. */
+  designator: z.string().default(""),
+  /** One line, already written for a human to read in the debrief. */
+  detail: z.string(),
+});
+export type SimEvent = z.infer<typeof SimEventSchema>;
+
+/** What the run added up to. Counted by the engine, never by the model. */
+export const RunResultSchema = z.object({
+  leakers: z.number().int(),
+  hostiles_destroyed: z.number().int(),
+  friendly_engaged: z.number().int(),
+  unknown_engaged: z.number().int(),
+  interceptors_spent: z.number().int(),
+  /** Seconds from a hostile being resolvable to the operator engaging it. */
+  mean_reaction_s: z.number().nullable(),
+  met_criteria: z.boolean(),
+});
+export type RunResult = z.infer<typeof RunResultSchema>;
+
 export const ScenarioInstanceSchema = z.object({
   scenario_name: z.string(),
   /** The brief the trainee reads before the clock starts. */
   situation_brief: z.string(),
   time_window_seconds: z.number(),
-  tracks: z.array(TrackSchema),
   resources: z.array(ScenarioResourceSchema),
-  decision_points: z.array(ScenarioDecisionPointSchema),
+
+  /**
+   * The air picture that actually runs. Everything a trainee sees on the scope
+   * comes from here, moved by the clock.
+   */
+  live_tracks: z.array(LiveTrackSchema).default([]),
+  /**
+   * Which way a fixed radar array is facing, 0–360.
+   *
+   * Meaningless for a rotating radar and ignored there. For a sector array it
+   * decides which threats are seen early and which arrive through the blind
+   * arc, so the generator places it deliberately — it belongs to the scenario
+   * rather than the profile because the same battery can be sited facing any
+   * direction, and where it faces is part of the problem being set.
+   */
+  radar_boresight_deg: z.number().default(0),
+  success_criteria: SuccessCriteriaSchema.default({
+    max_leakers: 0,
+    max_interceptors_spent: 99,
+    statement: "",
+  }),
+
+  /**
+   * The earlier shape: a static picture and a set of multiple-choice prompts.
+   *
+   * Kept only so runs recorded before the simulator existed still open. Nothing
+   * new is written here — a scenario now carries `live_tracks` instead, and a
+   * trainee flies the engagement rather than answering questions about it.
+   */
+  tracks: z.array(TrackSchema).default([]),
+  decision_points: z.array(ScenarioDecisionPointSchema).default([]),
 });
 export type ScenarioInstance = z.infer<typeof ScenarioInstanceSchema>;
 
@@ -428,7 +614,12 @@ export const SessionSchema = z.object({
   clarification_rounds: z.array(ClarificationRoundSchema),
   difficulty_level: DifficultyLevelSchema,
   scenario_instance: ScenarioInstanceSchema,
+  /** Legacy: the answers chosen, for runs recorded before the simulator. */
   decisions_made: z.array(DecisionMadeSchema),
+  /** What actually happened, second by second. The debrief is built from this. */
+  run_log: z.array(SimEventSchema).default([]),
+  /** What it added up to, counted by the engine rather than judged by a model. */
+  run_result: RunResultSchema.nullable().default(null),
   outcome: OutcomeSchema.nullable(),
   score: z.number().nullable(),
   debrief_text: z.string(),
