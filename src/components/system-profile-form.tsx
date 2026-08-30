@@ -14,6 +14,7 @@ import type {
   SystemProfileDraft,
   TrackClassification,
 } from "@/lib/domain/schemas";
+import { simulationGaps, type Gap } from "@/lib/domain/profile-readiness";
 import { readJson } from "@/lib/http";
 
 /**
@@ -143,6 +144,16 @@ export function SystemProfileForm({
     (q) => (answers[q.id] ?? "").trim().length > 0,
   ).length;
 
+  /**
+   * What is still missing before this can be flown.
+   *
+   * Computed from whichever copy of the figures is on screen — the entry form
+   * holds them in `spec`, the review screen in `draft`, and both are editable,
+   * so neither can be treated as the settled one. The same function decides on
+   * the server, so the two can never disagree about what "complete" means.
+   */
+  const gaps = simulationGaps(phase === "answering" ? spec : (draft ?? spec));
+
   /* ---- Phase 1: the questions ---------------------------------- */
   if (phase === "answering") {
     return (
@@ -159,6 +170,13 @@ export function SystemProfileForm({
             anything. The questions after them are the parts no form can ask
             well — answer those in your own words, and leave blank anything you
             would rather not say. You can correct all of it on the next screen.
+          </p>
+          <p className="mt-2 text-xs text-muted">
+            Anything marked <span className="text-danger">*</span> is a figure
+            the simulation runs on and cannot be left empty — with it missing
+            the exercise would still run, but on an invented number rather than
+            yours, and nothing on screen would say so. Everything else is
+            optional: leave blank what you do not know.
           </p>
         </div>
 
@@ -211,11 +229,20 @@ export function SystemProfileForm({
 
         {error ? <p className="chip status-danger !normal-case">{error}</p> : null}
 
+        <MissingData
+          gaps={gaps}
+          lead="The figures above are what the simulation runs on, so the form cannot be finished until they are complete."
+        />
+
         <div className="flex flex-wrap items-center gap-3 border-t border-line pt-6">
           <button
             type="button"
             className="btn btn-primary"
-            disabled={busy !== null || (answeredCount === 0 && !openNotes.trim())}
+            disabled={
+              busy !== null ||
+              gaps.length > 0 ||
+              (answeredCount === 0 && !openNotes.trim())
+            }
             onClick={() => void extract()}
           >
             {busy === "extracting" ? "Reading your answers…" : "Build the profile"}
@@ -751,11 +778,20 @@ export function SystemProfileForm({
       {error ? <p className="chip status-danger !normal-case">{error}</p> : null}
       {notice ? <p className="chip status-ok !normal-case">{notice}</p> : null}
 
+      <MissingData
+        gaps={gaps}
+        lead={
+          existing?.approved
+            ? "This profile was approved before these figures were required. Runs against it are using the simulator's own defaults for whatever is listed here — not this system's numbers. Fill them in under “Back to the questions” at the top of this page, then approve again."
+            : "This cannot be approved until the simulation has everything it runs on. Some of it — the rounds, the magazine, how many may be in the air — is entered under “Back to the questions” at the top of this page."
+        }
+      />
+
       <div className="flex flex-wrap items-center gap-3 border-t border-line pt-6">
         <button
           type="button"
           className="btn btn-primary"
-          disabled={busy !== null}
+          disabled={busy !== null || gaps.length > 0}
           onClick={() => void save(true)}
         >
           {busy === "saving" ? "Saving…" : "Approve profile"}
@@ -768,12 +804,61 @@ export function SystemProfileForm({
         >
           Save as draft
         </button>
+        {gaps.length > 0 ? (
+          <span className="text-xs text-muted">
+            A draft can still be saved — it just does not drive anything yet.
+          </span>
+        ) : null}
       </div>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
+
+/**
+ * What is still missing, said plainly and in one place.
+ *
+ * Grouped by the section each gap belongs to rather than listed flat: a
+ * designer reading this is about to go and fix it, and "four things under the
+ * envelope" is a place to stand, where four separate lines about ranges and
+ * rounds are a search. The heading text matches the form's own headings
+ * exactly, so finding it is scrolling rather than interpreting.
+ */
+function MissingData({ gaps, lead }: { gaps: Gap[]; lead: string }) {
+  if (gaps.length === 0) return null;
+
+  const sections = gaps.reduce<Record<string, string[]>>((grouped, gap) => {
+    (grouped[gap.where] ??= []).push(gap.what);
+    return grouped;
+  }, {});
+
+  return (
+    <div className="panel border-l-2 border-l-danger p-4" role="alert">
+      <p className="text-sm">
+        <strong>
+          {gaps.length} thing{gaps.length === 1 ? "" : "s"} still to complete.
+        </strong>{" "}
+        {lead}
+      </p>
+
+      <div className="mt-4 space-y-3">
+        {Object.entries(sections).map(([where, items]) => (
+          <div key={where}>
+            <p className="label !mb-1">{where}</p>
+            <ul className="space-y-1">
+              {items.map((item, index) => (
+                <li key={index} className="text-xs leading-relaxed text-muted">
+                  — {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function toDraft(profile: SystemProfile): SystemProfileDraft {
   return {
