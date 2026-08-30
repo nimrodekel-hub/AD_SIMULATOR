@@ -2,72 +2,87 @@ import "server-only";
 import {
   DebriefSchema,
   type Debrief,
-  type DecisionMade,
   type DilemmaEntry,
+  type RunResult,
   type ScenarioInstance,
+  type SimEvent,
 } from "../../domain/schemas";
 import { structured } from "../client";
 
 /**
  * Screen 4 — scoring the run and explaining it back.
  *
- * The one rule that matters here: the explanation comes from the knowledge
- * base, not from the model's own opinion about air defence. The expert's
- * rationale and their list of common errors are what the trainee reads. A model
- * that argues a well-reasoned but unsanctioned position would quietly teach
- * something the expert never approved.
+ * Two rules matter here, and they pull in different directions.
+ *
+ * The explanation comes from the knowledge base, not from the model's own
+ * opinion about air defence: the expert's rationale and their list of common
+ * errors are what the trainee reads. A model that argues a well-reasoned but
+ * unsanctioned position would quietly teach something the expert never
+ * approved.
+ *
+ * The *facts*, though, come from neither. What happened was counted by the
+ * simulation from the run log — how many leaked, what was spent, whether a
+ * friendly was engaged — and the model is told plainly not to relitigate any
+ * of it. Judgement is the model's; arithmetic is not.
  */
 
-const DEBRIEF_SYSTEM = `You debrief a trainee after one run of an air-defence training scenario.
+const DEBRIEF_SYSTEM = `You debrief an air-defence operator after one live engagement.
 
-You are given the dilemma record from the knowledge base (including, for each decision point, the preferred action, the expert's rationale, and the errors trainees commonly make), the scenario as it was presented, and the actions the trainee actually took.
+They did not answer questions. They sat at the console while tracks closed in real time, identified what they could, chose rounds and fired — or did not. You are given the dilemma record from the knowledge base (the expert's reasoning and the errors trainees commonly make), what the run was scored on, the second-by-second log of what happened, and the tally the simulation counted.
 
 ## The binding rule
 
-**Every judgement you make must come from the knowledge base.** The expert's rationale is the authority on why an action was right or wrong — not your own reasoning about air defence. If you find yourself explaining something the record does not contain, stop and use what the record says instead.
+**Every judgement you make must come from the knowledge base.** The expert's rationale is the authority on what good practice is here — not your own reasoning about air defence. Where the log shows something the record does not address, say so plainly rather than inventing a verdict.
 
-Where the trainee's choice matches a documented common error, name that error and explain why it is tempting. That connection is the single most useful thing in a debrief.
+Where what they did matches a documented common error, name that error and explain why it was tempting *at that moment in this run*. That connection is the single most useful thing in a debrief.
 
-If the trainee did something the record simply does not address, say so plainly rather than inventing a verdict for it.
+## The numbers are already decided
+
+The tally — leakers, kills, fratricide, rounds spent, reaction time — was counted by the simulation. **Never contradict it, recompute it, or soften it.** Your job is to explain how those numbers came about and what to do differently.
+
+## What actually matters, in order
+
+1. **Anything friendly engaged.** This fails the run outright, whatever else went well, and the debrief opens with it.
+2. **Anything hostile that reached the defended area**, and what the log shows they were doing instead.
+3. **Rounds wasted** — shots refused, shots broken off, shots taken at poor geometry when waiting would have been better. The log carries the Pk of every launch; a 40% shot taken when a 90% one was seconds away is worth naming.
+4. **Reaction time**, but only where it changed the outcome. Being slow on a track that was still destroyed comfortably is not the lesson.
+
+Refusals in the log are not system faults. "Inside minimum range" means they let a threat get too close before committing; "already in the air" means they had spent their capacity. Read them as evidence about the operator.
 
 ## Scoring
 
-Score 0-100, following the entry's scoring_notes. In the absence of more specific guidance: the proportion of decision points answered with the preferred action, adjusted for how consequential each one was. Set outcome.success from the entry's success_condition, evaluated against what the trainee actually did — a passable score with the success condition unmet is a failed run, and should read as one.
+Score 0-100 following the entry's scoring_notes. In their absence: start from whether the success criteria were met, then weigh efficiency and timeliness. **Engaging a friendly caps the score at 20 regardless of everything else.** Set outcome.success from whether the criteria were met.
 
-Fill per_decision for every decision point in the scenario, in order, whether or not the trainee reached it. An unanswered decision point is a miss.
+Use per_decision to walk through the *turning points* of the run — the launch that decided it, the identification that was left too late, the leaker. One entry per moment worth discussing, not one per track. Put the time in the comment. \`chosen_action\` is what they did; \`preferred_action\` is what the record says good practice was.
 
 ## Tone
 
-Write to a professional adult in training. Direct about what went wrong, specific about why, no padding and no false encouragement. Lead with what actually decided the outcome rather than working through the decisions in order — if one choice determined the run, say that first.
+Write to a professional adult in training. Direct about what went wrong, specific about why, no padding and no false encouragement. Lead with whatever actually decided the run.
 
 Address the trainee as "you". Two to four short paragraphs.
 
 ## Recommendations
 
-Two to four concrete things to work on next, each tied to something that happened in this run. "Practise faster identification calls when two tracks converge" — not "continue to develop situational awareness".`;
+Two to four concrete things to work on next, each tied to something that happened in this run. "Commit to the closing track before it reaches 20 km, rather than waiting for the system to resolve it" — not "continue to develop situational awareness".`;
 
 export async function generateDebrief(input: {
   dilemma: DilemmaEntry;
   scenario: ScenarioInstance;
-  decisions: DecisionMade[];
+  log: SimEvent[];
+  result: RunResult;
 }): Promise<Debrief> {
-  const { dilemma, scenario, decisions } = input;
+  const { dilemma, scenario, log, result } = input;
 
-  // Pair each decision point with what the trainee chose there, so the model
-  // never has to correlate two lists by index and cannot mis-align them.
-  const playback = scenario.decision_points.map((point, index) => {
-    const kbPoint = dilemma.decision_points[point.kb_decision_point_index];
-    const decision = decisions.find((d) => d.decision_point_index === index);
-    return {
-      decision_point_index: index,
-      situation: point.situation_rendered,
-      trainee_chose: decision?.chosen_action ?? "(no answer given)",
-      seconds_taken: decision ? Math.round(decision.elapsed_ms / 1000) : null,
-      preferred_action: kbPoint?.preferred_action ?? "(not in knowledge base)",
-      expert_rationale: kbPoint?.rationale ?? "",
-      known_common_errors: kbPoint?.common_errors ?? [],
-    };
-  });
+  /* What the expert said about this dilemma, flattened once so the model is
+     not asked to correlate two lists by index — the old shape paired each
+     decision point with an answer, and there are no answers any more. */
+  const doctrine = dilemma.decision_points.map((point, index) => ({
+    situation: point.situation,
+    preferred_action: point.preferred_action,
+    expert_rationale: point.rationale,
+    known_common_errors: point.common_errors,
+    index,
+  }));
 
   return structured({
     system: DEBRIEF_SYSTEM,
@@ -76,8 +91,21 @@ export async function generateDebrief(input: {
         role: "user",
         content: [
           `<evaluation_criteria>\n${JSON.stringify(dilemma.evaluation_criteria, null, 2)}\n</evaluation_criteria>`,
-          `<scenario_brief>\n${scenario.situation_brief}\n</scenario_brief>`,
-          `<run>\n${JSON.stringify(playback, null, 2)}\n</run>`,
+          `<expert_doctrine>\n${JSON.stringify(doctrine, null, 2)}\n</expert_doctrine>`,
+          `<success_criteria>\n${JSON.stringify(scenario.success_criteria, null, 2)}\n</success_criteria>`,
+          `<what_was_flown>\n${scenario.situation_brief}\n\nTracks: ${JSON.stringify(
+            scenario.live_tracks.map((track) => ({
+              designator: track.designator,
+              classification: track.classification,
+              it_really_was: track.truth_iff,
+              shown_at_first_as: track.initial_iff,
+              appeared_at_s: track.appears_at_s,
+            })),
+            null,
+            2,
+          )}\n</what_was_flown>`,
+          `<run_log>\n${log.map((entry) => `T+${String(Math.floor(entry.t)).padStart(3, "0")} [${entry.kind}] ${entry.detail}`).join("\n")}\n</run_log>`,
+          `<counted_result>\n${JSON.stringify(result, null, 2)}\n</counted_result>`,
           "Produce the debrief.",
         ].join("\n\n"),
       },
@@ -86,39 +114,46 @@ export async function generateDebrief(input: {
     effort: "high",
     maxTokens: 8000,
     label: "debrief",
-    mock: () => mockDebrief(playback),
+    mock: () => mockDebrief(result, log),
   });
 }
 
-type Playback = Array<{
-  decision_point_index: number;
-  trainee_chose: string;
-  preferred_action: string;
-  expert_rationale: string;
-}>;
+/**
+ * A stand-in built from the tally rather than from the model.
+ *
+ * Worth keeping honest: with no API key the score still reflects what actually
+ * happened in the run, so the whole loop can be exercised and the number on
+ * the screen is never a lie about the flying.
+ */
+function mockDebrief(result: RunResult, log: SimEvent[]): Debrief {
+  const score = result.friendly_engaged > 0
+    ? 15
+    : result.met_criteria
+      ? Math.max(60, 100 - result.interceptors_spent * 5)
+      : Math.max(20, 60 - result.leakers * 20);
 
-function mockDebrief(playback: Playback): Debrief {
-  const perDecision = playback.map((entry) => ({
-    decision_point_index: entry.decision_point_index,
-    chosen_action: entry.trainee_chose,
-    preferred_action: entry.preferred_action,
-    correct: entry.trainee_chose === entry.preferred_action,
-    comment: entry.expert_rationale || "No rationale recorded for this decision point.",
-  }));
-  const correct = perDecision.filter((entry) => entry.correct).length;
-  const score = perDecision.length
-    ? Math.round((correct / perDecision.length) * 100)
-    : 0;
+  const turningPoints = log
+    .filter((entry) => ["hit", "leaked", "miss", "refused"].includes(entry.kind))
+    .slice(0, 6)
+    .map((entry, index) => ({
+      decision_point_index: index,
+      chosen_action: entry.detail,
+      preferred_action: "(mock mode — no assessment made)",
+      correct: entry.kind === "hit",
+      comment: `T+${Math.floor(entry.t)}s.`,
+    }));
 
   return {
     score,
     outcome: {
-      success: score >= 70,
-      summary: `Mock evaluation — ${correct} of ${perDecision.length} decision points matched the preferred action.`,
-      per_decision: perDecision,
+      success: result.met_criteria,
+      summary: `Mock assessment. ${result.hostiles_destroyed} hostile(s) destroyed, ${result.leakers} leaked, ${result.interceptors_spent} round(s) spent, ${result.friendly_engaged} friendly engaged.`,
+      per_decision: turningPoints,
     },
     debrief_text:
-      "Mock debrief. No ANTHROPIC_API_KEY is configured, so this is scored by exact-match against the knowledge base rather than by the model. The per-decision comments below are the expert's own rationale, quoted directly.",
-    recommendations: ["Configure ANTHROPIC_API_KEY to get a real debrief."],
+      "Mock debrief. No ANTHROPIC_API_KEY is configured, so this text is a placeholder — but the tally above is real: it was counted from the run you just flew.",
+    recommendations: [
+      "Configure an API key to get a real assessment of this run.",
+    ],
   };
 }
