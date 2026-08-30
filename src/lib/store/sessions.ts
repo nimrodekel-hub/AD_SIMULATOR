@@ -5,8 +5,9 @@ import {
   TraineeSchema,
   type ClarificationRound,
   type Debrief,
-  type DecisionMade,
   type DifficultyLevel,
+  type RunResult,
+  type SimEvent,
   type ScenarioInstance,
   type Session,
   type Trainee,
@@ -53,6 +54,8 @@ export async function createSession(input: {
     difficulty_level: input.difficulty,
     scenario_instance: input.scenario,
     decisions_made: [],
+    run_log: [],
+    run_result: null,
     outcome: null,
     score: null,
     debrief_text: "",
@@ -88,18 +91,23 @@ async function save(session: Session, message: string): Promise<void> {
 }
 
 /**
- * Stores what the trainee chose, before the debrief is generated. A failure in
- * the assessment then loses the assessment but never the record of the run.
+ * Stores what happened during a run, before anything is asked to assess it.
+ *
+ * Written as its own commit rather than folded into the completion, so that a
+ * debrief that fails — a model timeout, a bad key — still leaves a full record
+ * of the engagement on the branch. The assessment can be produced again from
+ * this; the flying cannot.
  */
-export async function recordDecisions(
+export async function recordRun(
   id: string,
-  decisions: DecisionMade[],
+  log: SimEvent[],
+  result: RunResult,
 ): Promise<void> {
   const session = await getSession(id);
   if (!session) return;
   await save(
-    { ...session, decisions_made: decisions },
-    `Record decisions for run ${id.slice(0, 8)}`,
+    { ...session, run_log: log, run_result: result },
+    `Record run ${id.slice(0, 8)}`,
   );
 }
 

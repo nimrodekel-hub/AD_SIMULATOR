@@ -11,15 +11,17 @@ import { structured, type Anthropic } from "../client";
  *
  * The generated markup is a *shell*, not a working interface. It supplies the
  * chrome — the header, the panel frames, the palette, the typography — and
- * marks five places where the live scenario is injected. The trainee console
+ * marks the places where the live scenario is injected. The trainee console
  * renders real React into those slots, so the data stays interactive and only
- * the appearance comes from the model.
+ * the appearance comes from the model — including the radar picture, which is
+ * a running simulation rather than anything the model could draw.
  */
 
-/** The five places live data is rendered into. All five must be present. */
+/** Where live data is rendered. Every one of these must be present. */
 export const REQUIRED_SLOTS = [
   "system-name",
   "clock",
+  "scope",
   "tracks",
   "resources",
   "decision",
@@ -53,23 +55,35 @@ A single self-contained HTML fragment:
 - **No \`<script>\` tags, no inline event handlers, no external URLs, no \`<img>\` tags.** Draw with CSS, and use inline \`<svg>\` for any radar rings, compass marks or icons.
 - No \`<html>\`, \`<head>\` or \`<body>\` — a fragment only.
 
-## The five slots — all are required
+## The six slots — all are required
 
 Place these exactly where the corresponding information sits in the reference console. Each must be an empty element carrying the attribute and nothing inside it:
 
 - \`<div data-slot="system-name"></div>\` — the console's title area
 - \`<div data-slot="clock"></div>\` — where a countdown or time readout belongs
-- \`<div data-slot="tracks"></div>\` — the main air picture area, the largest panel
+- \`<div data-slot="scope"></div>\` — **the radar picture.** A live plan-position display is drawn into this: the site at the centre, range rings, tracks moving on it in real time. It is the single most important thing on the console and the operator looks at it constantly, so give it the largest area you can and keep it **roughly square** — a wide, short box wastes most of a circular display. If the reference screenshots show a scope, this goes where that one is
+- \`<div data-slot="tracks"></div>\` — the track list beside the scope: one row per held track, in the profile's readout columns
 - \`<div data-slot="resources"></div>\` — where weapon or resource status is shown
-- \`<div data-slot="decision"></div>\` — where prompts and controls sit, usually along the bottom
+- \`<div data-slot="decision"></div>\` — the engagement controls, along the bottom. Identification buttons, interceptor selection, the firing solution and the fire command all sit here in one row, so make it wide and no taller than it needs to be
 
-Leave them completely empty. Live content is injected at runtime, so give each one room to grow — set a sensible min-height and let the surrounding layout flex rather than fixing pixel heights.
+Leave them completely empty. Live content is injected at runtime.
 
 ## Making it usable
 
-The slots must be **legible and large**. A beautiful frame that leaves the track table two centimetres of space is a failure: the air picture slot should dominate, as it does on a real console.
+The slots must be **legible and large**. A beautiful frame that leaves the air picture two centimetres of space is a failure: that slot should dominate, as it does on a real console — it holds a radar scope, and a scope that is not roughly square and roughly the height of the window is not usable.
 
-Build the layout with CSS grid or flexbox so it survives different window sizes. The console must not require horizontal scrolling of the page.
+## The console is one screen, landscape
+
+**It must fit entirely inside the window, with no page scrolling in either direction.** An operator's position is a fixed rectangle of glass: everything is on it at once, and scrolling to find the track you are about to shoot is not a thing that happens on real equipment.
+
+That means, concretely:
+
+- The outermost element is \`height: 100%\` with \`overflow: hidden\`, and is a flex column or a grid with explicit rows.
+- **Never set \`min-height\` on a panel.** Min-heights stack, and a column of them is exactly how a console becomes a page you scroll. Use \`flex: 1\` and \`min-height: 0\` so panels share out the height that exists rather than demanding their own.
+- The scope takes the remaining space (\`flex: 1\`); the header, the status strip and the control row take only what they need.
+- **Do not draw a scope, a track table, a clock or any readout of your own.** Every one of those is rendered live into its slot. A decorative copy beside the real one is worse than nothing: it is a second display showing a different picture, and an operator will read the wrong one.
+- Anything that might overflow — a long track list, a log — gets \`overflow: auto\` on **that panel**, so it scrolls inside its own frame.
+- Lay it out **wide**: a landscape screen, controls along the bottom or down one side, never a single tall column.
 
 Prefer dark palettes and monospace numerals unless the screenshots clearly show otherwise.
 
@@ -194,11 +208,12 @@ export function missingSlots(html: string): string[] {
 }
 
 const MOCK_HTML = `<style>
-.sim-console { display: flex; flex-direction: column; gap: 1px; background: #16202b; color: #cfe3f5; font-family: ui-monospace, monospace; min-height: 100%; }
+.sim-console { display: flex; flex-direction: column; gap: 1px; background: #16202b; color: #cfe3f5; font-family: ui-monospace, monospace; height: 100%; overflow: hidden; }
 .sim-console .bar { background: #0b1219; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
-.sim-console .body { display: grid; grid-template-columns: 1fr 15rem; gap: 1px; flex: 1; }
-.sim-console .pane { background: #0b1219; padding: 12px; min-height: 12rem; }
-.sim-console .foot { background: #0b1219; padding: 12px 14px; min-height: 6rem; }
+.sim-console .body { display: grid; grid-template-columns: 1.6fr 15rem 13rem; gap: 1px; flex: 1; min-height: 0; }
+.sim-console .pane > [data-slot] { flex: 1; min-height: 0; }
+.sim-console .pane { background: #0b1219; padding: 8px; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.sim-console .foot { background: #0b1219; padding: 10px 12px; min-height: 0; overflow: auto; }
 .sim-console h4 { font-size: 10px; letter-spacing: .12em; color: #6d8399; margin-bottom: 8px; }
 </style>
 <div class="sim-console">
@@ -207,7 +222,8 @@ const MOCK_HTML = `<style>
     <div data-slot="clock"></div>
   </div>
   <div class="body">
-    <div class="pane"><h4>AIR PICTURE</h4><div data-slot="tracks"></div></div>
+    <div class="pane"><h4>AIR PICTURE</h4><div data-slot="scope"></div></div>
+    <div class="pane"><h4>TRACKS</h4><div data-slot="tracks"></div></div>
     <div class="pane"><h4>RESOURCES</h4><div data-slot="resources"></div></div>
   </div>
   <div class="foot"><div data-slot="decision"></div></div>

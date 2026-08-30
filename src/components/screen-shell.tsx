@@ -16,6 +16,7 @@ export function ScreenShell({
   actions,
   children,
   contained = true,
+  fullHeight = false,
 }: {
   theme: "ops" | "work";
   /** Small label above the title — usually the role this screen belongs to. */
@@ -29,12 +30,23 @@ export function ScreenShell({
    * space. Working screens get a reading-width column instead.
    */
   contained?: boolean;
+  /**
+   * Pin the screen to exactly one viewport and stop the page scrolling.
+   *
+   * An operator's console is a fixed rectangle of glass: everything is on it
+   * at once, and scrolling to find the track you are about to shoot is not a
+   * thing that happens. Screens that read rather than run leave this off and
+   * grow as tall as their content.
+   */
+  fullHeight?: boolean;
 }) {
   const isOps = theme === "ops";
 
   return (
     <div
-      className={`theme-${theme} flex min-h-full flex-1 flex-col bg-bg text-ink`}
+      className={`theme-${theme} flex flex-col bg-bg text-ink ${
+        fullHeight ? "h-dvh overflow-hidden" : "min-h-full flex-1"
+      }`}
     >
       <header
         className={`flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-line ${
@@ -76,7 +88,7 @@ export function ScreenShell({
         className={
           contained
             ? "mx-auto w-full max-w-5xl flex-1 px-6 py-8"
-            : "flex min-h-0 flex-1 flex-col"
+            : "flex min-h-0 flex-1 flex-col overflow-hidden"
         }
       >
         {children}
