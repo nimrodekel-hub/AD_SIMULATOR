@@ -67,6 +67,22 @@ export function emptySpec(): SystemSpec {
   };
 }
 
+/**
+ * Marks a figure the simulation cannot run without.
+ *
+ * The rule itself lives in `domain/profile-readiness`, which is what actually
+ * refuses; this is only the warning shown beforehand. Being told at the bottom
+ * of a long form that six fields are missing is worse than being told which
+ * six mattered while filling them in.
+ */
+function Req() {
+  return (
+    <span className="ml-1 text-danger" title="Required by the simulation">
+      *
+    </span>
+  );
+}
+
 export function SystemSpecFields({
   spec,
   onChange,
@@ -97,6 +113,7 @@ export function SystemSpecFields({
         <div className="grid gap-4 sm:grid-cols-2">
           <Num
             label="Detection range (km)"
+            required
             hint="How far out it sees. Not the engagement range."
             value={spec.sensor.max_range_km}
             onChange={(max_range_km) =>
@@ -114,7 +131,10 @@ export function SystemSpecFields({
         </div>
 
         <div>
-          <span className="label">Azimuth coverage</span>
+          <span className="label">
+            Azimuth coverage
+            <Req />
+          </span>
           <div className="flex flex-wrap items-center gap-2">
             {ARCS.map((arc) => (
               <button
@@ -169,6 +189,7 @@ export function SystemSpecFields({
 
       {/* ---- Track classes -------------------------------------------- */}
       <Block
+        required
         title="What can appear on the display"
         hint="Scenario generation may only produce tracks of these kinds, inside these bands. A class you leave out is one a trainee will never see."
       >
@@ -281,6 +302,7 @@ export function SystemSpecFields({
 
       {/* ---- Identification states ------------------------------------ */}
       <Block
+        required
         title="Identification states"
         hint="Every state the operator sees, and what puts a track into it. The tone decides the colour the console shows it in, so it has to match how urgency actually reads on the display."
       >
@@ -379,6 +401,7 @@ export function SystemSpecFields({
 
       {/* ---- Readout columns ------------------------------------------ */}
       <Block
+        required
         title="What the operator reads for each track"
         hint="Tick the columns your display shows, then put them in the order it shows them. Add anything of your own that is not offered — these become the table a trainee reads, so a missing column is information they never get."
       >
@@ -518,7 +541,7 @@ export function SystemSpecFields({
               }
             />
           </Labelled>
-          <Labelled label="Maximum intercept range (km)">
+          <Labelled label="Maximum intercept range (km)" required>
             <input
               type="number"
               className="field data"
@@ -541,6 +564,7 @@ export function SystemSpecFields({
         <div className="grid gap-4 sm:grid-cols-2">
           <Num
             label="Interceptors in the air at once"
+            required
             hint="The hard limit. A third launch is refused until one resolves."
             value={spec.engagement.max_simultaneous}
             onChange={(max_simultaneous) =>
@@ -549,6 +573,7 @@ export function SystemSpecFields({
           />
           <Num
             label="Rounds available"
+            required
             hint="How deep the magazine is for one engagement."
             value={spec.engagement.magazine_depth}
             onChange={(magazine_depth) =>
@@ -559,7 +584,10 @@ export function SystemSpecFields({
 
         {/* ---- The rounds themselves ------------------------------- */}
         <div>
-          <span className="label">Interceptor types</span>
+          <span className="label">
+            Interceptor types
+            <Req />
+          </span>
           <p className="mb-2 text-xs leading-relaxed text-muted">
             One entry per round the operator can choose between. A system with
             a single round needs one line; where there are several, picking the
@@ -688,15 +716,20 @@ export function SystemSpecFields({
 function Block({
   title,
   hint,
+  required,
   children,
 }: {
   title: string;
   hint: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <section>
-      <h2 className="text-sm font-semibold">{title}</h2>
+      <h2 className="text-sm font-semibold">
+        {title}
+        {required ? <Req /> : null}
+      </h2>
       <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">{hint}</p>
       <div className="mt-4 space-y-4">{children}</div>
     </section>
@@ -706,15 +739,20 @@ function Block({
 function Labelled({
   label,
   hint,
+  required,
   children,
 }: {
   label: string;
   hint?: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <label className="block">
-      <span className="label">{label}</span>
+      <span className="label">
+        {label}
+        {required ? <Req /> : null}
+      </span>
       {hint ? <span className="mb-1.5 block text-xs text-muted">{hint}</span> : null}
       {children}
     </label>
@@ -725,16 +763,18 @@ function Labelled({
 function Num({
   label,
   hint,
+  required,
   value,
   onChange,
 }: {
   label: string;
   hint?: string;
+  required?: boolean;
   value: number | null;
   onChange: (next: number | null) => void;
 }) {
   return (
-    <Labelled label={label} hint={hint}>
+    <Labelled label={label} hint={hint} required={required}>
       <input
         type="number"
         className="field data"
