@@ -3,6 +3,7 @@
 import { READOUT_CATALOGUE } from "@/lib/domain/readouts";
 import type {
   EngagementDoctrine,
+  InterceptorType,
   IffState,
   SensorCoverage,
   TrackClassification,
@@ -59,6 +60,9 @@ export function emptySpec(): SystemSpec {
       time_of_flight_note: "",
       simultaneous_engagements_note: "",
       authority_note: "",
+      interceptors: [],
+      max_simultaneous: null,
+      magazine_depth: null,
     },
   };
 }
@@ -72,6 +76,12 @@ export function SystemSpecFields({
 }) {
   const set = <K extends keyof SystemSpec>(key: K, value: SystemSpec[K]) =>
     onChange({ ...spec, [key]: value });
+
+  const setRound = (index: number, next: InterceptorType) =>
+    set("engagement", {
+      ...spec.engagement,
+      interceptors: at(spec.engagement.interceptors, index, next),
+    });
 
   const chosenLabels = new Set(
     spec.track_readout_fields.map((field) => field.label.toUpperCase()),
@@ -524,13 +534,107 @@ export function SystemSpecFields({
           </Labelled>
         </div>
 
+        {/* The two figures the simulation enforces. These used to live inside
+            the sentence below, which was fine while a run was a quiz: "no more
+            than two rockets in the air" has to be a number before anything can
+            stop a third launch. */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Num
+            label="Interceptors in the air at once"
+            hint="The hard limit. A third launch is refused until one resolves."
+            value={spec.engagement.max_simultaneous}
+            onChange={(max_simultaneous) =>
+              set("engagement", { ...spec.engagement, max_simultaneous })
+            }
+          />
+          <Num
+            label="Rounds available"
+            hint="How deep the magazine is for one engagement."
+            value={spec.engagement.magazine_depth}
+            onChange={(magazine_depth) =>
+              set("engagement", { ...spec.engagement, magazine_depth })
+            }
+          />
+        </div>
+
+        {/* ---- The rounds themselves ------------------------------- */}
+        <div>
+          <span className="label">Interceptor types</span>
+          <p className="mb-2 text-xs leading-relaxed text-muted">
+            One entry per round the operator can choose between. A system with
+            a single round needs one line; where there are several, picking the
+            right one becomes a real decision — a long-range round spent close
+            in is a round that is not there for the next threat. Speed sets the
+            time of flight, which is how much earlier than impact the operator
+            has to commit.
+          </p>
+          <div className="space-y-2">
+            {spec.engagement.interceptors.map((round, index) => (
+              <div key={index} className="flex flex-wrap items-end gap-2">
+                <input
+                  className="field data w-40"
+                  placeholder="long range"
+                  aria-label="Interceptor name"
+                  value={round.name}
+                  onChange={(event) =>
+                    setRound(index, { ...round, name: event.target.value })
+                  }
+                />
+                <RoundNumber
+                  label="min km"
+                  value={round.min_range_km}
+                  onChange={(min_range_km) => setRound(index, { ...round, min_range_km })}
+                />
+                <RoundNumber
+                  label="max km"
+                  value={round.max_range_km}
+                  onChange={(max_range_km) => setRound(index, { ...round, max_range_km })}
+                />
+                <RoundNumber
+                  label="kts"
+                  value={round.speed_kts}
+                  onChange={(speed_kts) => setRound(index, { ...round, speed_kts })}
+                />
+                <Remove
+                  label="Remove interceptor"
+                  onClick={() =>
+                    set("engagement", {
+                      ...spec.engagement,
+                      interceptors: spec.engagement.interceptors.filter(
+                        (_, i) => i !== index,
+                      ),
+                    })
+                  }
+                />
+              </div>
+            ))}
+            <Add
+              label="Add an interceptor type"
+              onClick={() =>
+                set("engagement", {
+                  ...spec.engagement,
+                  interceptors: [
+                    ...spec.engagement.interceptors,
+                    {
+                      name: "",
+                      min_range_km: spec.engagement.min_range_km,
+                      max_range_km: spec.engagement.max_range_km,
+                      speed_kts: 1600,
+                    },
+                  ],
+                })
+              }
+            />
+          </div>
+        </div>
+
         <Labelled
-          label="Interceptors in the air at once"
-          hint="How many engagements can run simultaneously, and how deep the magazine is."
+          label="Anything else about firing several at once"
+          hint="The rule in your own words, where the numbers above do not carry it."
         >
           <input
             className="field"
-            placeholder="e.g. Two in the air at once, eight rounds on the launcher."
+            placeholder="e.g. A third engagement cannot begin until one resolves as hit, kill or miss."
             value={spec.engagement.simultaneous_engagements_note}
             onChange={(event) =>
               set("engagement", {
@@ -642,6 +746,32 @@ function Num({
         }
       />
     </Labelled>
+  );
+}
+
+/** A narrow number with its unit under it, for a row of round figures. */
+function RoundNumber({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (next: number) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-0.5 block text-[0.625rem] uppercase tracking-[0.1em] text-muted">
+        {label}
+      </span>
+      <input
+        type="number"
+        className="field data w-24"
+        aria-label={label}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+    </label>
   );
 }
 
