@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { describeAiError } from "@/lib/ai/client";
 import { extractSystemNarrative } from "@/lib/ai/tasks/learn-system";
+import { gapMessage, simulationGaps } from "@/lib/domain/profile-readiness";
 import {
   EngagementDoctrineSchema,
   IffStateSchema,
@@ -84,6 +85,15 @@ export async function POST(
       { error: "Answer at least one question before building the profile." },
       { status: 400 },
     );
+  }
+
+  // The figures are checked here rather than only at approval, because this is
+  // the step that costs money: reading the answers takes half a minute of
+  // model time, and there is no sense spending it on a specification that
+  // cannot be approved when it comes back.
+  const gaps = simulationGaps(parsed.data.spec);
+  if (gaps.length > 0) {
+    return NextResponse.json({ error: gapMessage(gaps), gaps }, { status: 400 });
   }
 
   try {
