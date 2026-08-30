@@ -252,3 +252,60 @@ body {
   background: var(--border-strong);
   border-radius: 5px;
 }
+
+/* ------------------------------------------------------------------ */
+/* The designer's console, made to fit one screen                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A generated console shell is arbitrary markup written by a model from
+ * screenshots, and left alone it grows: every panel gets a comfortable
+ * min-height, the min-heights stack, and the result is a console you scroll —
+ * which is not a thing an operator's position has ever been.
+ *
+ * Rather than hope the next generation behaves, the frame imposes the shape
+ * the hardware has. The wrapper is exactly as tall as the space it is given;
+ * inside it, the stacking min-heights are released and anything that overflows
+ * scrolls within its own panel instead of pushing the page down.
+ *
+ * The generation prompt asks for this too. This is the belt: consoles approved
+ * before the rule existed still have to fit.
+ */
+.console-frame {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.console-frame > * {
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+/* Release the stacked min-heights, and let flex children actually shrink —
+   `min-height: auto` on a flex item is what makes overlong panels refuse to
+   compress no matter what the parent says. */
+.console-frame :where(div, section, main, aside, header, footer) {
+  min-height: 0;
+}
+
+/* The scope is the one panel that must take the space that is left. */
+.console-frame [data-slot="scope"] {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.console-frame [data-slot="tracks"] {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.console-frame [data-slot="resources"],
+.console-frame [data-slot="decision"] {
+  min-height: 0;
+  overflow: auto;
+}
