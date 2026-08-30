@@ -251,8 +251,311 @@
     "decision_points": []
   },
   "decisions_made": [],
-  "run_log": [],
-  "run_result": null,
+  "run_log": [
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TRK-4101",
+      "detail": "TRK-4101 detected, 87 km on 20°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TRK-4102",
+      "detail": "TRK-4102 detected, 81 km on 55°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TRK-5201",
+      "detail": "TRK-5201 detected, 29 km on 65°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TRK-5202",
+      "detail": "TRK-5202 detected, 30 km on 350°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TRK-7011",
+      "detail": "TRK-7011 detected, 15 km on 15°."
+    },
+    {
+      "t": 15.1,
+      "kind": "detected",
+      "designator": "TRK-7024",
+      "detail": "TRK-7024 detected, 39 km on 75°."
+    },
+    {
+      "t": 40,
+      "kind": "detected",
+      "designator": "TRK-4103",
+      "detail": "TRK-4103 detected, 72 km on 350°."
+    },
+    {
+      "t": 45,
+      "kind": "detected",
+      "designator": "TRK-5203",
+      "detail": "TRK-5203 detected, 25 km on 80°."
+    },
+    {
+      "t": 46,
+      "kind": "launched",
+      "designator": "TRK-4102",
+      "detail": "interceptor launched at TRK-4102 (69 km, intercept in 63 s, Pk 82%)."
+    },
+    {
+      "t": 51,
+      "kind": "refused",
+      "designator": "TRK-4101",
+      "detail": "Engagement refused: 73 km is beyond the interceptor's reach of 70 km."
+    },
+    {
+      "t": 61,
+      "kind": "launched",
+      "designator": "TRK-4102",
+      "detail": "interceptor launched at TRK-4102 (65 km, intercept in 59 s, Pk 85%)."
+    },
+    {
+      "t": 69.9,
+      "kind": "refused",
+      "designator": "TRK-4103",
+      "detail": "Engagement refused: 2 engagement(s) already in the air — the system allows no more."
+    },
+    {
+      "t": 70,
+      "kind": "detected",
+      "designator": "TRK-5204",
+      "detail": "TRK-5204 detected, 23 km on 10°."
+    },
+    {
+      "t": 70,
+      "kind": "detected",
+      "designator": "TRK-7038",
+      "detail": "TRK-7038 detected, 29 km on 30°."
+    },
+    {
+      "t": 87.3,
+      "kind": "refused",
+      "designator": "TRK-4101",
+      "detail": "Engagement refused: 2 engagement(s) already in the air — the system allows no more."
+    },
+    {
+      "t": 95.1,
+      "kind": "detected",
+      "designator": "TRK-5205",
+      "detail": "TRK-5205 detected, 19 km on 45°."
+    },
+    {
+      "t": 109.2,
+      "kind": "miss",
+      "designator": "TRK-4102",
+      "detail": "interceptor missed TRK-4102."
+    },
+    {
+      "t": 118,
+      "kind": "launched",
+      "designator": "TRK-4103",
+      "detail": "interceptor launched at TRK-4103 (50 km, intercept in 45 s, Pk 90%)."
+    },
+    {
+      "t": 120.1,
+      "kind": "detected",
+      "designator": "TRK-5206",
+      "detail": "TRK-5206 detected, 14 km on 90°."
+    },
+    {
+      "t": 120.5,
+      "kind": "hit",
+      "designator": "TRK-4102",
+      "detail": "TRK-4102 destroyed by interceptor. It was Enemy."
+    },
+    {
+      "t": 125.7,
+      "kind": "launched",
+      "designator": "TRK-4101",
+      "detail": "interceptor launched at TRK-4101 (52 km, intercept in 48 s, Pk 90%)."
+    },
+    {
+      "t": 130.1,
+      "kind": "resolved",
+      "designator": "TRK-7024",
+      "detail": "TRK-7024 resolved to Friendly."
+    },
+    {
+      "t": 150.1,
+      "kind": "detected",
+      "designator": "TRK-5207",
+      "detail": "TRK-5207 detected, 10 km on 345°."
+    },
+    {
+      "t": 151.1,
+      "kind": "refused",
+      "designator": "TRK-5204",
+      "detail": "Engagement refused: 2 engagement(s) already in the air — the system allows no more."
+    },
+    {
+      "t": 163,
+      "kind": "hit",
+      "designator": "TRK-4103",
+      "detail": "TRK-4103 destroyed by interceptor. It was Enemy."
+    },
+    {
+      "t": 163.8,
+      "kind": "launched",
+      "designator": "TRK-5204",
+      "detail": "interceptor launched at TRK-5204 (12 km, intercept in 12 s, Pk 64%)."
+    },
+    {
+      "t": 168.6,
+      "kind": "leaked",
+      "designator": "TRK-7038",
+      "detail": "TRK-7038 overflew the site. It was Our Forces."
+    },
+    {
+      "t": 173.3,
+      "kind": "hit",
+      "designator": "TRK-4101",
+      "detail": "TRK-4101 destroyed by interceptor. It was Enemy."
+    },
+    {
+      "t": 176.1,
+      "kind": "hit",
+      "designator": "TRK-5204",
+      "detail": "TRK-5204 destroyed by interceptor. It was Enemy."
+    },
+    {
+      "t": 176.1,
+      "kind": "refused",
+      "designator": "TRK-7011",
+      "detail": "Engagement refused: 4 km is inside the interceptor's minimum range of 5 km."
+    },
+    {
+      "t": 180.5,
+      "kind": "refused",
+      "designator": "TRK-7011",
+      "detail": "Engagement refused: 4 km is inside the interceptor's minimum range of 5 km."
+    },
+    {
+      "t": 184.2,
+      "kind": "refused",
+      "designator": "TRK-7011",
+      "detail": "Engagement refused: 3 km is inside the interceptor's minimum range of 5 km."
+    },
+    {
+      "t": 188.3,
+      "kind": "refused",
+      "designator": "TRK-5207",
+      "detail": "Engagement refused: 5 km is inside the interceptor's minimum range of 5 km."
+    },
+    {
+      "t": 191,
+      "kind": "leaked",
+      "designator": "TRK-7011",
+      "detail": "TRK-7011 overflew the site. It was Our Forces."
+    },
+    {
+      "t": 195.4,
+      "kind": "launched",
+      "designator": "TRK-5206",
+      "detail": "interceptor launched at TRK-5206 (5 km, intercept in 5 s, Pk 0%)."
+    },
+    {
+      "t": 199.5,
+      "kind": "refused",
+      "designator": "TRK-5206",
+      "detail": "Engagement refused: 5 km is inside the interceptor's minimum range of 5 km."
+    },
+    {
+      "t": 200.8,
+      "kind": "miss",
+      "designator": "TRK-5206",
+      "detail": "interceptor missed TRK-5206."
+    },
+    {
+      "t": 202.3,
+      "kind": "leaked",
+      "designator": "TRK-5207",
+      "detail": "TRK-5207 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 203.7,
+      "kind": "launched",
+      "designator": "TRK-7024",
+      "detail": "interceptor launched at TRK-7024 (48 km, intercept in 72 s, Pk 72%)."
+    },
+    {
+      "t": 212.5,
+      "kind": "ceased",
+      "designator": "TRK-7024",
+      "detail": "Engagement against TRK-7024 broken off; 1 round(s) wasted."
+    },
+    {
+      "t": 213.5,
+      "kind": "leaked",
+      "designator": "TRK-5206",
+      "detail": "TRK-5206 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 215.3,
+      "kind": "launched",
+      "designator": "TRK-7024",
+      "detail": "interceptor launched at TRK-7024 (50 km, intercept in 75 s, Pk 68%)."
+    },
+    {
+      "t": 218.1,
+      "kind": "refused",
+      "designator": "TRK-5205",
+      "detail": "Engagement refused: no rounds remaining."
+    },
+    {
+      "t": 224.7,
+      "kind": "leaked",
+      "designator": "TRK-5205",
+      "detail": "TRK-5205 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 247.2,
+      "kind": "leaked",
+      "designator": "TRK-5203",
+      "detail": "TRK-5203 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 258.4,
+      "kind": "leaked",
+      "designator": "TRK-5202",
+      "detail": "TRK-5202 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 269.7,
+      "kind": "leaked",
+      "designator": "TRK-5201",
+      "detail": "TRK-5201 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 290.7,
+      "kind": "hit",
+      "designator": "TRK-7024",
+      "detail": "TRK-7024 destroyed by interceptor. It was Friendly."
+    },
+    {
+      "t": 290.7,
+      "kind": "ended",
+      "designator": "",
+      "detail": "Air picture clear."
+    }
+  ],
+  "run_result": {
+    "leakers": 6,
+    "hostiles_destroyed": 4,
+    "friendly_engaged": 2,
+    "unknown_engaged": 0,
+    "interceptors_spent": 8,
+    "mean_reaction_s": 79.9,
+    "met_criteria": false
+  },
   "outcome": null,
   "score": null,
   "debrief_text": "",
