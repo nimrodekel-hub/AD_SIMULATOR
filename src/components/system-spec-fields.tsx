@@ -1,13 +1,16 @@
 "use client";
 
 import { READOUT_CATALOGUE } from "@/lib/domain/readouts";
+import { WELL_KNOWN_MODE_3 } from "@/lib/domain/iff-codes";
 import type {
   EngagementDoctrine,
+  IffInterrogation,
   InterceptorType,
   IffState,
   SensorCoverage,
   TrackClassification,
   TrackReadoutField,
+  TransponderKind,
 } from "@/lib/domain/schemas";
 
 /**
@@ -28,9 +31,33 @@ export interface SystemSpec {
   sensor: SensorCoverage;
   track_classifications: TrackClassification[];
   iff_states: IffState[];
+  iff_interrogation: IffInterrogation;
   track_readout_fields: TrackReadoutField[];
   engagement: EngagementDoctrine;
 }
+
+/** What each answer to "does this class carry a transponder" means. */
+const TRANSPONDERS: Array<{
+  value: TransponderKind;
+  label: string;
+  hint: string;
+}> = [
+  {
+    value: "none",
+    label: "No reply",
+    hint: "Interrogating it returns silence — which is itself information, and usually the point.",
+  },
+  {
+    value: "civil",
+    label: "Civil (Mode 3 only)",
+    hint: "Four octal digits, as air traffic assigns. An airliner, a light aircraft, a medevac.",
+  },
+  {
+    value: "military",
+    label: "Military (Mode 3 + Mode 1)",
+    hint: "Also replies on Mode 1 — two digits, 0–4 — which a civil transponder cannot.",
+  },
+];
 
 const TONES: IffState["tone"][] = ["friendly", "neutral", "caution", "hostile"];
 
@@ -53,6 +80,7 @@ export function emptySpec(): SystemSpec {
     },
     track_classifications: [],
     iff_states: [],
+    iff_interrogation: { enabled: false, mode_3: true, mode_1: false, note: "" },
     track_readout_fields: [],
     engagement: {
       min_range_km: 0,
@@ -280,6 +308,45 @@ export function SystemSpecFields({
                   )
                 }
               />
+
+              {/* Which aircraft answer an interrogation. Only asked once the
+                  system is declared to have an interrogator — on a system
+                  without one it is a question about nothing. */}
+              {spec.iff_interrogation.enabled ? (
+                <div className="mt-3">
+                  <span className="label">Transponder</span>
+                  <div className="flex flex-wrap gap-1">
+                    {TRANSPONDERS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        title={option.hint}
+                        className={`btn text-xs ${
+                          (entry.transponder ?? "none") === option.value
+                            ? "btn-primary"
+                            : ""
+                        }`}
+                        onClick={() =>
+                          set(
+                            "track_classifications",
+                            at(spec.track_classifications, index, {
+                              ...entry,
+                              transponder: option.value,
+                            }),
+                          )
+                        }
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                    {TRANSPONDERS.find(
+                      (option) => option.value === (entry.transponder ?? "none"),
+                    )?.hint}
+                  </p>
+                </div>
+              ) : null}
             </div>
           ))}
           <Add
@@ -293,6 +360,7 @@ export function SystemSpecFields({
                   typical_speed_kts: { min: 0, max: 0 },
                   typical_altitude_ft: { min: 0, max: 0 },
                   behaviour_note: "",
+                  transponder: "none",
                 },
               ])
             }
@@ -397,6 +465,126 @@ export function SystemSpecFields({
             }
           />
         </div>
+      </Block>
+
+      {/* ---- IFF interrogation ---------------------------------------- */}
+      <Block
+        title="Can the operator interrogate a transponder?"
+        hint="A separate capability from the radar. Plenty of systems see a track without being able to ask it anything, and an operator on such a system identifies by behaviour alone — a different skill, and a deliberate one to train. Leave this off and the console has no interrogate command at all."
+      >
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={spec.iff_interrogation.enabled}
+            onChange={(event) =>
+              set("iff_interrogation", {
+                ...spec.iff_interrogation,
+                enabled: event.target.checked,
+              })
+            }
+          />
+          <span>
+            This system has an IFF interrogator.
+            <span className="mt-1 block text-xs leading-relaxed text-muted">
+              With this on, each track class below is asked what it replies —
+              and the operator gets an <strong>Interrogate</strong> command
+              during a run.
+            </span>
+          </span>
+        </label>
+
+        {spec.iff_interrogation.enabled ? (
+          <>
+            <div className="mt-5">
+              <span className="label">Which modes it can read</span>
+              <div className="space-y-2">
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={spec.iff_interrogation.mode_3}
+                    onChange={(event) =>
+                      set("iff_interrogation", {
+                        ...spec.iff_interrogation,
+                        mode_3: event.target.checked,
+                      })
+                    }
+                  />
+                  <span>
+                    <strong className="data">Mode 3/A</strong> — four octal
+                    digits, each 0–7
+                    <span className="mt-0.5 block text-xs text-muted">
+                      The code civil air traffic assigns, and what a
+                      co-operating military aircraft squawks as well. Almost
+                      every interrogator has it.
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={spec.iff_interrogation.mode_1}
+                    onChange={(event) =>
+                      set("iff_interrogation", {
+                        ...spec.iff_interrogation,
+                        mode_1: event.target.checked,
+                      })
+                    }
+                  />
+                  <span>
+                    <strong className="data">Mode 1</strong> — two digits, each
+                    0–4
+                    <span className="mt-0.5 block text-xs text-muted">
+                      A military mission code. A track that answers on it is
+                      saying something a Mode 3 code alone does not.
+                    </span>
+                  </span>
+                </label>
+              </div>
+              {!spec.iff_interrogation.mode_3 &&
+              !spec.iff_interrogation.mode_1 ? (
+                <p className="mt-2 text-xs text-warn">
+                  An interrogator that reads neither mode returns nothing on
+                  every track. Choose at least one, or turn interrogation off.
+                </p>
+              ) : null}
+            </div>
+
+            <input
+              className="field mt-4"
+              placeholder="Anything the boxes do not carry — who may interrogate, when, how long a reply takes…"
+              aria-label="Interrogation note"
+              value={spec.iff_interrogation.note}
+              onChange={(event) =>
+                set("iff_interrogation", {
+                  ...spec.iff_interrogation,
+                  note: event.target.value,
+                })
+              }
+            />
+
+            {/* Worth knowing before a scenario hands one out: these codes say
+                something specific, the console names them to the trainee, and
+                a generated exercise only uses them on purpose. */}
+            {spec.iff_interrogation.mode_3 ? (
+              <p className="mt-3 text-xs leading-relaxed text-muted">
+                Codes that mean something in their own right, which scenarios
+                use only deliberately:{" "}
+                {Object.entries(WELL_KNOWN_MODE_3).map(
+                  ([code, meaning], index) => (
+                    <span key={code}>
+                      {index > 0 ? "; " : ""}
+                      <span className="data text-primary">{code}</span> {meaning}
+                    </span>
+                  ),
+                )}
+                .
+              </p>
+            ) : null}
+          </>
+        ) : null}
       </Block>
 
       {/* ---- Readout columns ------------------------------------------ */}
