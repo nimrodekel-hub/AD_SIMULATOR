@@ -32,14 +32,27 @@ export default async function SystemProfilePage({
       title="How the system behaves"
       subtitle="Taught once. Every scenario, console and debrief on this system is built from it."
     >
-      <p className="mb-8">
+      <div className="mb-8 flex flex-wrap items-center gap-4">
         <Link
           href={`/designer/systems/${systemId}`}
           className="text-sm text-muted hover:text-accent"
         >
           ← {system.name}
         </Link>
-      </p>
+
+        {/* The figures below are exactly the ones a form cannot check: a
+            detection range that gives four seconds of warning is a valid
+            number. Flying them is the check, so the way to it sits on this
+            page rather than only in the sequence. */}
+        {existing ? (
+          <Link
+            href={`/designer/systems/${systemId}/test`}
+            className="btn ml-auto"
+          >
+            ▶ Test these figures
+          </Link>
+        ) : null}
+      </div>
 
       <SystemProfileForm
         systemId={systemId}
