@@ -1,6 +1,7 @@
 import type { ScenarioInstance, SystemProfile } from "../domain/schemas";
+import { codesFor } from "../domain/iff-codes";
 import { detectionRangeKm } from "./engine";
-import { knotsToKmPerSecond } from "./geometry";
+import { knotsToKmPerSecond, seededRandom } from "./geometry";
 
 /**
  * An engagement built in code, for the designer to test their own system with.
@@ -62,8 +63,25 @@ export function rehearsalScenario(profile: SystemProfile | null): ScenarioInstan
     return Math.min(Math.max(km, blind + 5), detection * 0.98);
   };
 
+  /* Fixed seed: the test is meant to be run twice and compared, so the codes
+     have to be the same both times. The luck of the shooting is seeded per
+     attempt elsewhere; the picture itself should not move under the designer. */
+  const dice = seededRandom("system-test");
+
+  /* The friendly track is drawn from a class that carries a transponder, if
+     the profile declares one. Otherwise the single track meant to show a reply
+     coming back is as silent as the rest, and the test demonstrates only half
+     of interrogation — which is the half that needs demonstrating least. */
+  const cooperating = classes.find(
+    (entry) => (entry.transponder ?? "none") !== "none",
+  );
+
   const tracks = Array.from({ length: TRACK_COUNT }, (_, index) => {
-    const declared = classes[index % Math.max(classes.length, 1)];
+    const isFriendlyIndex = index === 2;
+    const declared =
+      isFriendlyIndex && cooperating
+        ? cooperating
+        : classes[index % Math.max(classes.length, 1)];
     const speed = declared?.typical_speed_kts.max
       ? Math.max(declared.typical_speed_kts.min, declared.typical_speed_kts.max * 0.8)
       : 420;
@@ -75,8 +93,17 @@ export function rehearsalScenario(profile: SystemProfile | null): ScenarioInstan
     /* One friendly among them, and one that only resolves late: the two cases
        a console has to make visually obvious, and the two a designer is most
        likely to get wrong. */
-    const isFriendly = index === 2;
+    const isFriendly = isFriendlyIndex;
     const resolvesLate = index === 3;
+
+    /* The friendly one replies, and nothing else does — so the test shows both
+       halves of interrogation: a code coming back, and the silence that is the
+       harder half. Whether the operator ever sees either depends on the
+       profile declaring an interrogator, which is itself worth finding out. */
+    const codes = codesFor(
+      isFriendly ? (declared?.transponder ?? "civil") : "none",
+      dice,
+    );
 
     return {
       designator: `RH-${1100 + index * 11}`,
@@ -92,6 +119,8 @@ export function rehearsalScenario(profile: SystemProfile | null): ScenarioInstan
       initial_iff: isFriendly || resolvesLate ? unknown : hostile,
       resolves_at_s: resolvesLate ? arriveAt - 30 : isFriendly ? null : null,
       appears_at_s: index === 0 ? 0 : 10 + index * 15,
+      mode_3: codes.mode_3,
+      mode_1: codes.mode_1,
       notes: isFriendly
         ? "Test: this one is friendly. Engaging it should be counted against you."
         : resolvesLate
@@ -113,6 +142,10 @@ export function rehearsalScenario(profile: SystemProfile | null): ScenarioInstan
       `Five tracks come in across the covered arc and arrive one after another. One of them is friendly and one resolves late, so every identification colour your profile declares appears at some point.`,
       "",
       `What it is worth watching: whether the detection range gives you enough warning to do anything, whether the interceptor actually catches what it is aimed at, and whether the console holds up with a live picture in it — the track list holding its rows, the scope staying square, the firing solution appearing where it will appear for a trainee.`,
+      "",
+      cooperating
+        ? `If your profile declares an IFF interrogator, one of these five replies and the rest stay silent — so interrogating each of them shows you both answers.`
+        : `No track class in your profile carries a transponder, so every interrogation here returns silence. If that is not true of the real system, say which classes reply in the profile.`,
       "",
       `Engagement envelope: ${Math.round(envelope)} km. Detection: ${Math.round(detection)} km.`,
     ].join("\n"),
