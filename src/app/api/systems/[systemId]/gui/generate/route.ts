@@ -50,12 +50,24 @@ export async function POST(
     return NextResponse.json({ error: "System not found" }, { status: 404 });
   }
 
-  let body: { guidance?: string; previous_html?: string };
+  let body: { requests?: unknown; previous_html?: string };
   try {
     body = await request.json();
   } catch {
     body = {};
   }
+
+  /* Every change the designer has asked for, oldest first — not just the
+     newest. A revision that honours the current request while quietly undoing
+     the previous one is how this conversation goes in circles, and the model
+     can only avoid that if it can see what was already agreed. */
+  const requests = Array.isArray(body.requests)
+    ? body.requests
+        .filter((entry): entry is string => typeof entry === "string")
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0)
+        .slice(-20)
+    : [];
 
   // The console is built from the screenshots and the profile together. Without
   // the profile it would only look right, and a console that looks right while
@@ -100,7 +112,7 @@ export async function POST(
         })),
         profile,
         systemNameFictional: system.name,
-        guidance: String(body.guidance ?? "").trim(),
+        requests,
         previousHtml: String(body.previous_html ?? "") || undefined,
       });
 

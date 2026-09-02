@@ -11,11 +11,17 @@ import { readJson } from "@/lib/http";
 import { formatWait, useBackgroundJob } from "@/lib/use-job";
 
 /**
- * Screen 3, the front half: the trainee asks for training in their own words.
+ * Screen 3, the front half: choosing what to train on.
  *
- * This is the interaction the POC exists to test, so the screen is deliberately
- * a blank box rather than a menu of scenarios. If the trainee has to pick from
- * a list, the matching engine is never exercised.
+ * The free-text box is the interaction the POC exists to test, so it comes
+ * first and gets the room. But it was the *only* way in, and that turned out
+ * to be a tax rather than a principle: a trainee who already knows they want
+ * the leaker drill should not have to describe it to a matcher and wait for it
+ * to agree. So the system's approved dilemmas are also listed, and picking one
+ * starts a run directly.
+ *
+ * Matching is still what the POC is testing, which is why the box is above the
+ * list and not beside it.
  *
  * Matching is quick. Building the scenario is not — it runs for over a minute,
  * which is longer than a phone will hold a connection open, and the trainee is
@@ -34,6 +40,8 @@ type Phase =
       reasoning: string;
       difficulty: DifficultyLevel;
       settledWithoutConfidence: boolean;
+      /** Whether the matcher chose it or the trainee did. */
+      source: "match" | "list";
     }
   | { kind: "no_dilemmas" };
 
@@ -60,12 +68,18 @@ export function TrainingRequest({
   systemId,
   systemName,
   trainees,
+  catalogue,
   preselectedTraineeId,
 }: {
   /** The system chosen on the previous screen. Matching is scoped to it. */
   systemId: string;
   systemName: string;
   trainees: Trainee[];
+  /**
+   * This system's approved dilemmas, for the trainee who would rather choose
+   * than describe. Empty means there is nothing to train on at all.
+   */
+  catalogue: Array<{ id: string; title: string; tag: string; when: string }>;
   /** Set when an instructor started this run from a trainee's history. */
   preselectedTraineeId?: string;
 }) {
@@ -127,6 +141,7 @@ export function TrainingRequest({
           reasoning: payload.reasoning,
           difficulty: payload.suggested_difficulty,
           settledWithoutConfidence: payload.settled_without_confidence,
+          source: "match",
         });
       }
     } catch (reason) {
@@ -147,6 +162,21 @@ export function TrainingRequest({
     await match(rounds);
   }
 
+  /** Skips the matcher: the trainee already knows what they want. */
+  function choose(entry: { id: string; title: string }) {
+    setError(undefined);
+    setClarifications([]);
+    setPhase({
+      kind: "matched",
+      dilemma: entry,
+      confidence: 1,
+      reasoning: "",
+      difficulty: "medium",
+      settledWithoutConfidence: false,
+      source: "list",
+    });
+  }
+
   function begin() {
     if (phase.kind !== "matched") return;
     setError(undefined);
@@ -154,7 +184,13 @@ export function TrainingRequest({
       trainee_id: traineeId,
       system_id: systemId,
       dilemma_id: phase.dilemma.id,
-      requested_text: request,
+      // The record of why this run happened. A list pick has no request of its
+      // own, and leaving it blank would make the debrief and the instructor's
+      // history read as though nobody asked for anything.
+      requested_text:
+        phase.source === "list"
+          ? `Chose “${phase.dilemma.title}” from the list.`
+          : request,
       clarifications,
       difficulty: phase.difficulty,
     });
@@ -226,6 +262,44 @@ export function TrainingRequest({
         </div>
       </div>
 
+      {/* ---- Or pick one ------------------------------------------- */}
+      {phase.kind === "asking" && catalogue.length > 0 ? (
+        <div className="panel mt-4">
+          <div className="panel-header">
+            Or pick a drill · {catalogue.length} available
+          </div>
+          <div className="p-4">
+            <p className="text-xs leading-relaxed text-muted">
+              Every drill {systemName} has been taught. The situation is still
+              generated fresh each time, so running the same one twice is not
+              the same run twice.
+            </p>
+            <ul className="mt-3 space-y-2">
+              {catalogue.map((entry) => (
+                <li key={entry.id}>
+                  <button
+                    type="button"
+                    className="panel w-full p-3 text-left transition-colors hover:border-accent"
+                    disabled={busy}
+                    onClick={() => choose(entry)}
+                  >
+                    <p className="text-sm font-medium">{entry.title}</p>
+                    {entry.when ? (
+                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted">
+                        {entry.when}
+                      </p>
+                    ) : null}
+                    {entry.tag ? (
+                      <span className="chip data mt-2">{entry.tag}</span>
+                    ) : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
+
       {/* ---- Clarification ----------------------------------------- */}
       {phase.kind === "clarifying" ? (
         <div className="panel is-active mt-4">
@@ -262,7 +336,9 @@ export function TrainingRequest({
       {/* ---- Matched ------------------------------------------------ */}
       {phase.kind === "matched" ? (
         <div className="panel is-active mt-4">
-          <div className="panel-header">Matched</div>
+          <div className="panel-header">
+            {phase.source === "list" ? "Chosen" : "Matched"}
+          </div>
           <div className="p-4">
             {phase.settledWithoutConfidence ? (
               <p className="chip status-warn mb-3 !normal-case">
@@ -270,12 +346,18 @@ export function TrainingRequest({
               </p>
             ) : null}
 
-            <p className="text-sm text-muted">Based on what you asked for:</p>
+            {phase.source === "match" ? (
+              <p className="text-sm text-muted">Based on what you asked for:</p>
+            ) : null}
             <p className="mt-1 text-lg font-semibold">{phase.dilemma.title}</p>
-            <p className="mt-2 text-sm text-muted">{phase.reasoning}</p>
-            <p className="data mt-2 text-xs text-muted">
-              confidence {(phase.confidence * 100).toFixed(0)}%
-            </p>
+            {phase.source === "match" ? (
+              <>
+                <p className="mt-2 text-sm text-muted">{phase.reasoning}</p>
+                <p className="data mt-2 text-xs text-muted">
+                  confidence {(phase.confidence * 100).toFixed(0)}%
+                </p>
+              </>
+            ) : null}
 
             <div className="mt-5">
               <span className="label">Difficulty</span>
@@ -310,7 +392,7 @@ export function TrainingRequest({
                 onClick={restart}
                 disabled={busy || building}
               >
-                Ask for something else
+                {phase.source === "list" ? "Pick something else" : "Ask for something else"}
               </button>
             </div>
 

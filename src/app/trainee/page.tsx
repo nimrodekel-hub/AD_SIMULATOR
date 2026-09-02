@@ -5,7 +5,7 @@ import { getSystemBundle, listSystems } from "@/lib/store/kb";
 import { listTrainees } from "@/lib/store/sessions";
 
 /**
- * Where a trainee starts: pick the system, then ask for the training.
+ * Where a trainee starts: pick the system, then say what to train on.
  *
  * The system comes first because a dilemma is only meaningful inside one. Its
  * identification states, its operator actions and its plausible numbers all
@@ -120,13 +120,27 @@ export default async function TraineePage({
     );
   }
 
-  /* ---- Ask for the training ------------------------------------ */
+  /* ---- Ask for it, or choose it ---------------------------------- */
+
+  /* The approved drills for the chosen system, so the trainee can pick one
+     instead of describing it. Only approved ones: a draft is the designer
+     still working, and half-taught doctrine trains the wrong thing. */
+  const { dilemmas } = await getSystemBundle(chosen.id);
+  const catalogue = dilemmas
+    .filter((entry) => entry.status === "approved")
+    .map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      tag: entry.sub_domain_tag,
+      when: entry.trigger_conditions,
+    }));
+
   return (
     <ScreenShell
       theme="ops"
       eyebrow={`Trainee · ${chosen.name}`}
       title="Request training"
-      subtitle="Ask for what you want to practise, in your own words"
+      subtitle="Say what you want to practise, or pick a drill"
       contained={false}
     >
       {systems.length > 1 ? (
@@ -144,6 +158,7 @@ export default async function TraineePage({
         systemId={chosen.id}
         systemName={chosen.name}
         trainees={trainees}
+        catalogue={catalogue}
         preselectedTraineeId={preselected}
       />
     </ScreenShell>

@@ -4,7 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RadarScope } from "@/components/radar-scope";
 import { SimulatedConsole } from "@/components/simulated-console";
-import type { Session, SystemProfile } from "@/lib/domain/schemas";
+import type {
+  DifficultyLevel,
+  ScenarioInstance,
+  SystemProfile,
+} from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
 import {
   command,
@@ -54,11 +58,20 @@ const TONE_CLASS = {
 type Stage = "brief" | "running" | "submitting" | "failed";
 
 export function LiveRun({
-  session,
+  runId,
+  scenario,
+  difficulty,
   profile,
   templateHtml,
+  onFinish,
 }: {
-  session: Session;
+  /**
+   * Identifies this run. It seeds the luck and, for a trainee, addresses the
+   * session the result is written to.
+   */
+  runId: string;
+  scenario: ScenarioInstance;
+  difficulty: DifficultyLevel;
   profile: SystemProfile | null;
   /**
    * The designer's console shell, when there is one that can host a live
@@ -66,15 +79,25 @@ export function LiveRun({
    * arriving here is known to have somewhere to put the radar picture.
    */
   templateHtml?: string;
+  /**
+   * Where the run's outcome goes.
+   *
+   * A trainee's run is scored: left unset, the log and the tally are posted to
+   * the session and the debrief opens. A designer rehearsing their console
+   * passes a handler instead — nothing is written, nobody is assessed, and the
+   * point is only to watch the console behave with things moving on it. Same
+   * component either way, because a rehearsal against a near-copy of the real
+   * thing proves nothing.
+   */
+  onFinish?: (final: SimState) => void;
 }) {
   const router = useRouter();
-  const scenario = session.scenario_instance;
 
   const config = useMemo(() => simConfig(profile, scenario), [profile, scenario]);
   /* Seeded from the session, so the luck of a run is fixed the moment it is
      created: the same scenario deals the same hands, and a debrief that says a
      shot missed is still true when someone reviews it. */
-  const random = useMemo(() => seededRandom(session.id), [session.id]);
+  const random = useMemo(() => seededRandom(runId), [runId]);
 
   const [stage, setStage] = useState<Stage>("brief");
   const [state, setState] = useState<SimState>(() =>
@@ -93,18 +116,26 @@ export function LiveRun({
     async (final: SimState) => {
       if (submitted.current) return;
       submitted.current = true;
+
+      // A rehearsal is over when it is over: nothing to write, nobody to
+      // score, and the designer stays on their own page.
+      if (onFinish) {
+        onFinish(final);
+        return;
+      }
+
       setStage("submitting");
 
       const result = summarise(final, config, scenario.success_criteria);
       try {
-        const response = await fetch(`/api/sessions/${session.id}/complete`, {
+        const response = await fetch(`/api/sessions/${runId}/complete`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ run_log: final.events, run_result: result }),
         });
         const payload = await readJson<{ error?: string }>(response);
         if (!response.ok) throw new Error(payload.error ?? "Debrief failed.");
-        router.push(`/trainee/${session.id}/debrief`);
+        router.push(`/trainee/${runId}/debrief`);
       } catch (reason) {
         // The log is written before the assessment call, so a failure here
         // costs the debrief and never the record of what the trainee did.
@@ -114,7 +145,7 @@ export function LiveRun({
         setStage("failed");
       }
     },
-    [config, router, scenario.success_criteria, session.id],
+    [config, onFinish, router, runId, scenario.success_criteria],
   );
 
   /* ---- The clock ------------------------------------------------ */
@@ -168,7 +199,7 @@ export function LiveRun({
       <Brief
         scenario={scenario}
         config={config}
-        difficulty={session.difficulty_level}
+        difficulty={difficulty}
         onBegin={() => setStage("running")}
       />
     );
@@ -329,7 +360,7 @@ function Brief({
   difficulty,
   onBegin,
 }: {
-  scenario: Session["scenario_instance"];
+  scenario: ScenarioInstance;
   config: ReturnType<typeof simConfig>;
   difficulty: string;
   onBegin: () => void;
@@ -475,7 +506,7 @@ function Resources({
   config: ReturnType<typeof simConfig>;
   spent: number;
   inFlight: number;
-  criteria: Session["scenario_instance"]["success_criteria"];
+  criteria: ScenarioInstance["success_criteria"];
 }) {
   const left = config.magazine - spent;
   return (

@@ -67,7 +67,9 @@ export default async function RunPage({
       fullHeight
     >
       <LiveRun
-        session={session}
+        runId={session.id}
+        scenario={session.scenario_instance}
+        difficulty={session.difficulty_level}
         profile={profile?.approved ? profile : null}
         templateHtml={usableConsole(template?.approved ? template.generated_ui_code : undefined)}
       />

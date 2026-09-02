@@ -251,9 +251,9 @@ export async function loadScreenshots(
 /**
  * Replaces the whole reference set.
  *
- * Uploading is "these are the screenshots of this system", not "add one more",
- * so a second upload supersedes the first rather than accumulating a pile
- * nobody remembers the order of.
+ * The plain case is "these are the screenshots of this system", so a second
+ * upload supersedes the first rather than leaving a pile nobody remembers the
+ * order of.
  */
 export async function replaceScreenshots(
   systemId: string,
@@ -271,6 +271,40 @@ export async function replaceScreenshots(
   return Promise.all(
     files.map((file) => saveScreenshot(systemId, file.name, file.bytes)),
   );
+}
+
+/**
+ * Adds to the reference set instead of replacing it.
+ *
+ * The console is copied from these, and the copy gets closer the more views
+ * there are — but a browser cannot post twenty scaled screenshots inside the
+ * platform's 4.5 MB request body. Replacing would make that a hard ceiling on
+ * how much reference a system can have; appending turns it into a matter of
+ * how many trips the designer is willing to make.
+ */
+export async function addScreenshots(
+  systemId: string,
+  files: Array<{ name: string; bytes: Uint8Array }>,
+): Promise<string[]> {
+  await Promise.all(
+    files.map((file) => saveScreenshot(systemId, file.name, file.bytes)),
+  );
+  return listScreenshots(systemId);
+}
+
+/** Removes one reference by its stored file name. */
+export async function removeScreenshot(
+  systemId: string,
+  name: string,
+): Promise<string[]> {
+  const root = systemPaths(systemId).screenshots;
+  // Only ever a name from the stored listing: a path from the caller could
+  // otherwise reach out of this system's folder.
+  const known = await repoFiles().list(root);
+  if (known.includes(name)) {
+    await repoFiles().remove(`${root}/${name}`, "Remove a console reference");
+  }
+  return listScreenshots(systemId);
 }
 
 const MEDIA_TYPES: Record<string, string> = {

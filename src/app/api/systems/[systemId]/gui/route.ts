@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { missingSlots, sanitiseHtml } from "@/lib/ai/tasks/generate-gui";
 import { getGuiTemplate, getSystem, saveGuiTemplate } from "@/lib/store/kb";
-import type { GuiTemplate } from "@/lib/domain/schemas";
+import { GuiRevisionSchema, type GuiTemplate } from "@/lib/domain/schemas";
 
 /** One system's simulated console: read, save, approve. */
 
@@ -10,6 +10,15 @@ const SaveSchema = z.object({
   generated_ui_code: z.string().min(1),
   source_screenshots: z.array(z.string()),
   approved: z.boolean(),
+  /**
+   * The conversation that produced this console.
+   *
+   * Stored with it so that reopening the page picks the thread back up: the
+   * next request the designer makes then arrives with everything already
+   * agreed, instead of asking a model that has forgotten it to change one
+   * thing without undoing the rest.
+   */
+  revisions: z.array(GuiRevisionSchema).default([]),
 });
 
 export async function GET(
@@ -58,6 +67,7 @@ export async function POST(
     generated_ui_code: html,
     approved: parsed.data.approved,
     created_at: existing?.created_at ?? new Date().toISOString(),
+    revisions: parsed.data.revisions,
   };
 
   try {
