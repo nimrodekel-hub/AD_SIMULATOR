@@ -429,5 +429,5 @@ export async function deleteDilemma(
   systemId: string,
   id: string,
 ): Promise<void> {
-  await repoFiles().remove(dilemmaFile(validated_placeholder), `Remove dilemma ${id}`);
+  await repoFiles().remove(dilemmaFile(systemId, id), `Remove dilemma ${id}`);
 }
