@@ -5,6 +5,7 @@ import { extractSystemNarrative } from "@/lib/ai/tasks/learn-system";
 import { gapMessage, simulationGaps } from "@/lib/domain/profile-readiness";
 import {
   EngagementDoctrineSchema,
+  IffInterrogationSchema,
   IffStateSchema,
   SensorCoverageSchema,
   TrackClassificationSchema,
@@ -53,6 +54,7 @@ const BodySchema = z.object({
   spec: z.object({
     track_classifications: z.array(TrackClassificationSchema),
     iff_states: z.array(IffStateSchema),
+    iff_interrogation: IffInterrogationSchema,
     track_readout_fields: z.array(TrackReadoutFieldSchema),
     sensor: SensorCoverageSchema,
     engagement: EngagementDoctrineSchema,

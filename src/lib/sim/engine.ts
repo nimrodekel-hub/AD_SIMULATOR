@@ -7,6 +7,7 @@ import type {
   SuccessCriteria,
   SystemProfile,
 } from "../domain/schemas";
+import { describeReply, meaningOfMode3 } from "../domain/iff-codes";
 import {
   add,
   polarToVec,
@@ -74,6 +75,15 @@ export interface SimConfig {
   defended_radius_km: number;
   /** Identification state name (lower-cased) to the tone the designer gave it. */
   tones: Record<string, IffState["tone"]>;
+
+  /**
+   * Whether this system can interrogate a transponder, and on which modes.
+   *
+   * Off means the console has no interrogate command: an operator on such a
+   * system identifies by behaviour, which is a different skill and a
+   * deliberate one to train.
+   */
+  iff: { enabled: boolean; mode_3: boolean; mode_1: boolean };
 }
 
 /** The state a track is in, which is not the same as how it is identified. */
@@ -105,6 +115,21 @@ export interface RuntimeTrack {
   identified_by_operator: boolean;
   /** When the system resolves it unaided, or null if it never does. */
   resolves_at_s: number | null;
+
+  /* ---- Its transponder, and whether anyone has asked --------------- */
+  /** Mode 3/A code it would reply with, or "" for a track that stays silent. */
+  mode_3: string;
+  /** Mode 1 code it would reply with, or "". Military transponders only. */
+  mode_1: string;
+  /**
+   * True once the operator has interrogated it.
+   *
+   * Until then the console shows nothing at all — not a blank code, which
+   * would read as "asked and got silence". Not having asked and having asked
+   * and heard nothing are different pieces of information, and the second one
+   * is the one worth acting on.
+   */
+  squawk_known: boolean;
 
   state: TrackState;
   /** When it first became visible, for measuring how long a decision took. */
@@ -217,6 +242,11 @@ export function simConfig(
     magazine: engagement?.magazine_depth ?? DEFAULT_MAGAZINE,
 
     defended_radius_km: DEFAULT_DEFENDED_RADIUS_KM,
+    iff: {
+      enabled: profile?.iff_interrogation?.enabled === true,
+      mode_3: profile?.iff_interrogation?.mode_3 !== false,
+      mode_1: profile?.iff_interrogation?.mode_1 === true,
+    },
     tones: Object.fromEntries(
       (profile?.iff_states ?? []).map((state) => [
         state.name.toLowerCase(),
@@ -254,6 +284,10 @@ export function createSim(tracks: LiveTrack[]): SimState {
       displayed_iff: track.initial_iff,
       identified_by_operator: false,
       resolves_at_s: track.resolves_at_s,
+
+      mode_3: track.mode_3 ?? "",
+      mode_1: track.mode_1 ?? "",
+      squawk_known: false,
 
       state: track.appears_at_s > 0 ? "pending" : "airborne",
       first_seen_s: null,
@@ -373,6 +407,7 @@ export function probabilityOfKill(
 
 export type Command =
   | { kind: "classify"; designator: string; to: string }
+  | { kind: "interrogate"; designator: string }
   | { kind: "engage"; designator: string; interceptor: string }
   | { kind: "cease"; designator: string };
 
@@ -424,6 +459,54 @@ export function command(
           "classified",
           track.designator,
           `Operator set ${track.designator} to ${cmd.to}.`,
+        ),
+      ],
+    };
+  }
+
+  if (cmd.kind === "interrogate") {
+    if (track.state !== "airborne") return state;
+
+    /* A system without an interrogator has no such command, and the console
+       does not offer one — but the engine refuses rather than trusts that,
+       because the rule belongs with the rules. */
+    if (!config.iff.enabled) {
+      return {
+        ...state,
+        events: [
+          ...state.events,
+          event(
+            state,
+            "refused",
+            track.designator,
+            "This system has no IFF interrogator.",
+          ),
+        ],
+      };
+    }
+
+    // Only the modes the system actually has. A Mode 1 code on a system
+    // without Mode 1 is information its operator would never get.
+    const mode3 = config.iff.mode_3 ? track.mode_3 : "";
+    const mode1 = config.iff.mode_1 ? track.mode_1 : "";
+    const reply = describeReply(mode3, mode1);
+    const meaning = meaningOfMode3(mode3);
+
+    return {
+      ...state,
+      tracks: replace(state.tracks, track.designator, {
+        ...track,
+        squawk_known: true,
+      }),
+      events: [
+        ...state.events,
+        event(
+          state,
+          "interrogated",
+          track.designator,
+          reply.replied
+            ? `${track.designator} replied ${reply.text}${meaning ? ` — ${meaning}` : ""}.`
+            : `${track.designator} interrogated: no reply.`,
         ),
       ],
     };

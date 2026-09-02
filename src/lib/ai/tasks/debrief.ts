@@ -49,6 +49,8 @@ The tally — leakers, kills, fratricide, rounds spent, reaction time — was co
 
 Refusals in the log are not system faults. "Inside minimum range" means they let a threat get too close before committing; "already in the air" means they had spent their capacity. Read them as evidence about the operator.
 
+**Where the log carries \`interrogated\` entries, read them as identification work.** A track engaged without ever being interrogated, on a system that could have interrogated it, is worth naming — and so is the opposite: a transponder reply that was read and then ignored. A reply of "no reply" is not proof of hostility and never was; treating it as proof is one of the more expensive habits an operator can form. If the log shows no interrogation at all, do not invent one — the system may not have an interrogator.
+
 ## Scoring
 
 Score 0-100 following the entry's scoring_notes. In their absence: start from whether the success criteria were met, then weigh efficiency and timeliness. **Engaging a friendly caps the score at 20 regardless of everything else.** Set outcome.success from whether the criteria were met.

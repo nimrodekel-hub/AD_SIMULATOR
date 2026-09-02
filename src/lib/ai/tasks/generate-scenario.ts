@@ -7,7 +7,9 @@ import {
   type LiveTrack,
   type ScenarioInstance,
   type SystemProfile,
+  type TrackClassification,
 } from "../../domain/schemas";
+import { isMode1, isMode3 } from "../../domain/iff-codes";
 import { structured } from "../client";
 import { detectionRangeKm } from "../../sim/engine";
 import { knotsToKmPerSecond } from "../../sim/geometry";
@@ -58,6 +60,14 @@ The trainee will fly this in real time: tracks move at the speeds you give them,
 **Geometry is the exercise.** Time the arrivals so the operator is forced to choose: two threats that converge at once against a system that can only engage one at a time, or an ambiguous track closer than a confirmed one. Work out roughly when each track reaches the engagement envelope and stagger them deliberately. Threats that arrive comfortably one after another teach nothing.
 
 **truth_iff is what the track really is; initial_iff is what the console shows at first.** The gap between them is where identification training lives. \`resolves_at_s\` is when the system works it out unaided — set it late to force the operator to decide alone, or leave it null so it never resolves and the call is entirely theirs.
+
+**The transponder codes, when the system can interrogate.** Each declared classification says what it carries, and that is binding:
+
+- A class marked **none** replies to nothing: \`mode_3\` and \`mode_1\` must both be \`""\`. **Silence is the point** — it is what makes an unknown track a decision rather than a lookup, so most hostile tracks should be silent.
+- A class marked **civil** replies on Mode 3 only: \`mode_3\` is four digits, each 0–7; \`mode_1\` is \`""\`.
+- A class marked **military** may reply on both: \`mode_3\` as above, \`mode_1\` two digits, each 0–4.
+
+A code is not decoration. Give an airliner an ordinary code and it reads as an airliner; give one \`7700\` (general emergency), \`7600\` (radio failure) or \`7500\` (hijack) and you have built a specific and much harder problem — **do that deliberately, and say so in the brief**, never by accident. Two tracks squawking the same Mode 3 code is also a real and vicious problem, and again only worth doing on purpose.
 
 **Include at least one track that must not be engaged** — a friendly or a civil transit — unless the dilemma is explicitly about something else. An exercise where everything airborne is a valid target trains the wrong reflex.
 
@@ -213,6 +223,11 @@ function clampToProfile(
       resolves_at_s:
         track.resolves_at_s === null ? null : Math.max(0, track.resolves_at_s),
       appears_at_s: Math.max(0, track.appears_at_s),
+
+      /* The class decides what may reply, not the model. A cruise missile
+         handed a squawk would let a trainee identify it by asking, which is
+         exactly the shortcut the class declaration exists to forbid. */
+      ...transponderReply(track, declared),
     };
   });
 
@@ -328,6 +343,32 @@ function clamp(value: number, low: number, high: number): number {
   return Math.min(high, Math.max(low, value));
 }
 
+/**
+ * What this track is actually allowed to reply, whatever the model wrote.
+ *
+ * Two rules, and both of them protect the exercise rather than the data. A
+ * class the designer marked as carrying nothing must stay silent, or a trainee
+ * could identify a cruise missile by interrogating it — the shortcut the
+ * declaration exists to forbid. And a malformed code is dropped rather than
+ * repaired: a console showing `8291` as a Mode 3 code teaches an operator that
+ * such a code exists.
+ */
+function transponderReply(
+  track: LiveTrack,
+  declared: TrackClassification | undefined,
+): { mode_3: string; mode_1: string } {
+  const kind = declared?.transponder ?? "none";
+  if (kind === "none") return { mode_3: "", mode_1: "" };
+
+  const mode3 = (track.mode_3 ?? "").trim();
+  const mode1 = (track.mode_1 ?? "").trim();
+
+  return {
+    mode_3: isMode3(mode3) ? mode3 : "",
+    mode_1: kind === "military" && isMode1(mode1) ? mode1 : "",
+  };
+}
+
 /** The raw answers and timestamps are provenance, not behaviour. */
 function stripProvenance(profile: SystemProfile) {
   const { id, approved, source_answers, created_at, approved_at, ...behaviour } =
@@ -392,6 +433,8 @@ function mockScenario(
       resolves_at_s: null,
       appears_at_s: 0,
       notes: "",
+      mode_3: "",
+      mode_1: "",
       ...rest,
     };
   };
@@ -410,6 +453,9 @@ function mockScenario(
         truth_iff: friendly,
         initial_iff: unknown,
         resolves_at_s: 70,
+        // A civil code, so mock mode exercises interrogation too. Dropped
+        // again by `transponderReply` if this class carries no transponder.
+        mode_3: "1200",
         notes: "Squawking late. Not a threat, whatever the display says at first.",
       },
       {

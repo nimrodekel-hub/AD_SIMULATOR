@@ -159,6 +159,20 @@ export type SimulatedSystem = z.infer<typeof SimulatedSystemSchema>;
  * designer's own doctrine.
  */
 
+/**
+ * What a track's transponder answers when it is interrogated.
+ *
+ * `none` is not an omission — it is the interesting case. A track that does
+ * not reply is the one an operator has to decide about, and a system whose
+ * every class replies has removed the dilemma rather than modelled it.
+ *
+ * `civil` carries a Mode 3/A code only. `military` carries Mode 1 as well,
+ * which is what distinguishes a co-operating military aircraft from an
+ * airliner squawking a code an air-traffic centre assigned it.
+ */
+export const TransponderKindSchema = z.enum(["none", "civil", "military"]);
+export type TransponderKind = z.infer<typeof TransponderKindSchema>;
+
 export const TrackClassificationSchema = z.object({
   name: z.string(),
   description: z.string(),
@@ -166,6 +180,14 @@ export const TrackClassificationSchema = z.object({
   typical_altitude_ft: RangeSchema,
   /** How this kind of track behaves on its way to a target. */
   behaviour_note: z.string(),
+  /**
+   * Whether this class carries a transponder, and which modes it answers on.
+   *
+   * Defaulted to `none` so a profile written before interrogation existed
+   * keeps loading — and reads honestly, since such a profile never said any
+   * class replies.
+   */
+  transponder: TransponderKindSchema.default("none"),
 });
 export type TrackClassification = z.infer<typeof TrackClassificationSchema>;
 
@@ -178,6 +200,39 @@ export const IffStateSchema = z.object({
   tone: z.enum(["friendly", "neutral", "caution", "hostile"]),
 });
 export type IffState = z.infer<typeof IffStateSchema>;
+
+/**
+ * Whether the system can interrogate a transponder, and on which modes.
+ *
+ * A separate capability from the radar: plenty of systems see a track without
+ * being able to ask it anything, and an operator on such a system identifies
+ * by behaviour alone. That is a different training problem, and it is the
+ * designer's to declare rather than the app's to assume — so this defaults to
+ * off, and every profile approved before it existed reads as off.
+ *
+ * **Mode 3/A** is four octal digits (each 0–7): the code civil air traffic
+ * assigns, and the one a co-operating military aircraft also squawks.
+ * **Mode 1** is two digits (each 0–4): a military mission code, so a reply on
+ * it says more than a Mode 3 code alone does.
+ */
+export const IffInterrogationSchema = z.object({
+  /** Off means the console has no interrogate command at all. */
+  enabled: z.boolean().default(false),
+  /** Four octal digits. The mode almost every interrogator has. */
+  mode_3: z.boolean().default(true),
+  /** Two digits 0–4. Military only. */
+  mode_1: z.boolean().default(false),
+  /** Anything the numbers do not carry — who may interrogate, when, delays. */
+  note: z.string().default(""),
+});
+export type IffInterrogation = z.infer<typeof IffInterrogationSchema>;
+
+export const IFF_INTERROGATION_OFF: IffInterrogation = {
+  enabled: false,
+  mode_3: true,
+  mode_1: false,
+  note: "",
+};
 
 export const TrackReadoutFieldSchema = z.object({
   /** Column header as the real console shows it, e.g. "RNG". */
@@ -275,6 +330,8 @@ export const SystemProfileDraftSchema = z.object({
   iff_states: z.array(IffStateSchema),
   /** The columns the console shows for every track, in display order. */
   track_readout_fields: z.array(TrackReadoutFieldSchema),
+  /** Whether the system can interrogate a transponder, and on which modes. */
+  iff_interrogation: IffInterrogationSchema.default(IFF_INTERROGATION_OFF),
   /** What the radar sees, and from where. */
   sensor: SensorCoverageSchema.default({
     max_range_km: null,
@@ -451,6 +508,18 @@ export const LiveTrackSchema = z.object({
    */
   resolves_at_s: z.number().nullable().default(null),
 
+  /* ---- What its transponder would reply -------------------------- */
+  /**
+   * Mode 3/A code: four octal digits, or `""` for a track that does not reply.
+   *
+   * Never shown until the operator interrogates. Silence is a legitimate and
+   * deliberate answer — it is most of what makes an unknown track a decision
+   * rather than a lookup.
+   */
+  mode_3: z.string().default(""),
+  /** Mode 1 code: two digits 0–4, or `""`. Military transponders only. */
+  mode_1: z.string().default(""),
+
   /** Seconds from the start before it appears. 0 means it is up from the off. */
   appears_at_s: z.number().default(0),
   /** Anything that makes this track notable or ambiguous. */
@@ -492,6 +561,7 @@ export const SimEventSchema = z.object({
     "detected",
     "resolved",
     "classified",
+    "interrogated",
     "launched",
     "refused",
     "hit",

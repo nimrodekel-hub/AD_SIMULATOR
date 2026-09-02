@@ -9,6 +9,7 @@ import type {
   ScenarioInstance,
   SystemProfile,
 } from "@/lib/domain/schemas";
+import { describeReply, meaningOfMode3 } from "@/lib/domain/iff-codes";
 import { readJson } from "@/lib/http";
 import {
   command,
@@ -20,6 +21,7 @@ import {
   toneOf,
   viewOf,
   type Command,
+  type RuntimeTrack,
   type SimState,
   type TrackView,
 } from "@/lib/sim/engine";
@@ -466,6 +468,9 @@ function TrackList({
           <th className="px-2 py-1 text-left font-medium">TRK</th>
           <th className="px-2 py-1 text-right font-medium">RNG</th>
           <th className="px-2 py-1 text-right font-medium">TTI</th>
+          {config.iff.enabled ? (
+            <th className="px-2 py-1 text-left font-medium">IFF</th>
+          ) : null}
           <th className="px-2 py-1 text-left font-medium">ID</th>
         </tr>
       </thead>
@@ -483,6 +488,11 @@ function TrackList({
             <td className="px-2 py-1 text-right">
               {view.tti_s === null ? "—" : `${view.tti_s.toFixed(0)}s`}
             </td>
+            {config.iff.enabled ? (
+              <td className="px-2 py-1">
+                <Squawk track={view.track} config={config} />
+              </td>
+            ) : null}
             <td className="px-2 py-1">
               <span
                 className={`chip ${TONE_CLASS[toneOf(config, view.track.displayed_iff)]}`}
@@ -494,6 +504,48 @@ function TrackList({
         ))}
       </tbody>
     </table>
+  );
+}
+
+/**
+ * What the transponder said, or the fact that nobody has asked.
+ *
+ * Three states, and the difference between the last two is the whole point:
+ * not interrogated, interrogated and silent, interrogated and answering. A
+ * console that showed a blank for both of the first two would be telling the
+ * operator that a track refused to reply when in fact nobody asked it.
+ */
+function Squawk({
+  track,
+  config,
+}: {
+  track: RuntimeTrack;
+  config: ReturnType<typeof simConfig>;
+}) {
+  if (!track.squawk_known) {
+    return <span className="text-muted" title="Not interrogated">·</span>;
+  }
+
+  const mode3 = config.iff.mode_3 ? track.mode_3 : "";
+  const mode1 = config.iff.mode_1 ? track.mode_1 : "";
+  const reply = describeReply(mode3, mode1);
+
+  if (!reply.replied) {
+    return (
+      <span className="text-warn" title="Interrogated — nothing came back">
+        NO RPLY
+      </span>
+    );
+  }
+
+  const meaning = meaningOfMode3(mode3);
+  return (
+    <span
+      className={meaning ? "text-danger" : "text-ok"}
+      title={meaning ?? "Transponder reply"}
+    >
+      {mode3 || `M1 ${mode1}`}
+    </span>
   );
 }
 
@@ -630,6 +682,33 @@ function Controls({
         ) : null}
       </div>
 
+      {/* ---- Interrogation ------------------------------------- */}
+      {config.iff.enabled ? (
+        <div>
+          <p className="label">IFF</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="btn text-[0.7rem]"
+              disabled={busy}
+              onClick={() =>
+                onCommand({ kind: "interrogate", designator: track.designator })
+              }
+            >
+              {track.squawk_known ? "Interrogate again" : "Interrogate"}
+            </button>
+            <span className="data text-[0.7rem]">
+              <Squawk track={track} config={config} />
+            </span>
+          </div>
+          {track.squawk_known ? (
+            <p className="mt-1 max-w-xs text-[0.7rem] text-muted">
+              {interrogationLine(track, config)}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* ---- Identification ------------------------------------ */}
       <div>
         <p className="label">Identification</p>
@@ -735,6 +814,32 @@ function Controls({
   );
 }
 
+/**
+ * The reply in words, because four digits are not self-explanatory.
+ *
+ * An operator who does not know what 7700 means has to be told, and being told
+ * during a run is exactly what a training simulator is for. A code with no
+ * standing meaning is left as itself rather than dressed up.
+ */
+function interrogationLine(
+  track: RuntimeTrack,
+  config: ReturnType<typeof simConfig>,
+): string {
+  const mode3 = config.iff.mode_3 ? track.mode_3 : "";
+  const mode1 = config.iff.mode_1 ? track.mode_1 : "";
+  const reply = describeReply(mode3, mode1);
+
+  if (!reply.replied) {
+    return "Nothing came back. It carries no transponder, or is not answering.";
+  }
+
+  const meaning = meaningOfMode3(mode3);
+  const military = mode1
+    ? " Mode 1 replied, so it is a military transponder."
+    : "";
+  return `${reply.text}.${meaning ? ` ${meaning}.` : ""}${military}`;
+}
+
 /** The running record, newest first — what a real console prints as it goes. */
 function EventLog({ state }: { state: SimState }) {
   const recent = [...state.events].reverse().slice(0, 40);
@@ -760,6 +865,9 @@ function entryClass(kind: string): string {
   if (kind === "leaked" || kind === "refused" || kind === "miss")
     return "text-danger";
   if (kind === "launched" || kind === "resolved") return "text-warn";
+  // An interrogation is a reading, not an outcome: worth finding in the log
+  // afterwards, not worth shouting while the run is on.
+  if (kind === "interrogated") return "text-accent";
   return "text-muted";
 }
 

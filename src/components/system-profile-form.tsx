@@ -294,6 +294,7 @@ export function SystemProfileForm({
               sensor: draft.sensor,
               track_classifications: draft.track_classifications,
               iff_states: draft.iff_states,
+              iff_interrogation: draft.iff_interrogation,
               track_readout_fields: draft.track_readout_fields,
               engagement: draft.engagement,
             });
@@ -865,6 +866,7 @@ function toDraft(profile: SystemProfile): SystemProfileDraft {
     purpose: profile.purpose,
     track_classifications: profile.track_classifications,
     iff_states: profile.iff_states,
+    iff_interrogation: profile.iff_interrogation,
     track_readout_fields: profile.track_readout_fields,
     sensor: profile.sensor,
     engagement: profile.engagement,
@@ -886,6 +888,7 @@ function toSpec(profile: SystemProfile): SystemSpec {
     sensor: profile.sensor,
     track_classifications: profile.track_classifications,
     iff_states: profile.iff_states,
+    iff_interrogation: profile.iff_interrogation,
     track_readout_fields: profile.track_readout_fields,
     engagement: profile.engagement,
   };
@@ -912,6 +915,7 @@ function emptyClassification(): TrackClassification {
     typical_speed_kts: { min: 0, max: 0 },
     typical_altitude_ft: { min: 0, max: 0 },
     behaviour_note: "",
+    transponder: "none",
   };
 }
 

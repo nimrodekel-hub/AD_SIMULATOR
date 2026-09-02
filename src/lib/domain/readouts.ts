@@ -23,6 +23,17 @@ export const READOUT_CATALOGUE: TrackReadoutField[] = [
   { label: "ALT", unit: "ft", description: "Altitude." },
   { label: "SPD", unit: "kts", description: "Speed." },
   { label: "TTI", unit: "s", description: "Time to impact." },
+  {
+    label: "IFF",
+    unit: "",
+    description:
+      "Transponder reply — the Mode 3 code, or that nothing came back. Blank until interrogated.",
+  },
+  {
+    label: "MODE 1",
+    unit: "",
+    description: "Military mission code, where the interrogator reads Mode 1.",
+  },
   { label: "PK", unit: "%", description: "Probability of kill." },
   {
     label: "FIRE STATUS",
