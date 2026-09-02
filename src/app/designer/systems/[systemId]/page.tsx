@@ -43,11 +43,21 @@ export default async function SystemSetupPage({
         system.note || "Describe the system, build its console, then teach it dilemmas"
       }
     >
-      <p className="mb-8">
+      <div className="mb-8 flex flex-wrap items-center gap-4">
         <Link href="/designer" className="text-sm text-muted hover:text-accent">
           ← All systems
         </Link>
-      </p>
+
+        {/* The one action that is worth reaching from anywhere on this page.
+            Everything else here is a step you complete once; this is the one
+            you repeat after every change, so it does not live only inside the
+            sequence below. */}
+        {profile ? (
+          <Link href={`${base}/test`} className="btn btn-primary ml-auto">
+            ▶ Test the system
+          </Link>
+        ) : null}
+      </div>
 
       {/* ---- Setup, in order ----------------------------------------- */}
       <section>
@@ -104,6 +114,23 @@ export default async function SystemSetupPage({
           />
           <SetupStep
             number={4}
+            href={`${base}/test`}
+            title="Test the system"
+            done={false}
+            action
+            blocked={profile === null}
+            state={
+              profile === null
+                ? "Needs the profile"
+                : consoleReady
+                  ? "Test it on your console"
+                  : "Test it in the built-in layout"
+            }
+            blurb="Fly targets at it yourself, with the real controls and the clock running. This is where you find out whether the detection range gives an operator any warning, whether the interceptors catch what they are supposed to catch, and whether your console holds up with a live picture in it. Nothing is recorded and no trainee is involved — run it as often as you like."
+            blockedNote="Fill in the behaviour profile first — the test flies this system's own figures. A draft is enough."
+          />
+          <SetupStep
+            number={5}
             href={`${base}/learn`}
             title="Teach a dilemma"
             done={dilemmas.some((entry) => entry.status === "approved")}
@@ -180,6 +207,7 @@ function SetupStep({
   blurb,
   state,
   done,
+  action,
   blocked,
   blockedNote,
   warnNote,
@@ -190,6 +218,14 @@ function SetupStep({
   blurb: string;
   state: string;
   done: boolean;
+  /**
+   * A step you *do* rather than one you finish.
+   *
+   * Testing has no completed state — it is worth running again after every
+   * change — so it gets a neutral chip instead of the orange one that means
+   * "something is still missing here".
+   */
+  action?: boolean;
   blocked?: boolean;
   blockedNote?: string;
   warnNote?: string;
@@ -205,13 +241,21 @@ function SetupStep({
             done ? "status-ok" : "bg-panel-raised text-muted"
           }`}
         >
-          {done ? "✓" : number}
+          {done ? "✓" : action && !blocked ? "▶" : number}
         </span>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <p className="font-medium">{title}</p>
-            <span className={`chip ${done ? "status-ok" : "status-warn"}`}>
+            <span
+              className={`chip ${
+                done
+                  ? "status-ok"
+                  : action && !blocked
+                    ? "bg-panel-raised text-muted"
+                    : "status-warn"
+              }`}
+            >
               {state}
             </span>
           </div>

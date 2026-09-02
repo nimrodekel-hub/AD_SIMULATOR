@@ -309,16 +309,19 @@ export function GuiBuilder({
             srcDoc={`<style>body{margin:0;background:#0a0e14;min-height:100vh}</style>${html}`}
           />
 
-          <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="panel mt-4 flex flex-wrap items-center gap-4 p-4">
             <Link
-              href={`/designer/systems/${systemId}/gui/rehearse`}
-              className="btn text-xs"
+              href={`/designer/systems/${systemId}/test`}
+              className="btn btn-primary"
             >
-              Fly targets on it →
+              ▶ Test it with live targets
             </Link>
-            <span className="text-xs text-muted">
-              Runs tracks and interceptions on this console, with the real
-              controls, without involving a trainee.
+            <span className="min-w-0 flex-1 text-xs leading-relaxed text-muted">
+              An empty preview only shows where the panels are. This flies real
+              tracks at this console with the real controls and the clock
+              running, so you can see the track list hold its rows and the
+              firing solution appear where it will actually appear. Nothing is
+              recorded and no trainee is involved.
             </span>
           </div>
         </section>

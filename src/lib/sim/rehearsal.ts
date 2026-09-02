@@ -3,23 +3,26 @@ import { detectionRangeKm } from "./engine";
 import { knotsToKmPerSecond } from "./geometry";
 
 /**
- * An engagement built in code, for the designer to test their console with.
+ * An engagement built in code, for the designer to test their own system with.
  *
- * The console builder shows an empty shell: panels in the right places, and no
- * way to tell whether the track list can hold six rows, whether the scope is
- * actually square once a radar is drawn in it, or whether the fire controls
- * still fit when the firing solution appears beside them. The only way to know
- * is to put things in the air and watch.
+ * Nothing earlier in the setup sequence answers the questions this does. A
+ * profile is a form: it can hold a detection range that gives an operator four
+ * seconds of warning, or an interceptor too slow to catch anything it is aimed
+ * at, and the form will accept both. A console preview is an empty shell: it
+ * shows where the panels are and cannot say whether the track list holds six
+ * rows, whether the scope is still square once a radar is drawn in it, or
+ * whether the fire controls still fit when the firing solution appears beside
+ * them. The only way to know any of it is to put things in the air and watch.
  *
- * Deliberately **no model call and no dilemma**. A designer checking their
- * layout should not wait seventy seconds or spend anything, and should not need
- * an approved dilemma to exist yet — this step comes before any of that. It is
- * also why the exercise is dull on purpose: it exists to load every panel, not
- * to teach a lesson.
+ * Deliberately **no model call and no dilemma**. A designer testing their own
+ * figures should not wait seventy seconds or spend anything, and should not
+ * need an approved dilemma to exist yet — this step comes before any of that.
+ * It is also why the exercise is dull on purpose: it exists to exercise every
+ * figure and load every panel, not to teach a lesson.
  *
  * What it does insist on is being the *real* thing: the same `ScenarioInstance`
  * the trainee's run is given, so it flows through the same engine and the same
- * console. A rehearsal against a near-copy would prove nothing about the copy.
+ * console. A test against a near-copy would prove nothing about the real one.
  */
 
 /** Enough tracks to fill a list and force a second decision. */
@@ -90,10 +93,10 @@ export function rehearsalScenario(profile: SystemProfile | null): ScenarioInstan
       resolves_at_s: resolvesLate ? arriveAt - 30 : isFriendly ? null : null,
       appears_at_s: index === 0 ? 0 : 10 + index * 15,
       notes: isFriendly
-        ? "Rehearsal: this one is friendly. Engaging it should be counted against you."
+        ? "Test: this one is friendly. Engaging it should be counted against you."
         : resolvesLate
-          ? "Rehearsal: identity resolves late, so the call is yours for most of the run."
-          : "Rehearsal: a plain inbound.",
+          ? "Test: identity resolves late, so the call is yours for most of the run."
+          : "Test: a plain inbound.",
     };
   });
 
@@ -103,11 +106,13 @@ export function rehearsalScenario(profile: SystemProfile | null): ScenarioInstan
   );
 
   return {
-    scenario_name: "Console rehearsal",
+    scenario_name: "System test",
     situation_brief: [
-      "This is a rehearsal of your console, not a training exercise.",
+      "This is your own test of the system, not a training exercise. Nothing is recorded and nobody is scored.",
       "",
-      `Five tracks come in across the covered arc and arrive one after another. One of them is friendly and one resolves late, so every identification colour your profile declares appears at some point. Nothing is recorded and nobody is scored — the point is to watch your panels with real data in them: whether the track list holds its rows, whether the scope stays square with a radar drawn in it, and whether the fire controls still fit once a firing solution appears beside them.`,
+      `Five tracks come in across the covered arc and arrive one after another. One of them is friendly and one resolves late, so every identification colour your profile declares appears at some point.`,
+      "",
+      `What it is worth watching: whether the detection range gives you enough warning to do anything, whether the interceptor actually catches what it is aimed at, and whether the console holds up with a live picture in it — the track list holding its rows, the scope staying square, the firing solution appearing where it will appear for a trainee.`,
       "",
       `Engagement envelope: ${Math.round(envelope)} km. Detection: ${Math.round(detection)} km.`,
     ].join("\n"),
@@ -120,7 +125,7 @@ export function rehearsalScenario(profile: SystemProfile | null): ScenarioInstan
       max_leakers: 0,
       max_interceptors_spent: profile?.engagement.magazine_depth ?? 8,
       statement:
-        "Nothing is judged in a rehearsal. Fire, hold, or let them through — the console is what is being tested.",
+        "Nothing is judged here. Fire, hold, or let them through — the system is what is being tested.",
     },
     resources: [],
     tracks: [],

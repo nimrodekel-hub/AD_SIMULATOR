@@ -8,17 +8,18 @@ import { simConfig, summarise, type SimState } from "@/lib/sim/engine";
 import { rehearsalScenario } from "@/lib/sim/rehearsal";
 
 /**
- * The designer flying their own console.
+ * The designer flying their own system.
  *
  * Same `LiveRun` a trainee gets, same engine, same console shell — the only
  * difference is where the outcome goes: nowhere. Nothing is written, nobody is
  * scored, and when the run ends the designer lands back here with a tally and
  * a button to go again.
  *
- * The tally is shown because it answers a question the empty preview cannot:
- * whether the controls in this console can actually be *used*. A designer who
- * could not find the fire command, or could not tell the friendly from the
- * hostile, sees it in the numbers.
+ * The tally is shown because it answers questions no earlier step can: whether
+ * the figures in the profile make a runnable engagement, and whether the
+ * controls in this console can actually be *used*. A designer whose detection
+ * range gave them no warning, or who could not find the fire command, or could
+ * not tell the friendly from the hostile, sees it in the numbers.
  */
 export function ConsoleRehearsal({
   systemId,
@@ -42,7 +43,7 @@ export function ConsoleRehearsal({
 
     return (
       <div className="mx-auto max-w-2xl px-6 py-10">
-        <h2 className="text-sm font-semibold">Rehearsal over</h2>
+        <h2 className="text-sm font-semibold">Test over</h2>
         <p className="mt-1 text-xs leading-relaxed text-muted">
           Nothing was recorded. What the run added up to, only so you can see
           the controls did what you pressed:
@@ -89,10 +90,13 @@ export function ConsoleRehearsal({
               setAttempt((current) => current + 1);
             }}
           >
-            Fly it again
+            Run it again
           </button>
+          <Link href={`/designer/systems/${systemId}`} className="btn">
+            Back to the system
+          </Link>
           <Link href={`/designer/systems/${systemId}/gui`} className="btn">
-            Back to the console
+            The console
           </Link>
         </div>
       </div>
