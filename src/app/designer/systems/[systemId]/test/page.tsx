@@ -20,7 +20,7 @@ import { getGuiTemplate, getSystem, getSystemProfile } from "@/lib/store/kb";
  * numbers have never been flown is the thing actually worth catching, so the
  * test opens the moment a profile exists, draft included.
  *
- * Nothing is recorded. No model is called, no dilemma is required, nobody is
+ * Nothing is recorded. No model is called, no scenario is required, nobody is
  * scored.
  *
  * It is also where a console change is reviewed. A revision used to live only
