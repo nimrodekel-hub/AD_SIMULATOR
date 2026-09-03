@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { stamped, threadFor } from "@/lib/domain/gui-thread";
 import type { GuiRevision } from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
 
@@ -54,6 +55,19 @@ export function ConsoleReview({
   const [error, setError] = useState<string>();
 
   const newest = requests.at(-1);
+  /* The whole record, not only what was just asked: the console is the sum of
+     every request, and a designer deciding whether to approve it is deciding
+     about all of them. Notes are kept per entry where they were recorded; the
+     entry this build answers gets the notes that came back with it. */
+  const record = requests.map((request, index) => ({
+    request,
+    notes:
+      storedRevisions[index]?.request === request
+        ? storedRevisions[index].notes
+        : designNotes,
+    at: storedRevisions[index]?.request === request ? storedRevisions[index].at : "",
+    isNew: storedRevisions[index]?.request !== request,
+  }));
 
   async function accept(approved: boolean) {
     setBusy(approved ? "approve" : "draft");
@@ -66,7 +80,7 @@ export function ConsoleReview({
           generated_ui_code: html,
           source_screenshots: screenshots,
           approved,
-          revisions: threadFor(requests, storedRevisions, designNotes),
+          revisions: stamped(threadFor(requests, storedRevisions, designNotes)),
         }),
       });
       const payload = await readJson<{ error?: string }>(response);
@@ -86,21 +100,57 @@ export function ConsoleReview({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <span className="chip status-warn">under review</span>
         <p className="min-w-0 flex-1 text-sm">
-          This is the console with your change applied, running with live
-          targets. It is not saved yet
+          This is the console with your change applied. Take the position below
+          and look at it with things moving on it before you decide. It is not
+          saved yet
           {wasApproved
             ? " — training runs are still using the version you approved before."
             : "."}
         </p>
       </div>
 
-      {newest ? (
+      {/* Everything asked for, in order, with what came back for each. The
+          console is the sum of all of it, so approving is a decision about
+          the whole list and not only about the newest line. */}
+      {record.length > 0 ? (
+        <details className="mt-2" open>
+          <summary className="cursor-pointer text-xs text-muted">
+            {record.length} change{record.length === 1 ? "" : "s"} asked for so
+            far — what was requested, and what was done
+          </summary>
+          <ol className="mt-2 space-y-2">
+            {record.map((entry, index) => (
+              <li
+                key={index}
+                className={`border-l-2 pl-3 ${
+                  entry.isNew ? "border-l-accent" : "border-l-line"
+                }`}
+              >
+                <div className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="data text-[0.65rem] text-muted">
+                    {index + 1}.
+                  </span>
+                  <p className="min-w-0 flex-1 text-xs">{entry.request}</p>
+                  {entry.isNew ? (
+                    <span className="chip status-warn">this one</span>
+                  ) : entry.at ? (
+                    <span className="data text-[0.6rem] text-muted">
+                      {new Date(entry.at).toLocaleString()}
+                    </span>
+                  ) : null}
+                </div>
+                {entry.notes ? (
+                  <p className="mt-0.5 text-[0.7rem] leading-relaxed text-muted">
+                    <span className="text-muted/70">What was done: </span>
+                    {entry.notes}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        </details>
+      ) : newest ? (
         <p className="mt-2 text-xs italic text-muted">“{newest}”</p>
-      ) : null}
-      {designNotes ? (
-        <p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted">
-          {designNotes}
-        </p>
       ) : null}
 
       {missingSlots.length > 0 ? (
@@ -143,27 +193,5 @@ export function ConsoleReview({
         </span>
       </div>
     </div>
-  );
-}
-
-/**
- * The conversation to store with an accepted build.
- *
- * The build carries the requests it answers; the console carries the notes and
- * timestamps recorded when each was applied. Matching them by position keeps
- * the history that already exists and adds an entry only for the request that
- * has not been recorded yet — so accepting a revision on this page leaves the
- * same thread the builder would have left.
- */
-function threadFor(
-  requests: string[],
-  stored: GuiRevision[],
-  designNotes: string,
-): GuiRevision[] {
-  const now = new Date().toISOString();
-  return requests.map((request, index) =>
-    stored[index]?.request === request
-      ? stored[index]
-      : { request, notes: designNotes, at: now },
   );
 }

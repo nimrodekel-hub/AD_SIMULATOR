@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { threadFor } from "@/lib/domain/gui-thread";
 import type { GuiRevision, GuiTemplate } from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
 import { type JobView, formatWait, useBackgroundJob } from "@/lib/use-job";
@@ -50,6 +51,16 @@ interface JobResult {
   design_notes: string;
   screenshots: string[];
   missing_slots: string[];
+  /**
+   * Every change this build answers, oldest first, recorded with the build.
+   *
+   * Read from the build rather than from this page because the page may not
+   * be the one that started it: a console takes a minute or more and the
+   * screen says outright that you can close it and come back. On that return
+   * nothing here remembers what was asked, and the thread — and the trip to
+   * go and look at the result — used to be lost with it.
+   */
+  requests?: string[];
 }
 
 export function GuiBuilder({
@@ -81,10 +92,32 @@ export function GuiBuilder({
     initialJob.result?.missing_slots ?? [],
   );
 
-  /** The thread so far, oldest first. Every attempt is sent all of it. */
-  const [revisions, setRevisions] = useState<GuiRevision[]>(
-    existing?.revisions ?? [],
-  );
+  /**
+   * The thread so far, oldest first. Every attempt is sent all of it.
+   *
+   * Seeded from the build as well as from the console, so a page opened after
+   * a build finished somewhere else still shows the request that build
+   * answers instead of a record that stops one change short.
+   */
+  const [revisions, setRevisions] = useState<GuiRevision[]>(() => {
+    const stored = existing?.revisions ?? [];
+    /* The build's own list is only the better source while that build is
+       still waiting to be accepted. Once it has been — or if the record on
+       the job is left over from something already superseded — the console
+       itself is what the history is. */
+    const pending =
+      initialJob.status === "done" &&
+      !!initialJob.result &&
+      initialJob.result.html !== (existing?.generated_ui_code ?? "");
+
+    return threadFor(
+      pending && initialJob.result?.requests?.length
+        ? initialJob.result.requests
+        : stored.map((entry) => entry.request),
+      stored,
+      initialJob.result?.design_notes ?? "",
+    );
+  });
   /** What was just asked for and is still in flight. */
   const [pending, setPending] = useState<string>();
   const [message, setMessage] = useState("");
@@ -99,7 +132,6 @@ export function GuiBuilder({
 
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string>();
-  const [dirty, setDirty] = useState(false);
 
   const {
     running: generating,
@@ -115,7 +147,6 @@ export function GuiBuilder({
       setNotes(result.design_notes);
       setScreenshots(result.screenshots);
       setMissingSlots(result.missing_slots);
-      setDirty(true);
       setPending(undefined);
 
       // The request is only recorded once something came back for it, so a
@@ -123,16 +154,37 @@ export function GuiBuilder({
       // applied.
       const asked = askedRef.current;
       askedRef.current = undefined;
-      if (!asked) return;
 
-      setRevisions((current) => [
-        ...current,
-        {
-          request: asked,
-          notes: result.design_notes,
-          at: new Date().toISOString(),
-        },
-      ]);
+      /* What this build answers, from the build itself, falling back to what
+         this page asked for. The two agree on the normal path; only the build
+         still knows after a reload. */
+      const thread =
+        result.requests && result.requests.length > 0
+          ? result.requests
+          : asked
+            ? [...revisions.map((entry) => entry.request), asked]
+            : [];
+
+      if (thread.length === 0) return; // A first build: nothing to compare.
+
+      /* A rebuild can come back byte-identical to the console already stored
+         — the request may have asked for something already true, or for
+         something the model declined to change. Sending the designer to
+         review a change that does not exist would waste the trip and look
+         like the same silence this whole flow was built to end, so say it
+         instead. */
+      if (result.html === (existing?.generated_ui_code ?? "")) {
+        setNotice(
+          "The rebuild came back identical to the console you already have — nothing changed. Try saying more specifically what should be different.",
+        );
+        return;
+      }
+
+      // Same reconciliation the review screen uses, so the two screens cannot
+      // show different histories for the same console.
+      setRevisions((current) =>
+        threadFor(thread, current, result.design_notes),
+      );
 
       /* Straight to the changed console, running.
          Nobody can judge "make the scope bigger" from an empty shell, and
@@ -140,8 +192,7 @@ export function GuiBuilder({
          iframe most of a page further down — which is why a change that had
          been made looked like a change that had been ignored. The test page
          is also where the build is accepted or sent back, so this is the
-         review, not a detour. The build itself is stored with its job, so
-         arriving there does not depend on this tab. */
+         review, not a detour. */
       router.push(`/designer/systems/${systemId}/test`);
     },
   });
@@ -182,7 +233,6 @@ export function GuiBuilder({
       const payload = await readJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(payload.error ?? "Save failed.");
 
-      setDirty(false);
       setNotice(
         approved
           ? "Approved. Training runs will render inside this console."
@@ -198,6 +248,18 @@ export function GuiBuilder({
 
   const busy = generating || saving;
   const thin = screenshotCount < 6;
+
+  /**
+   * Whether what is on screen has been accepted into the console yet.
+   *
+   * A fact about the two pieces of markup rather than something this page
+   * remembers doing. The session flag it replaces was false on a fresh load,
+   * so a builder reopened after a build finished offered to approve a console
+   * nobody had watched run — which is the whole thing the review exists to
+   * stop.
+   */
+  const unreviewed =
+    html.length > 0 && html !== (existing?.generated_ui_code ?? "");
 
   return (
     <div className="space-y-8">
@@ -293,7 +355,7 @@ export function GuiBuilder({
       ) : null}
 
       {error ? <p className="chip status-danger !normal-case">{error}</p> : null}
-      {notice ? <p className="chip status-ok !normal-case">{notice}</p> : null}
+      {notice ? <p className="chip !normal-case">{notice}</p> : null}
 
       {/* ---- Preview ------------------------------------------------- */}
       {html ? (
@@ -361,21 +423,40 @@ export function GuiBuilder({
           </p>
 
           {revisions.length > 0 ? (
-            <ol className="mt-4 space-y-3">
-              {revisions.map((entry, index) => (
-                <li key={index} className="panel p-3">
-                  <p className="text-sm">
-                    <span className="mr-2 text-muted">{index + 1}.</span>
-                    {entry.request}
-                  </p>
-                  {entry.notes ? (
-                    <p className="mt-2 text-xs leading-relaxed text-muted">
-                      {entry.notes}
-                    </p>
-                  ) : null}
-                </li>
-              ))}
-            </ol>
+            <div className="mt-5">
+              <h3 className="label">
+                What has been asked for, and what was done
+              </h3>
+              <p className="mb-3 text-xs leading-relaxed text-muted">
+                Saved with the console, so this is the record of how it came to
+                look the way it does — and it is what is sent with every
+                further request, which is why an early change does not come
+                undone later.
+              </p>
+              <ol className="space-y-3">
+                {revisions.map((entry, index) => (
+                  <li key={index} className="panel p-3">
+                    <div className="flex flex-wrap items-baseline gap-x-2">
+                      <span className="data text-xs text-muted">
+                        {index + 1}.
+                      </span>
+                      <p className="min-w-0 flex-1 text-sm">{entry.request}</p>
+                      {entry.at ? (
+                        <span className="data text-[0.65rem] text-muted">
+                          {new Date(entry.at).toLocaleString()}
+                        </span>
+                      ) : null}
+                    </div>
+                    {entry.notes ? (
+                      <p className="mt-2 text-xs leading-relaxed text-muted">
+                        <span className="text-muted/70">What was done: </span>
+                        {entry.notes}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
+            </div>
           ) : null}
 
           <div className="mt-4 space-y-3">
@@ -420,14 +501,35 @@ export function GuiBuilder({
       {html ? (
         <section className="border-t border-line pt-6">
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={busy || missingSlots.length > 0}
-              onClick={() => void save(true)}
-            >
-              {saving ? "Saving…" : "Approve console"}
-            </button>
+            {/* A build that is not stored yet has not been seen running, and
+                approving it from here would put a console in front of a
+                trainee on the strength of an empty preview. So the only way
+                on from here is to go and look at it; the approval lives on
+                that screen, next to the thing being approved. */}
+            {unreviewed ? (
+              <>
+                <Link
+                  href={`/designer/systems/${systemId}/test`}
+                  className="btn btn-primary"
+                >
+                  ▶ See it with live targets
+                </Link>
+                <span className="min-w-0 flex-1 text-xs leading-relaxed text-muted">
+                  Not saved yet, and not approvable from here. Look at the
+                  change on the console with things moving on it — the approval
+                  is on that screen, beside what it approves.
+                </span>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={busy || missingSlots.length > 0}
+                onClick={() => void save(true)}
+              >
+                {saving ? "Saving…" : "Approve console"}
+              </button>
+            )}
             <button
               type="button"
               className="btn"
@@ -436,11 +538,6 @@ export function GuiBuilder({
             >
               Save as draft
             </button>
-            {dirty ? (
-              <span className="text-xs text-warn">
-                This version is not saved yet.
-              </span>
-            ) : null}
           </div>
         </section>
       ) : null}
