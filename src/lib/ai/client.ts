@@ -236,6 +236,21 @@ export class AiNotConfiguredError extends Error {
   }
 }
 
+/**
+ * Whether the account has run out of credit.
+ *
+ * It arrives as a plain 400, which put it in the same bucket as a malformed
+ * request — so the app reported an API error and left a designer looking for
+ * the mistake in what they had typed. There is no mistake, and no amount of
+ * rewording fixes it: it is a billing state, and the only useful thing to say
+ * is where to go and top it up.
+ */
+function isOutOfCredit(reason: unknown): boolean {
+  if (!(reason instanceof Anthropic.APIError)) return false;
+  if (reason.status !== 400) return false;
+  return /credit balance is too low/i.test(apiErrorText(reason));
+}
+
 /** Whether the provider said it is saturated, whatever shape it said it in. */
 function isOverloaded(reason: unknown): boolean {
   if (!(reason instanceof Anthropic.APIError)) return false;
@@ -274,6 +289,15 @@ export function describeAiError(reason: unknown): string {
       "The Anthropic API is overloaded at the moment. That is on their side, " +
       "not a problem with what you asked for. It was already retried for over " +
       "a minute; press it again and it will usually go through."
+    );
+  }
+  if (isOutOfCredit(reason)) {
+    return (
+      "The Anthropic account is out of credit, so nothing can be generated — " +
+      "interviews, exercises, consoles and debriefs all stop until it is topped " +
+      "up. Nothing here is wrong with what you asked for, and nothing was lost. " +
+      "Add credit under Plans & Billing in the Anthropic console, then press it " +
+      "again."
     );
   }
   if (reason instanceof Anthropic.APIConnectionError) {
