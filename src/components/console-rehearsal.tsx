@@ -74,41 +74,53 @@ export function ConsoleRehearsal({
 
   if (done || seenEnough) {
     return (
-      <div className="mx-auto max-w-2xl px-6 py-10">
-        <h2 className="text-sm font-semibold">
-          {done ? "Test over" : "Test stopped"}
-        </h2>
-        <p className="mt-1 text-xs leading-relaxed text-muted">
-          Nothing was recorded.
-          {done
-            ? " What the run added up to, only so you can see the controls did what you pressed:"
-            : " You stopped it early, so there is no tally — the point was to look at the console."}
-        </p>
+      /* Scrolls in its own right.
+       *
+       * The test screen is pinned to one viewport and hides its overflow,
+       * which is right while a console is running — an operator's position is
+       * a fixed rectangle of glass. It is wrong the moment the run ends and
+       * this becomes a page to read: the tally, the account of what was
+       * changed and the approval all sat below the fold of a container that
+       * would not scroll, so the verdict this screen exists to collect could
+       * not be reached at all.
+       */
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-2xl px-6 py-10">
+          <h2 className="text-sm font-semibold">
+            {done ? "Test over" : "Test stopped"}
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted">
+            Nothing was recorded.
+            {done
+              ? " What the run added up to, only so you can see the controls did what you pressed:"
+              : " You stopped it early, so there is no tally — the point was to look at the console."}
+          </p>
 
-        {done ? <Tally done={done} config={config} exercise={exercise} /> : null}
+          {done ? <Tally done={done} config={config} exercise={exercise} /> : null}
 
-        {/* The verdict on a change, in the order it is useful: what was done,
-            then anything else, then the approval. */}
-        {review ? <ConsoleReview systemId={systemId} {...review} /> : null}
+          {/* The verdict on a change, in the order it is useful: what was done,
+              then anything else, then the approval. */}
+          {review ? <ConsoleReview systemId={systemId} {...review} /> : null}
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              setDone(undefined);
-              setSeenEnough(false);
-              setAttempt((current) => current + 1);
-            }}
-          >
-            {review ? "Fly it again" : "Run it again"}
-          </button>
-          <Link href={`/designer/systems/${systemId}`} className="btn">
-            Back to the system
-          </Link>
-          <Link href={`/designer/systems/${systemId}/gui`} className="btn">
-            The console
-          </Link>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setDone(undefined);
+                setSeenEnough(false);
+                setAttempt((current) => current + 1);
+              }}
+            >
+              {review ? "Fly it again" : "Run it again"}
+            </button>
+            <Link href={`/designer/systems/${systemId}`} className="btn">
+              Back to the system
+            </Link>
+            <Link href={`/designer/systems/${systemId}/gui`} className="btn">
+              The console
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -117,10 +129,23 @@ export function ConsoleRehearsal({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {review ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-panel-raised px-6 py-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-panel-raised px-6 py-2">
           <span className="chip status-warn">your change</span>
+          {/* What to look for, in the designer's own words.
+              "Fly it and see" on its own left them hunting a change they
+              could no longer remember the wording of, which is most of how a
+              change that was made comes to look like one that was not. The
+              account of what was done to get it waits on the closing panel,
+              where it can be read rather than skimmed mid-run. */}
           <p className="min-w-0 flex-1 text-xs text-muted">
-            This is the console with your change in it. Fly it and see.
+            {review.requests.at(-1) ? (
+              <>
+                Look for:{" "}
+                <span className="italic">“{review.requests.at(-1)}”</span>
+              </>
+            ) : (
+              "This is the console with your change in it. Fly it and see."
+            )}
           </p>
           <button
             type="button"
