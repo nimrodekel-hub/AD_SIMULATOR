@@ -32,10 +32,12 @@ export interface Usage {
  * model simply prints no estimate rather than a wrong one.
  */
 const RATES: Record<string, { in: number; out: number }> = {
+  "claude-fable-5-1": { in: 10, out: 50 },
+  "claude-fable-5": { in: 10, out: 50 },
   "claude-opus-5": { in: 5, out: 25 },
+  "claude-opus-4-8": { in: 5, out: 25 },
   "claude-sonnet-5": { in: 2, out: 10 },
   "claude-haiku-4-5": { in: 1, out: 5 },
-  "claude-fable-5-1": { in: 10, out: 50 },
 };
 
 /** Cache reads are a tenth of input; a 1-hour write is double it. */
@@ -287,6 +289,54 @@ export function describeAiError(reason: unknown): string {
 }
 
 /* ------------------------------------------------------------------ */
+/* Declined requests                                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Asks the API to re-run a policy-declined request on a substitute model.
+ *
+ * This app writes air-defence engagements: silent inbound tracks, engagement
+ * envelopes, when an operator may fire. That is exactly the shape of content a
+ * safety classifier can decline, and until now a decline arrived as a dead end
+ * — "the model declined this request", mid-way through a trainee starting a
+ * run or a designer correcting an exercise, with nothing to do about it.
+ *
+ * `"default"` rather than a named substitute: which model is the right one
+ * depends on *why* the request was declined, the routing is decided
+ * server-side, and naming one would leave a migration owing the day it is
+ * retired.
+ */
+const FALLBACK_BETA = "server-side-fallback-2026-07-01";
+
+/**
+ * Whether this account can use the fallback beta. Null until it has been tried.
+ *
+ * The opt-in must never be the thing that breaks the app. It is a beta, and a
+ * beta an organisation is not enrolled in is rejected — so the first rejection
+ * turns it off for the life of the process and the call goes again without it.
+ * A robustness feature that can take every AI call down with it is not one.
+ */
+let fallbacksUsable: boolean | null = null;
+
+/** Whether a 400 is the account refusing the beta rather than a bad request. */
+function rejectedTheBeta(reason: unknown): boolean {
+  if (!(reason instanceof Anthropic.APIError)) return false;
+  if (reason.status !== 400) return false;
+  const text = apiErrorText(reason).toLowerCase();
+  return text.includes("fallback") || text.includes("beta");
+}
+
+/** The parts of a reply this app reads, from either the beta or plain path. */
+interface Parsed<T> {
+  parsed_output: T | null | undefined;
+  stop_reason: string | null;
+  refusalCategory: string | null;
+  usage: Usage;
+  /** The model that actually answered — not always the one asked for. */
+  served: string;
+}
+
+/* ------------------------------------------------------------------ */
 /* Structured output                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -333,26 +383,68 @@ export async function structured<T>({
   if (config.anthropic.mock && mock) return mock();
 
   const model = modelFor(label);
-  const response = await withRetry(label, () =>
-    anthropic().messages.parse({
-      model,
-      max_tokens: maxTokens,
-      thinking: { type: "adaptive" },
-      system: cacheableSystem(system),
-      messages,
-      output_config: {
-        effort,
-        format: zodOutputFormat(schema),
-      },
-    }),
-  );
+  const request = {
+    model,
+    max_tokens: maxTokens,
+    thinking: { type: "adaptive" as const },
+    system: cacheableSystem(system),
+    messages,
+    output_config: {
+      effort,
+      format: zodOutputFormat(schema),
+    },
+  };
 
-  reportUsage(label, model, response.usage as Usage);
+  /* Ask for the fallback, and take it off the table for good the first time
+     the account says no — see `fallbacksUsable`. */
+  const ask = async (): Promise<Parsed<T>> => {
+    if (fallbacksUsable !== false) {
+      try {
+        const beta = await anthropic().beta.messages.parse({
+          ...request,
+          betas: [FALLBACK_BETA],
+          fallbacks: "default",
+        });
+        fallbacksUsable = true;
+        return {
+          parsed_output: beta.parsed_output as T | null | undefined,
+          stop_reason: beta.stop_reason,
+          refusalCategory: beta.stop_details?.category ?? null,
+          usage: beta.usage as Usage,
+          served: beta.model,
+        };
+      } catch (reason) {
+        if (!rejectedTheBeta(reason)) throw reason;
+        fallbacksUsable = false;
+        console.log(
+          "[ai:fallbacks] this account cannot use " +
+            `${FALLBACK_BETA}; carrying on without it`,
+        );
+      }
+    }
+
+    const plain = await anthropic().messages.parse(request);
+    return {
+      parsed_output: plain.parsed_output as T | null | undefined,
+      stop_reason: plain.stop_reason,
+      refusalCategory: plain.stop_details?.category ?? null,
+      usage: plain.usage as Usage,
+      served: plain.model,
+    };
+  };
+
+  const response = await withRetry(label, ask);
+
+  // The model that answered, not the one asked for: a fallback bills at its
+  // own rates, so logging the requested model would misprice the line.
+  reportUsage(label, response.served, response.usage);
 
   if (response.stop_reason === "refusal") {
     throw new Error(
-      `The model declined this request (${response.stop_details?.category ?? "unspecified"}). ` +
-        "Rephrase the operational detail and try again.",
+      "The model declined to write this one" +
+        (response.refusalCategory ? ` (${response.refusalCategory})` : "") +
+        ". A substitute was tried and declined it too. Reword the operational " +
+        "detail — it is usually one specific phrase rather than the whole request.",
     );
   }
   if (!response.parsed_output) {
@@ -462,7 +554,8 @@ export function streamChat({
                 }
               }
 
-              reportUsage(label, model, (await stream.finalMessage()).usage as Usage);
+              const finished = await stream.finalMessage();
+              reportUsage(label, finished.model, finished.usage as Usage);
             },
             () => !wroteText,
           );
