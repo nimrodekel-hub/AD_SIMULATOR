@@ -1,24 +1,25 @@
 import "server-only";
 import { DATA_PATHS, systemPaths } from "../config";
 import {
-  DilemmaEntrySchema,
+  ScenarioEntrySchema,
   GuiTemplateSchema,
   SimulatedSystemSchema,
   SystemProfileSchema,
-  type DilemmaDraft,
-  type DilemmaEntry,
+  type ScenarioDraft,
+  type ScenarioEntry,
   type GuiTemplate,
   type SimulatedSystem,
   type SystemProfile,
 } from "../domain/schemas";
 import { repoFiles } from "./repo-files";
+import { currentNames } from "../domain/stored-names";
 
 /**
  * The knowledge base, organised by simulated system.
  *
  * Several systems exist side by side, and each one owns everything that only
  * makes sense inside it: how it behaves, what its console looks like, the
- * screenshots it was built from, and the dilemmas taught within it. A dilemma
+ * screenshots it was built from, and the scenarios taught within it. A scenario
  * is a judgement call *within* a system — its numbers, its identification
  * states and the actions it offers are only meaningful there — so it is stored
  * there rather than in a shared pool.
@@ -98,15 +99,15 @@ export async function getSystemBundle(id: string): Promise<{
   system: SimulatedSystem | null;
   profile: SystemProfile | null;
   gui: GuiTemplate | null;
-  dilemmas: DilemmaEntry[];
+  scenarios: ScenarioEntry[];
 }> {
-  const [system, profile, gui, dilemmas] = await Promise.all([
+  const [system, profile, gui, scenarios] = await Promise.all([
     getSystem(id),
     getSystemProfile(id),
     getGuiTemplate(id),
-    listDilemmas(id),
+    listScenarios(id),
   ]);
-  return { system, profile, gui, dilemmas };
+  return { system, profile, gui, scenarios };
 }
 
 /* ------------------------------------------------------------------ */
@@ -114,7 +115,7 @@ export async function getSystemBundle(id: string): Promise<{
 /* ------------------------------------------------------------------ */
 
 /**
- * Read by scenario generation, debriefing and the console builder alike. One
+ * Read by exercise generation, debriefing and the console builder alike. One
  * per system, and only an approved one governs anything.
  */
 export async function getSystemProfile(
@@ -155,7 +156,7 @@ export async function saveSystemProfile(
 
 /**
  * One console template per system — section 3 of the brief rules out runtime
- * GUI generation, so a system's console is built once and every scenario on
+ * GUI generation, so a system's console is built once and every exercise on
  * that system renders inside it.
  */
 export async function getGuiTemplate(
@@ -319,71 +320,71 @@ const extensionOf = (name: string) =>
   name.slice(name.lastIndexOf(".") + 1).toLowerCase();
 
 /* ------------------------------------------------------------------ */
-/* Dilemmas — one system's captured expertise                          */
+/* Scenarios — one system's captured expertise                          */
 /* ------------------------------------------------------------------ */
 
-const dilemmaFile = (systemId: string, id: string) =>
-  `${systemPaths(systemId).dilemmas}/${id}.json`;
+const scenarioFile = (systemId: string, id: string) =>
+  `${systemPaths(systemId).scenarios}/${id}.json`;
 
-export async function listDilemmas(systemId: string): Promise<DilemmaEntry[]> {
-  const files = await repoFiles().list(systemPaths(systemId).dilemmas);
+export async function listScenarios(systemId: string): Promise<ScenarioEntry[]> {
+  const files = await repoFiles().list(systemPaths(systemId).scenarios);
   const entries = await Promise.all(
     files
       .filter((name) => name.endsWith(".json"))
-      .map((name) => getDilemma(systemId, name.replace(/\.json$/, ""))),
+      .map((name) => getScenario(systemId, name.replace(/\.json$/, ""))),
   );
 
   return entries
-    .filter((entry): entry is DilemmaEntry => entry !== null)
+    .filter((entry): entry is ScenarioEntry => entry !== null)
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
 /**
- * Every dilemma in every system.
+ * Every scenario in every system.
  *
  * Only the instructor's views need this: they report on runs across all
  * systems, so they need to resolve a title without knowing which system a run
  * belonged to. Training never uses it — matching is always scoped to one
  * system.
  */
-export async function listAllDilemmas(): Promise<DilemmaEntry[]> {
+export async function listAllScenarios(): Promise<ScenarioEntry[]> {
   const systems = await listSystems();
   const perSystem = await Promise.all(
-    systems.map((system) => listDilemmas(system.id)),
+    systems.map((system) => listScenarios(system.id)),
   );
   return perSystem.flat();
 }
 
-export async function listApprovedDilemmas(
+export async function listApprovedScenarios(
   systemId: string,
-): Promise<DilemmaEntry[]> {
-  return (await listDilemmas(systemId)).filter(
+): Promise<ScenarioEntry[]> {
+  return (await listScenarios(systemId)).filter(
     (entry) => entry.status === "approved",
   );
 }
 
-export async function getDilemma(
+export async function getScenario(
   systemId: string,
   id: string,
-): Promise<DilemmaEntry | null> {
-  const raw = await repoFiles().read(dilemmaFile(systemId, id));
+): Promise<ScenarioEntry | null> {
+  const raw = await repoFiles().read(scenarioFile(systemId, id));
   if (raw === null) return null;
 
-  const parsed = DilemmaEntrySchema.safeParse(JSON.parse(raw));
+  const parsed = ScenarioEntrySchema.safeParse(currentNames(JSON.parse(raw)));
   if (!parsed.success) {
-    console.error(`Skipping malformed dilemma ${id}:`, parsed.error.message);
+    console.error(`Skipping malformed scenario ${id}:`, parsed.error.message);
     return null;
   }
   return parsed.data;
 }
 
-/** Creates a new draft entry from a freshly extracted dilemma. */
-export async function createDilemmaDraft(
+/** Creates a new draft entry from a freshly extracted scenario. */
+export async function createScenarioDraft(
   systemId: string,
-  draft: DilemmaDraft,
+  draft: ScenarioDraft,
   sourceChatLog: string,
-): Promise<DilemmaEntry> {
-  const entry: DilemmaEntry = {
+): Promise<ScenarioEntry> {
+  const entry: ScenarioEntry = {
     ...draft,
     id: crypto.randomUUID(),
     system_id: systemId,
@@ -392,42 +393,42 @@ export async function createDilemmaDraft(
     created_at: new Date().toISOString(),
     approved_at: null,
   };
-  await saveDilemma(entry, `Add dilemma draft: ${entry.title}`);
+  await saveScenario(entry, `Add scenario draft: ${entry.title}`);
   return entry;
 }
 
-export async function saveDilemma(
-  entry: DilemmaEntry,
+export async function saveScenario(
+  entry: ScenarioEntry,
   message?: string,
 ): Promise<void> {
-  const validated = DilemmaEntrySchema.parse(entry);
+  const validated = ScenarioEntrySchema.parse(entry);
   await repoFiles().write(
-    dilemmaFile(validated.system_id, validated.id),
+    scenarioFile(validated.system_id, validated.id),
     serialise(validated),
-    message ?? `Update dilemma: ${validated.title}`,
+    message ?? `Update scenario: ${validated.title}`,
   );
 }
 
 /** Flips a draft to approved, which is what makes it visible to trainees. */
-export async function approveDilemma(
+export async function approveScenario(
   systemId: string,
   id: string,
-): Promise<DilemmaEntry | null> {
-  const entry = await getDilemma(systemId, id);
+): Promise<ScenarioEntry | null> {
+  const entry = await getScenario(systemId, id);
   if (!entry) return null;
 
-  const approved: DilemmaEntry = {
+  const approved: ScenarioEntry = {
     ...entry,
     status: "approved",
     approved_at: new Date().toISOString(),
   };
-  await saveDilemma(approved, `Approve dilemma: ${approved.title}`);
+  await saveScenario(approved, `Approve scenario: ${approved.title}`);
   return approved;
 }
 
-export async function deleteDilemma(
+export async function deleteScenario(
   systemId: string,
   id: string,
 ): Promise<void> {
-  await repoFiles().remove(dilemmaFile(systemId, id), `Remove dilemma ${id}`);
+  await repoFiles().remove(scenarioFile(systemId, id), `Remove scenario ${id}`);
 }
