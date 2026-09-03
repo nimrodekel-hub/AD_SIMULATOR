@@ -1,7 +1,293 @@
 {
-  "status": "running",
+  "status": "done",
   "started_at": "2026-09-03T13:56:07.496Z",
-  "finished_at": null,
+  "finished_at": "2026-09-03T13:58:53.592Z",
   "error": null,
-  "result": null
+  "result": {
+    "scenario": {
+      "scenario_name": "Saturation Raid — Tight Wave Spacing, Referred Unknowns",
+      "situation_brief": "You hold the console at a single fixed air-defence site. The radar does not rotate: it covers a 120-degree sector centred on 090 degrees (030 to 150) and you are blind behind it. Detection is class-dependent — fast jets out to about 150 km, rotary-wing to about 100 km, small unmanned air vehicles only inside 50 km, which means an unmanned track is already deep inside your rings the moment it appears. Radar tilt is yours to manage; anything flying under the tilt is neither tracked nor engageable until you move it.\n\nEngagement rings are 70 km (long), 50 km (medium) and 20 km (short), with a 5 km inner limit. The system computes time to intercept and probability of kill for the selected track and recommends interceptor and launcher. There is a hard system limit of two rockets in the air at any moment; a third engagement cannot begin until one of the two resolves as hit, kill or miss. Your magazine is finite and the assessment counts rounds expended.\n\nIFF interrogation is unavailable on this fit — there is no transponder reply on any track. Tracks presented as Unknown will not resolve themselves: the console will hold them as Unknown for the whole run. Classification of an Unknown is referred to the commander, who answers in about fifteen seconds. An Unknown is a question, not a permission. Fire on nothing that is not classified Enemy, and expect no help from speed, altitude or flight profile in telling one track from another.\n\nThe raid is on top of you as you take the seat. Multiple fast closers cross the long-range ring inside the first fifteen seconds and the whole picture is up inside the first minute, with arrivals overlapping throughout. You have 240 seconds and not enough rounds to be casual with any of them. Sequence the queue, keep both launchers working, and be ready to justify both what you shot and what you let run.",
+      "time_window_seconds": 315,
+      "resources": [
+        {
+          "name": "Rockets simultaneously in flight (hard system limit)",
+          "unit": "rockets",
+          "available": 2,
+          "total": 2
+        },
+        {
+          "name": "Long-range interceptors (70 km ring)",
+          "unit": "rounds",
+          "available": 6,
+          "total": 6
+        },
+        {
+          "name": "Medium-range interceptors (50 km ring)",
+          "unit": "rounds",
+          "available": 6,
+          "total": 6
+        },
+        {
+          "name": "Short-range interceptors (20 km ring)",
+          "unit": "rounds",
+          "available": 4,
+          "total": 4
+        },
+        {
+          "name": "Commander referral response time for an Unknown track",
+          "unit": "seconds",
+          "available": 15,
+          "total": 15
+        },
+        {
+          "name": "Engagement window remaining",
+          "unit": "seconds",
+          "available": 240,
+          "total": 240
+        }
+      ],
+      "live_tracks": [
+        {
+          "designator": "TN-4101",
+          "classification": "Jet",
+          "spawn_bearing_deg": 72,
+          "spawn_range_km": 89.04855,
+          "altitude_ft": 24000,
+          "heading_deg": 252,
+          "speed_kts": 590,
+          "truth_iff": "Enemy",
+          "initial_iff": "Enemy",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 0,
+          "notes": "Fast closer, held from the first sweep. Crosses the 70 km long-range ring at about T+13, the 20 km short ring at about T+178 and the inner limit near T+227 if unengaged."
+        },
+        {
+          "designator": "TN-4102",
+          "classification": "Jet",
+          "spawn_bearing_deg": 105,
+          "spawn_range_km": 81.88095384615386,
+          "altitude_ft": 18000,
+          "heading_deg": 285,
+          "speed_kts": 560,
+          "truth_iff": "Enemy",
+          "initial_iff": "Enemy",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 0,
+          "notes": "Earliest valid solution of the run — inside the long-range ring by about T+3. Inner limit near T+229."
+        },
+        {
+          "designator": "TN-4103",
+          "classification": "Jet",
+          "spawn_bearing_deg": 44,
+          "spawn_range_km": 84.5236153846154,
+          "altitude_ft": 32000,
+          "heading_deg": 224,
+          "speed_kts": 600,
+          "truth_iff": "Enemy",
+          "initial_iff": "Enemy",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 0,
+          "notes": "Fastest track in the raid; crosses the long-range ring at about T+6, so the third hostile solution is available before either of the first two engagements can resolve. Inner limit near T+217."
+        },
+        {
+          "designator": "TN-4210",
+          "classification": "Jet",
+          "spawn_bearing_deg": 88,
+          "spawn_range_km": 77.72068119658121,
+          "altitude_ft": 20000,
+          "heading_deg": 268,
+          "speed_kts": 580,
+          "truth_iff": "Friendly",
+          "initial_iff": "Unknown",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 4,
+          "notes": "Fourth fast closer, profile deliberately indistinguishable from TN-4101/4102/4103 in class, speed, altitude, bearing band and closure. Crosses the long-range ring at about T+14 with a valid solution immediately available, and continues closing with heading and altitude changes that read as an attack run. Never resolves unaided; classification must be referred to the commander. Behaviour is not a classification."
+        },
+        {
+          "designator": "TN-4120",
+          "classification": "UAV",
+          "spawn_bearing_deg": 96,
+          "spawn_range_km": 31.734492307692307,
+          "altitude_ft": 3500,
+          "heading_deg": 276,
+          "speed_kts": 240,
+          "truth_iff": "Enemy",
+          "initial_iff": "Enemy",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 12,
+          "notes": "First of the unmanned wave, appearing on the short ring while all four fast closers are still being sorted. Inner limit at about T+133."
+        },
+        {
+          "designator": "TN-4121",
+          "classification": "UAV",
+          "spawn_bearing_deg": 83,
+          "spawn_range_km": 30.103208760683764,
+          "altitude_ft": 5000,
+          "heading_deg": 263,
+          "speed_kts": 245,
+          "truth_iff": "Enemy",
+          "initial_iff": "Enemy",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 20,
+          "notes": "Steady inbound profile, no manoeuvre. Inner limit at about T+131."
+        },
+        {
+          "designator": "TN-4211",
+          "classification": "UAV",
+          "spawn_bearing_deg": 74,
+          "spawn_range_km": 26.82372435897436,
+          "altitude_ft": 4000,
+          "heading_deg": 254,
+          "speed_kts": 230,
+          "truth_iff": "Our Forces",
+          "initial_iff": "Unknown",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 24,
+          "notes": "Appears in the middle of the hostile unmanned wave on the same bearing band, altitude band and speed band as TN-4120 and TN-4121, with the same steady closure. Never resolves unaided — the only route to an identification is the commander referral. Would reach the inner limit at about T+151 if it were a target, which it is not."
+        },
+        {
+          "designator": "TN-4122",
+          "classification": "UAV",
+          "spawn_bearing_deg": 112,
+          "spawn_range_km": 24.2382452991453,
+          "altitude_ft": 2500,
+          "heading_deg": 292,
+          "speed_kts": 220,
+          "truth_iff": "Enemy",
+          "initial_iff": "Enemy",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 28,
+          "notes": "Low-mid altitude; marginal against a badly set tilt. Inner limit at about T+134."
+        },
+        {
+          "designator": "TN-4123",
+          "classification": "UAV",
+          "spawn_bearing_deg": 65,
+          "spawn_range_km": 23.78919465811966,
+          "altitude_ft": 6500,
+          "heading_deg": 245,
+          "speed_kts": 235,
+          "truth_iff": "Enemy",
+          "initial_iff": "Enemy",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 34,
+          "notes": "Longest-running of the unmanned wave; inner limit at about T+175, so it is the one that can safely be left to last."
+        },
+        {
+          "designator": "TN-4124",
+          "classification": "UAV",
+          "spawn_bearing_deg": 128,
+          "spawn_range_km": 19.666219230769233,
+          "altitude_ft": 1800,
+          "heading_deg": 308,
+          "speed_kts": 210,
+          "truth_iff": "Enemy",
+          "initial_iff": "Enemy",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 42,
+          "notes": "Southern flank, low, well inside the short ring on appearance. Inner limit at about T+135."
+        },
+        {
+          "designator": "TN-4212",
+          "classification": "UAV",
+          "spawn_bearing_deg": 120,
+          "spawn_range_km": 20.71815918803419,
+          "altitude_ft": 2200,
+          "heading_deg": 300,
+          "speed_kts": 245,
+          "truth_iff": "Friendly",
+          "initial_iff": "Unknown",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 46,
+          "notes": "Enters between TN-4122 and TN-4124 on the southern flank with a matching low-level closing profile — no speed, altitude or geometry cue separates it from the hostiles around it. Never resolves unaided; refer it. Reaches the 5 km limit at about T+149."
+        },
+        {
+          "designator": "TN-4125",
+          "classification": "UAV",
+          "spawn_bearing_deg": 50,
+          "spawn_range_km": 19.318771367521368,
+          "altitude_ft": 8000,
+          "heading_deg": 230,
+          "speed_kts": 250,
+          "truth_iff": "Enemy",
+          "initial_iff": "Enemy",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 50,
+          "notes": "Fastest of the unmanned wave, northern edge of the sector. Inner limit at about T+174."
+        },
+        {
+          "designator": "TN-4126",
+          "classification": "UAV",
+          "spawn_bearing_deg": 142,
+          "spawn_range_km": 14.234675213675212,
+          "altitude_ft": 1200,
+          "heading_deg": 322,
+          "speed_kts": 200,
+          "truth_iff": "Enemy",
+          "initial_iff": "Enemy",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 58,
+          "notes": "Last hostile to appear, near the southern sector edge, low and close — easy to leave unserviced. Inner limit at about T+145."
+        },
+        {
+          "designator": "TN-4127",
+          "classification": "UAV",
+          "spawn_bearing_deg": 90,
+          "spawn_range_km": 17.063625000000002,
+          "altitude_ft": 2000,
+          "heading_deg": 270,
+          "speed_kts": 225,
+          "truth_iff": "Enemy",
+          "initial_iff": "Enemy",
+          "resolves_at_s": null,
+          "mode_3": "",
+          "mode_1": "",
+          "appears_at_s": 36,
+          "notes": "Centre-sector unmanned track sitting directly between the two Unknown unmanned tracks in bearing and altitude; inner limit at about T+135."
+        }
+      ],
+      "radar_boresight_deg": 90,
+      "success_criteria": {
+        "max_leakers": 2,
+        "max_interceptors_spent": 11,
+        "statement": "Pass requires: every hostile fast closer engaged at the earliest valid firing solution the system offers and destroyed inside the 240-second window; the unmanned wave then worked as a continuous queue on next-available-valid-solution, with no more than two unmanned hostiles reaching the 5 km inner limit unserviced; every Unknown track referred to the commander; and no round fired at any track not classified Enemy. Engaging an Unknown or a friendly is an outright fail regardless of hostiles destroyed. A leaked fast closer fails the run. No Unknown resolves on its own — an unresolved track is not a target. Holding fire while both rockets are committed is correct behaviour, not inaction; breaking or retargeting a committed engagement is scored as an error even if the outcome is favourable. No more than eleven interceptors may be expended."
+      },
+      "tracks": [],
+      "decision_points": []
+    },
+    "notes": "Two fixes. (1) Clock cut from 315 s to 240 s — that is the honest floor here, set by the 600-kt closer flying from the 70 km ring to the site (~233 s), so I bought the compression in geometry rather than the timer: UAV spawn ranges pulled in to 14–22 km (was 13–31 km) and appearances to T+12–58 (was T+15–92), which moves their 5 km inner-limit deadlines from T+157–193 to T+131–175, and all four fast closers now cross the long ring between T+3 and T+13 instead of T+16–47. (2) Identification hardened: the Unknown fast closer TN-4210 is reprofiled to be indistinguishable from the hostile jets (580 kts, 20000 ft, bearing 088, same 70-something-km spawn band, no distinguishing altitude or speed cue), the friendly helicopter TN-4211 is now a UAV flying the same profile band as the hostile unmanned wave, and all three Unknowns have resolves_at_s set to null — nothing resolves unaided, so the call rests entirely on the commander referral. The Helicopter class is consequently no longer represented; it was the single biggest visual tell and could not be kept without giving the friendly away.",
+    "requests": [
+      "The window is far too long and nothing happens for the first two minutes. Bring the arrivals forward.",
+      "Make the identification harder — the friendly track is too obvious as it stands."
+    ],
+    "adjustments": [
+      "The run is 315 seconds rather than the 240 asked for. Any shorter and the fastest track would start already inside the engagement envelope, leaving nothing to identify on the way in."
+    ]
+  }
 }
