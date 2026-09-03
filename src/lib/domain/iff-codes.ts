@@ -4,8 +4,8 @@ import type { TransponderKind } from "./schemas";
  * The two transponder codes an interrogator can get back, and their rules.
  *
  * One module because the same rules are needed in four places — the form the
- * designer types codes into, the scenario the model generates, the test
- * scenario built in code, and the console that shows them — and a format
+ * designer types codes into, the exercise the model generates, the test
+ * exercise built in code, and the console that shows them — and a format
  * enforced in three of the four is a format that quietly breaks in the fourth.
  *
  * **Mode 3/A** is four octal digits, each 0–7. It is the code civil air
@@ -42,7 +42,7 @@ export const cleanMode1 = (raw: string): string =>
  * Worth naming in the console rather than leaving as four digits: an operator
  * who does not recognise 7700 has to be told what it is, and being told during
  * a run is the whole point of a training simulator. All three are octal, so
- * they are legal codes a scenario can legitimately hand out.
+ * they are legal codes an exercise can legitimately hand out.
  */
 export const WELL_KNOWN_MODE_3: Record<string, string> = {
   "7500": "unlawful interference — hijack",
@@ -64,7 +64,7 @@ export const meaningOfMode3 = (code: string): string | null =>
  * right one when somebody reviews it.
  *
  * The emergency codes are deliberately **not** reachable here. A hijack squawk
- * is a scenario decision — the designer's or the generator's — not something
+ * is an exercise decision — the designer's or the generator's — not something
  * that should turn up by chance in a routine exercise.
  */
 export function codesFor(
