@@ -4,15 +4,15 @@ import { describeAiError } from "@/lib/ai/client";
 import {
   CONFIDENCE_THRESHOLD,
   MAX_CLARIFICATION_ROUNDS,
-  matchDilemma,
-} from "@/lib/ai/tasks/match-dilemma";
+  matchScenario,
+} from "@/lib/ai/tasks/match-scenario";
 import { ClarificationRoundSchema } from "@/lib/domain/schemas";
-import { getSystem, listApprovedDilemmas } from "@/lib/store/kb";
+import { getSystem, listApprovedScenarios } from "@/lib/store/kb";
 
 /**
- * Routes a trainee's free-text request to a dilemma.
+ * Routes a trainee's free-text request to a scenario.
  *
- * Matching is scoped to the system the trainee chose. A dilemma taught inside
+ * Matching is scoped to the system the trainee chose. A scenario taught inside
  * one system assumes that system's identification states, actions and numbers,
  * so offering it against another would train someone on a procedure their
  * console does not have.
@@ -20,7 +20,7 @@ import { getSystem, listApprovedDilemmas } from "@/lib/store/kb";
  * Returns one of three shapes, and the client renders whichever it gets:
  *   - `needs_clarification` — the matcher is unsure and has one question.
  *   - `matched`             — confident enough, or out of clarification rounds.
- *   - `no_dilemmas`         — nothing approved for this system yet.
+ *   - `no_scenarios`         — nothing approved for this system yet.
  */
 
 /**
@@ -31,7 +31,7 @@ import { getSystem, listApprovedDilemmas } from "@/lib/store/kb";
  * surviving a slow step, though: past about a minute it is the browser that
  * gives up, not the server. Measured against production this route stays well
  * inside that, so it answers in the request. The three that do not — extracting
- * a dilemma, generating a scenario and building a console — hand back a job
+ * a scenario, generating an exercise and building a console — hand back a job
  * record instead and let the page ask how it is getting on. See
  * `lib/store/job.ts`.
  */
@@ -54,16 +54,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "System not found" }, { status: 404 });
   }
 
-  const dilemmas = await listApprovedDilemmas(parsed.data.system_id);
-  if (dilemmas.length === 0) {
-    return NextResponse.json({ status: "no_dilemmas" as const });
+  const scenarios = await listApprovedScenarios(parsed.data.system_id);
+  if (scenarios.length === 0) {
+    return NextResponse.json({ status: "no_scenarios" as const });
   }
 
   try {
-    const match = await matchDilemma({
+    const match = await matchScenario({
       request: parsed.data.request,
       clarifications: parsed.data.clarifications,
-      dilemmas,
+      scenarios,
     });
 
     // The brief caps clarification at three rounds. Once spent, commit to the
@@ -83,12 +83,12 @@ export async function POST(request: NextRequest) {
     }
 
     const chosen =
-      dilemmas.find((entry) => entry.id === match.dilemma_entry_id) ??
-      dilemmas[0];
+      scenarios.find((entry) => entry.id === match.scenario_entry_id) ??
+      scenarios[0];
 
     return NextResponse.json({
       status: "matched" as const,
-      dilemma: { id: chosen.id, title: chosen.title },
+      scenario: { id: chosen.id, title: chosen.title },
       confidence: match.confidence,
       reasoning: match.reasoning,
       suggested_difficulty: match.suggested_difficulty,
