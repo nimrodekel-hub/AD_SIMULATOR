@@ -10,6 +10,7 @@ import {
 } from "@/components/system-spec-fields";
 import type {
   IffState,
+  InterceptorType,
   SystemProfile,
   SystemProfileDraft,
   TrackClassification,
@@ -254,7 +255,16 @@ export function SystemProfileForm({
             <button
               type="button"
               className="btn"
-              onClick={() => setPhase("reviewing")}
+              onClick={() => {
+                /* Carry the figures across.
+                   They are the designer's own typing, not something a model
+                   has to read, so there is no reason the only bridge from
+                   this screen to the profile should be the extraction call.
+                   Without this, anyone who corrected a number here and
+                   pressed this button watched the correction disappear. */
+                setDraft({ ...draft, ...spec });
+                setPhase("reviewing");
+              }}
             >
               Back to the profile
             </button>
@@ -271,6 +281,12 @@ export function SystemProfileForm({
     key: K,
     value: SystemProfileDraft[K],
   ) => setDraft({ ...draft, [key]: value });
+
+  const setRound = (index: number, next: InterceptorType) =>
+    set("engagement", {
+      ...draft.engagement,
+      interceptors: replaceAt(draft.engagement.interceptors, index, next),
+    });
 
   return (
     <div className="space-y-8">
@@ -700,6 +716,113 @@ export function SystemProfileForm({
             />
           </Labelled>
         </div>
+
+        {/* The three figures the simulation actually enforces.
+            They were reachable only from the questions screen, which made
+            this page a dead end: it listed them as the reason the profile
+            could not be approved and offered nowhere to type them, so the
+            approval stayed greyed out however much was corrected here. */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Labelled
+            label="Interceptors in the air at once"
+            hint="The hard limit. A further launch is refused until one resolves."
+          >
+            <NullableNumber
+              value={draft.engagement.max_simultaneous}
+              ariaLabel="Interceptors in the air at once"
+              onChange={(max_simultaneous) =>
+                set("engagement", { ...draft.engagement, max_simultaneous })
+              }
+            />
+          </Labelled>
+          <Labelled
+            label="Rounds available"
+            hint="How deep the magazine is for one engagement."
+          >
+            <NullableNumber
+              value={draft.engagement.magazine_depth}
+              ariaLabel="Rounds available"
+              onChange={(magazine_depth) =>
+                set("engagement", { ...draft.engagement, magazine_depth })
+              }
+            />
+          </Labelled>
+        </div>
+
+        <div>
+          <span className="label">Interceptor types</span>
+          <p className="mb-2 max-w-2xl text-xs leading-relaxed text-muted">
+            One entry per round the operator can choose between. A system with
+            a single round needs one line. Speed sets the time of flight, which
+            is how much earlier than impact the decision has to be made.
+          </p>
+          <div className="space-y-2">
+            {draft.engagement.interceptors.map((round, index) => (
+              <div key={index} className="flex flex-wrap items-end gap-2">
+                <input
+                  className="field data w-40"
+                  placeholder="long range"
+                  aria-label="Interceptor name"
+                  value={round.name}
+                  onChange={(e) =>
+                    setRound(index, { ...round, name: e.target.value })
+                  }
+                />
+                <RoundField
+                  label="min km"
+                  value={round.min_range_km}
+                  onChange={(min_range_km) =>
+                    setRound(index, { ...round, min_range_km })
+                  }
+                />
+                <RoundField
+                  label="max km"
+                  value={round.max_range_km}
+                  onChange={(max_range_km) =>
+                    setRound(index, { ...round, max_range_km })
+                  }
+                />
+                <RoundField
+                  label="kts"
+                  value={round.speed_kts}
+                  onChange={(speed_kts) =>
+                    setRound(index, { ...round, speed_kts })
+                  }
+                />
+                <RemoveButton
+                  label={`Remove ${round.name || "interceptor"}`}
+                  onClick={() =>
+                    set("engagement", {
+                      ...draft.engagement,
+                      interceptors: removeAt(
+                        draft.engagement.interceptors,
+                        index,
+                      ),
+                    })
+                  }
+                />
+              </div>
+            ))}
+            <AddButton
+              label="Add an interceptor type"
+              onClick={() =>
+                set("engagement", {
+                  ...draft.engagement,
+                  interceptors: [
+                    ...draft.engagement.interceptors,
+                    {
+                      name: "",
+                      min_range_km: draft.engagement.min_range_km,
+                      max_range_km: draft.engagement.max_range_km,
+                      speed_kts: 1600,
+                    },
+                  ],
+                })
+              }
+            />
+          </div>
+        </div>
+
         <Labelled label="Time of flight">
           <input
             className="field"
@@ -783,8 +906,8 @@ export function SystemProfileForm({
         gaps={gaps}
         lead={
           existing?.approved
-            ? "This profile was approved before these figures were required. Runs against it are using the simulator's own defaults for whatever is listed here — not this system's numbers. Fill them in under “Back to the questions” at the top of this page, then approve again."
-            : "This cannot be approved until the simulation has everything it runs on. Some of it — the rounds, the magazine, how many may be in the air — is entered under “Back to the questions” at the top of this page."
+            ? "This profile was approved before these figures were required. Runs against it are using the simulator's own defaults for whatever is listed here — not this system's numbers. Every one of them can be filled in on this page; approve again once they are."
+            : "This cannot be approved until the simulation has everything it runs on. All of it is on this page, under the headings named below."
         }
       />
 
@@ -805,11 +928,15 @@ export function SystemProfileForm({
         >
           Save as draft
         </button>
-        {gaps.length > 0 ? (
-          <span className="text-xs text-muted">
-            A draft can still be saved — it just does not drive anything yet.
-          </span>
-        ) : null}
+        {/* What the second button actually does, which is not the same thing
+            on a profile that is in force as on one that never was. Saving a
+            draft over an approved profile takes the system out of service,
+            and that is too large a consequence to leave unsaid. */}
+        <span className="min-w-0 flex-1 text-xs text-muted">
+          {existing?.approved
+            ? "Saving a draft takes this profile out of use until it is approved again — training runs would fall back to the simulator's own defaults."
+            : "A draft can still be saved — it just does not drive anything yet."}
+        </span>
       </div>
     </div>
   );
@@ -1009,6 +1136,32 @@ function NumberInput({
       value={Number.isFinite(value) ? value : 0}
       onChange={(e) => onChange(Number(e.target.value))}
     />
+  );
+}
+
+/** A narrow number with its unit above it, for a row of round figures. */
+function RoundField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (next: number) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-0.5 block text-[0.625rem] uppercase tracking-[0.1em] text-muted">
+        {label}
+      </span>
+      <input
+        type="number"
+        className="field data w-24"
+        aria-label={label}
+        value={Number.isFinite(value) ? value : 0}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+    </label>
   );
 }
 

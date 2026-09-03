@@ -106,7 +106,7 @@ export default async function TestSystemPage({
       fullHeight
     >
       {hostsTheScope && canInterrogate ? null : (
-        <div className="flex flex-col items-start gap-2 px-6 pt-4">
+        <div className="flex shrink-0 flex-col items-start gap-2 px-6 pt-4">
           {hostsTheScope ? null : (
             <p className="chip status-warn !normal-case">
               {html
