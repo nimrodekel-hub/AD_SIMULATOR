@@ -120,5 +120,7 @@ export const systemPaths = (systemId: string) => {
     dilemmaJob: `${root}/dilemma-job.json`,
     screenshots: `${root}/screenshots`,
     dilemmas: `${root}/dilemmas`,
+    /** Scenarios a designer has taken hold of, and the corrected versions. */
+    scenarios: `${root}/scenarios`,
   };
 };

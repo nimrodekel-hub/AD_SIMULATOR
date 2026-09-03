@@ -31,9 +31,29 @@ export default async function DesignerHome() {
       title="Simulated systems"
       subtitle="Each system has its own behaviour, console and dilemmas"
     >
-      {/* The layer above every system. Placed first because it is the thing
-          to get right before teaching anything, and because it is easy to
-          forget it exists once systems fill the page. */}
+      {/* The library of exercises. Placed beside general knowledge because
+          both are about everything rather than about one system, and because
+          what trainees are actually being given was invisible until it had a
+          front door. */}
+      <Link
+        href="/designer/simulations"
+        className="panel mb-6 block p-5 transition-colors hover:border-accent"
+      >
+        <div className="flex flex-wrap items-baseline gap-x-3">
+          <h2 className="text-base font-semibold">Exercises</h2>
+          <span className="chip">every engagement laid out so far</span>
+        </div>
+        <p className="mt-2 max-w-2xl text-sm text-muted">
+          Every engagement the generator has produced, across every system —
+          what each one puts in the air, what the trainee is told, and what
+          counts as success. If one is no good, say what is wrong with it in
+          your own words and it is laid out again.
+        </p>
+      </Link>
+
+      {/* The layer above every system. Placed near the top because it is the
+          thing to get right before teaching anything, and because it is easy
+          to forget it exists once systems fill the page. */}
       <Link
         href="/designer/knowledge"
         className="panel mb-6 block p-5 transition-colors hover:border-accent"

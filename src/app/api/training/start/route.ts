@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       // Only an approved profile governs generation. A draft is the designer
       // still working, and half-taught doctrine is worse than none.
       const profile = await getSystemProfile(body.system_id);
-      const scenario = await generateScenario(
+      const { scenario } = await generateScenario(
         dilemma,
         body.difficulty,
         profile?.approved ? profile : null,
