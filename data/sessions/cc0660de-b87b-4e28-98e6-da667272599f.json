@@ -262,8 +262,347 @@
     "dilemmas": []
   },
   "decisions_made": [],
-  "run_log": [],
-  "run_result": null,
+  "run_log": [
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-4101",
+      "detail": "TK-4101 detected, 91 km on 30°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-4102",
+      "detail": "TK-4102 detected, 85 km on 60°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-4103",
+      "detail": "TK-4103 detected, 84 km on 10°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-5201",
+      "detail": "TK-5201 detected, 36 km on 355°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-5202",
+      "detail": "TK-5202 detected, 33 km on 20°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-5203",
+      "detail": "TK-5203 detected, 33 km on 80°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-9003",
+      "detail": "TK-9003 detected, 21 km on 30°."
+    },
+    {
+      "t": 6.8,
+      "kind": "launched",
+      "designator": "TK-5203",
+      "detail": "interceptor launched at TK-5203 (32 km, intercept in 34 s, Pk 86%)."
+    },
+    {
+      "t": 10.1,
+      "kind": "detected",
+      "designator": "TK-9001",
+      "detail": "TK-9001 detected, 14 km on 350°."
+    },
+    {
+      "t": 18.6,
+      "kind": "launched",
+      "designator": "TK-5201",
+      "detail": "interceptor launched at TK-5201 (33 km, intercept in 35 s, Pk 87%)."
+    },
+    {
+      "t": 20,
+      "kind": "resolved",
+      "designator": "TK-4101",
+      "detail": "TK-4101 resolved to Enemy."
+    },
+    {
+      "t": 20,
+      "kind": "detected",
+      "designator": "TK-5204",
+      "detail": "TK-5204 detected, 29 km on 40°."
+    },
+    {
+      "t": 25,
+      "kind": "resolved",
+      "designator": "TK-4102",
+      "detail": "TK-4102 resolved to Enemy."
+    },
+    {
+      "t": 25,
+      "kind": "detected",
+      "designator": "TK-9002",
+      "detail": "TK-9002 detected, 36 km on 70°."
+    },
+    {
+      "t": 35,
+      "kind": "resolved",
+      "designator": "TK-4103",
+      "detail": "TK-4103 resolved to Enemy."
+    },
+    {
+      "t": 35,
+      "kind": "detected",
+      "designator": "TK-5205",
+      "detail": "TK-5205 detected, 25 km on 65°."
+    },
+    {
+      "t": 40.4,
+      "kind": "miss",
+      "designator": "TK-5203",
+      "detail": "interceptor missed TK-5203."
+    },
+    {
+      "t": 46.1,
+      "kind": "launched",
+      "designator": "TK-5205",
+      "detail": "interceptor launched at TK-5205 (24 km, intercept in 25 s, Pk 79%)."
+    },
+    {
+      "t": 50,
+      "kind": "detected",
+      "designator": "TK-5206",
+      "detail": "TK-5206 detected, 21 km on 5°."
+    },
+    {
+      "t": 53.5,
+      "kind": "hit",
+      "designator": "TK-5201",
+      "detail": "TK-5201 destroyed by interceptor. It was Enemy."
+    },
+    {
+      "t": 65,
+      "kind": "detected",
+      "designator": "TK-5207",
+      "detail": "TK-5207 detected, 19 km on 100°."
+    },
+    {
+      "t": 67.2,
+      "kind": "launched",
+      "designator": "TK-5207",
+      "detail": "interceptor launched at TK-5207 (19 km, intercept in 20 s, Pk 73%)."
+    },
+    {
+      "t": 71.2,
+      "kind": "hit",
+      "designator": "TK-5205",
+      "detail": "TK-5205 destroyed by interceptor. It was Enemy."
+    },
+    {
+      "t": 75,
+      "kind": "resolved",
+      "designator": "TK-9003",
+      "detail": "TK-9003 resolved to Friendly."
+    },
+    {
+      "t": 76.3,
+      "kind": "classified",
+      "designator": "TK-5206",
+      "detail": "Operator set TK-5206 to unknown."
+    },
+    {
+      "t": 77.2,
+      "kind": "classified",
+      "designator": "TK-5206",
+      "detail": "Operator set TK-5206 to enemy."
+    },
+    {
+      "t": 83,
+      "kind": "launched",
+      "designator": "TK-4101",
+      "detail": "interceptor launched at TK-4101 (65 km, intercept in 58 s, Pk 86%)."
+    },
+    {
+      "t": 86.9,
+      "kind": "hit",
+      "designator": "TK-5207",
+      "detail": "TK-5207 destroyed by interceptor. It was Enemy."
+    },
+    {
+      "t": 90,
+      "kind": "launched",
+      "designator": "TK-5206",
+      "detail": "interceptor launched at TK-5206 (16 km, intercept in 17 s, Pk 70%)."
+    },
+    {
+      "t": 107.3,
+      "kind": "hit",
+      "designator": "TK-5206",
+      "detail": "TK-5206 destroyed by interceptor. It was Enemy."
+    },
+    {
+      "t": 115.4,
+      "kind": "launched",
+      "designator": "TK-4102",
+      "detail": "interceptor launched at TK-4102 (50 km, intercept in 45 s, Pk 90%)."
+    },
+    {
+      "t": 135.3,
+      "kind": "refused",
+      "designator": "TK-5203",
+      "detail": "Engagement refused: 2 engagement(s) already in the air — the system allows no more."
+    },
+    {
+      "t": 140.6,
+      "kind": "miss",
+      "designator": "TK-4101",
+      "detail": "interceptor missed TK-4101."
+    },
+    {
+      "t": 141.5,
+      "kind": "launched",
+      "designator": "TK-5203",
+      "detail": "interceptor launched at TK-5203 (15 km, intercept in 15 s, Pk 68%)."
+    },
+    {
+      "t": 150.1,
+      "kind": "resolved",
+      "designator": "TK-9001",
+      "detail": "TK-9001 resolved to Our Forces."
+    },
+    {
+      "t": 153.9,
+      "kind": "refused",
+      "designator": "TK-4103",
+      "detail": "Engagement refused: no rounds remaining."
+    },
+    {
+      "t": 156.9,
+      "kind": "hit",
+      "designator": "TK-5203",
+      "detail": "TK-5203 destroyed by interceptor. It was Enemy."
+    },
+    {
+      "t": 158.1,
+      "kind": "leaked",
+      "designator": "TK-9002",
+      "detail": "TK-9002 overflew the site. It was Friendly."
+    },
+    {
+      "t": 159.5,
+      "kind": "refused",
+      "designator": "TK-4103",
+      "detail": "Engagement refused: no rounds remaining."
+    },
+    {
+      "t": 160.3,
+      "kind": "hit",
+      "designator": "TK-4102",
+      "detail": "TK-4102 destroyed by interceptor. It was Enemy."
+    },
+    {
+      "t": 168.6,
+      "kind": "leaked",
+      "designator": "TK-9001",
+      "detail": "TK-9001 overflew the site. It was Our Forces."
+    },
+    {
+      "t": 172.8,
+      "kind": "refused",
+      "designator": "TK-5204",
+      "detail": "Engagement refused: no rounds remaining."
+    },
+    {
+      "t": 175.7,
+      "kind": "refused",
+      "designator": "TK-5204",
+      "detail": "Engagement refused: no rounds remaining."
+    },
+    {
+      "t": 176.2,
+      "kind": "refused",
+      "designator": "TK-5204",
+      "detail": "Engagement refused: no rounds remaining."
+    },
+    {
+      "t": 176.4,
+      "kind": "refused",
+      "designator": "TK-5204",
+      "detail": "Engagement refused: no rounds remaining."
+    },
+    {
+      "t": 179.1,
+      "kind": "leaked",
+      "designator": "TK-9003",
+      "detail": "TK-9003 overflew the site. It was Friendly."
+    },
+    {
+      "t": 218.9,
+      "kind": "refused",
+      "designator": "TK-5204",
+      "detail": "Engagement refused: no rounds remaining."
+    },
+    {
+      "t": 221.3,
+      "kind": "leaked",
+      "designator": "TK-5204",
+      "detail": "TK-5204 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 222,
+      "kind": "refused",
+      "designator": "TK-5202",
+      "detail": "Engagement refused: no rounds remaining."
+    },
+    {
+      "t": 231.6,
+      "kind": "refused",
+      "designator": "TK-4103",
+      "detail": "Engagement refused: no rounds remaining."
+    },
+    {
+      "t": 234.2,
+      "kind": "refused",
+      "designator": "TK-4101",
+      "detail": "Engagement refused: no rounds remaining."
+    },
+    {
+      "t": 242.3,
+      "kind": "leaked",
+      "designator": "TK-5202",
+      "detail": "TK-5202 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 263.4,
+      "kind": "leaked",
+      "designator": "TK-4103",
+      "detail": "TK-4103 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 284.5,
+      "kind": "leaked",
+      "designator": "TK-4101",
+      "detail": "TK-4101 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 284.5,
+      "kind": "ended",
+      "designator": "",
+      "detail": "Air picture clear."
+    }
+  ],
+  "run_result": {
+    "leakers": 4,
+    "hostiles_destroyed": 6,
+    "friendly_engaged": 0,
+    "unknown_engaged": 0,
+    "interceptors_spent": 8,
+    "mean_reaction_s": 46.7,
+    "met_criteria": false
+  },
   "outcome": null,
   "score": null,
   "debrief_text": "",
