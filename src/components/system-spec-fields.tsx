@@ -219,7 +219,7 @@ export function SystemSpecFields({
       <Block
         required
         title="What can appear on the display"
-        hint="Scenario generation may only produce tracks of these kinds, inside these bands. A class you leave out is one a trainee will never see."
+        hint="Exercise generation may only produce tracks of these kinds, inside these bands. A class you leave out is one a trainee will never see."
       >
         <div className="space-y-3">
           {spec.track_classifications.map((entry, index) => (
@@ -565,12 +565,12 @@ export function SystemSpecFields({
               }
             />
 
-            {/* Worth knowing before a scenario hands one out: these codes say
+            {/* Worth knowing before an exercise hands one out: these codes say
                 something specific, the console names them to the trainee, and
                 a generated exercise only uses them on purpose. */}
             {spec.iff_interrogation.mode_3 ? (
               <p className="mt-3 text-xs leading-relaxed text-muted">
-                Codes that mean something in their own right, which scenarios
+                Codes that mean something in their own right, which exercises
                 use only deliberately:{" "}
                 {Object.entries(WELL_KNOWN_MODE_3).map(
                   ([code, meaning], index) => (
@@ -712,7 +712,7 @@ export function SystemSpecFields({
       {/* ---- Engagement envelope -------------------------------------- */}
       <Block
         title="What it can reach"
-        hint="Scenario geometry has to sit inside this, or the trade-off it presents is not a real one. The minimum matters as much as the maximum: a threat that gets inside it cannot be engaged at all."
+        hint="Exercise geometry has to sit inside this, or the trade-off it presents is not a real one. The minimum matters as much as the maximum: a threat that gets inside it cannot be engaged at all."
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Labelled label="Minimum intercept range (km)">
