@@ -40,7 +40,7 @@ export const ActionSchema = z.object({
 export type Action = z.infer<typeof ActionSchema>;
 
 /* ------------------------------------------------------------------ */
-/* Dilemma entry — the core of the knowledge base                      */
+/* Scenario entry — the core of the knowledge base                      */
 /* ------------------------------------------------------------------ */
 
 export const KeyVariablesSchema = z.object({
@@ -52,7 +52,7 @@ export const KeyVariablesSchema = z.object({
 });
 export type KeyVariables = z.infer<typeof KeyVariablesSchema>;
 
-export const DecisionPointSchema = z.object({
+export const DilemmaSchema = z.object({
   /** The situation the trainee faces at this branch point. */
   situation: z.string(),
   valid_actions: z.array(ActionSchema),
@@ -63,7 +63,7 @@ export const DecisionPointSchema = z.object({
   /** Mistakes trainees typically make here, and why each is tempting. */
   common_errors: z.array(z.string()),
 });
-export type DecisionPoint = z.infer<typeof DecisionPointSchema>;
+export type Dilemma = z.infer<typeof DilemmaSchema>;
 
 export const DifficultyBandSchema = z.object({
   description: z.string(),
@@ -89,36 +89,36 @@ export const EvaluationCriteriaSchema = z.object({
 export type EvaluationCriteria = z.infer<typeof EvaluationCriteriaSchema>;
 
 /**
- * The part of a dilemma entry that Claude extracts from the designer's chat.
+ * The part of a scenario entry that Claude extracts from the designer's chat.
  * Excludes identity, status and provenance, which the server owns.
  */
-export const DilemmaDraftSchema = z.object({
+export const ScenarioDraftSchema = z.object({
   title: z.string(),
   /** Kebab-case tag, e.g. "multi-threat-prioritization". */
   sub_domain_tag: z.string(),
-  /** Free text describing when this dilemma is the right match for a request. */
+  /** Free text describing when this scenario is the right match for a request. */
   trigger_conditions: z.string(),
   key_variables: KeyVariablesSchema,
-  decision_points: z.array(DecisionPointSchema),
+  dilemmas: z.array(DilemmaSchema),
   difficulty_scaling: DifficultyScalingSchema,
   evaluation_criteria: EvaluationCriteriaSchema,
 });
-export type DilemmaDraft = z.infer<typeof DilemmaDraftSchema>;
+export type ScenarioDraft = z.infer<typeof ScenarioDraftSchema>;
 
-export const DilemmaStatusSchema = z.enum(["draft", "approved"]);
-export type DilemmaStatus = z.infer<typeof DilemmaStatusSchema>;
+export const ScenarioStatusSchema = z.enum(["draft", "approved"]);
+export type ScenarioStatus = z.infer<typeof ScenarioStatusSchema>;
 
-export const DilemmaEntrySchema = DilemmaDraftSchema.extend({
+export const ScenarioEntrySchema = ScenarioDraftSchema.extend({
   id: z.string(),
-  /** The simulated system this dilemma was taught inside. */
+  /** The simulated system this scenario was taught inside. */
   system_id: z.string(),
-  status: DilemmaStatusSchema,
+  status: ScenarioStatusSchema,
   /** Transcript of the learning conversation this entry was extracted from. */
   source_chat_log: z.string(),
   created_at: z.string(),
   approved_at: z.string().nullable(),
 });
-export type DilemmaEntry = z.infer<typeof DilemmaEntrySchema>;
+export type ScenarioEntry = z.infer<typeof ScenarioEntrySchema>;
 
 /* ------------------------------------------------------------------ */
 /* Simulated systems                                                   */
@@ -128,7 +128,7 @@ export type DilemmaEntry = z.infer<typeof DilemmaEntrySchema>;
  * One simulated system the app can train on. Several exist side by side.
  *
  * A system is the container for everything that only makes sense inside it:
- * how it behaves, what its console looks like, and which dilemmas were taught
+ * how it behaves, what its console looks like, and which scenarios were taught
  * within it. It exists as soon as it is named, so it can be listed and worked
  * on before the profile has been extracted or the console built.
  *
@@ -150,11 +150,11 @@ export type SimulatedSystem = z.infer<typeof SimulatedSystemSchema>;
 /* ------------------------------------------------------------------ */
 
 /**
- * Taught once per system, before any of its dilemmas, and injected into every
- * scenario and debrief afterwards.
+ * Taught once per system, before any of its scenarios, and injected into every
+ * exercise and debrief afterwards.
  *
  * Without it the model invents a system: it guesses what classifications exist,
- * what makes a track hostile, and what an operator can do. The scenarios then
+ * what makes a track hostile, and what an operator can do. The exercises then
  * look right and are not right. This record replaces those guesses with the
  * designer's own doctrine.
  */
@@ -164,7 +164,7 @@ export type SimulatedSystem = z.infer<typeof SimulatedSystemSchema>;
  *
  * `none` is not an omission — it is the interesting case. A track that does
  * not reply is the one an operator has to decide about, and a system whose
- * every class replies has removed the dilemma rather than modelled it.
+ * every class replies has removed the scenario rather than modelled it.
  *
  * `civil` carries a Mode 3/A code only. `military` carries Mode 1 as well,
  * which is what distinguishes a co-operating military aircraft from an
@@ -246,7 +246,7 @@ export type TrackReadoutField = z.infer<typeof TrackReadoutFieldSchema>;
  * What the system can see, which is a different question from what it can hit.
  *
  * Detection decides how much warning an operator gets, and therefore the clock
- * on every dilemma about time. Coverage decides whether they get any warning at
+ * on every scenario about time. Coverage decides whether they get any warning at
  * all from a given direction: a rotating radar sees all round, a fixed array
  * watches a sector and is blind behind it, and a threat arriving through the
  * gap is a completely different training problem.
@@ -391,7 +391,7 @@ export type Revision = z.infer<typeof RevisionSchema>;
  *
  * The pattern turned out to be general: a designer says what is wrong in
  * words, something is rebuilt, and what came back is recorded beside the
- * request. It is how consoles are corrected and now how scenarios are, so the
+ * request. It is how consoles are corrected and now how exercises are, so the
  * schema is shared rather than copied.
  */
 export const GuiRevisionSchema = RevisionSchema;
@@ -419,7 +419,7 @@ export const GuiTemplateSchema = z.object({
 export type GuiTemplate = z.infer<typeof GuiTemplateSchema>;
 
 /* ------------------------------------------------------------------ */
-/* Scenario instance — one concrete rendering of a dilemma             */
+/* Exercise instance — one concrete rendering of a scenario             */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -448,25 +448,25 @@ export const TrackSchema = z.object({
 });
 export type Track = z.infer<typeof TrackSchema>;
 
-export const ScenarioResourceSchema = z.object({
+export const ExerciseResourceSchema = z.object({
   name: z.string(),
   unit: z.string(),
   available: z.number(),
   total: z.number(),
 });
 
-export const ScenarioDecisionPointSchema = z.object({
-  /** Index into the source dilemma's `decision_points`. Keeps the debrief grounded. */
-  kb_decision_point_index: z.number().int(),
-  /** The KB situation, rewritten in the concrete terms of this scenario. */
+export const ExerciseDilemmaSchema = z.object({
+  /** Index into the source scenario's `dilemmas`. Keeps the debrief grounded. */
+  kb_dilemma_index: z.number().int(),
+  /** The KB situation, rewritten in the concrete terms of this exercise. */
   situation_rendered: z.string(),
   /** Presented in this order; labels must match the KB entry's valid_actions. */
   actions: z.array(ActionSchema),
 });
-export type ScenarioDecisionPoint = z.infer<typeof ScenarioDecisionPointSchema>;
+export type ExerciseDilemma = z.infer<typeof ExerciseDilemmaSchema>;
 
 /* ------------------------------------------------------------------ */
-/* The live air picture — a scenario that actually runs                */
+/* The live air picture — an exercise that actually runs                */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -514,7 +514,7 @@ export const LiveTrackSchema = z.object({
   initial_iff: z.string(),
   /**
    * When the system resolves it by itself, in seconds from the start, or null
-   * if it never does and the operator has to decide without help. A dilemma
+   * if it never does and the operator has to decide without help. A scenario
    * about identification under time pressure lives entirely in this field.
    */
   resolves_at_s: z.number().nullable().default(null),
@@ -601,12 +601,12 @@ export const RunResultSchema = z.object({
 });
 export type RunResult = z.infer<typeof RunResultSchema>;
 
-export const ScenarioInstanceSchema = z.object({
-  scenario_name: z.string(),
+export const ExerciseInstanceSchema = z.object({
+  exercise_name: z.string(),
   /** The brief the trainee reads before the clock starts. */
   situation_brief: z.string(),
   time_window_seconds: z.number(),
-  resources: z.array(ScenarioResourceSchema),
+  resources: z.array(ExerciseResourceSchema),
 
   /**
    * The air picture that actually runs. Everything a trainee sees on the scope
@@ -618,7 +618,7 @@ export const ScenarioInstanceSchema = z.object({
    *
    * Meaningless for a rotating radar and ignored there. For a sector array it
    * decides which threats are seen early and which arrive through the blind
-   * arc, so the generator places it deliberately — it belongs to the scenario
+   * arc, so the generator places it deliberately — it belongs to the exercise
    * rather than the profile because the same battery can be sited facing any
    * direction, and where it faces is part of the problem being set.
    */
@@ -633,24 +633,24 @@ export const ScenarioInstanceSchema = z.object({
    * The earlier shape: a static picture and a set of multiple-choice prompts.
    *
    * Kept only so runs recorded before the simulator existed still open. Nothing
-   * new is written here — a scenario now carries `live_tracks` instead, and a
+   * new is written here — an exercise now carries `live_tracks` instead, and a
    * trainee flies the engagement rather than answering questions about it.
    */
   tracks: z.array(TrackSchema).default([]),
-  decision_points: z.array(ScenarioDecisionPointSchema).default([]),
+  dilemmas: z.array(ExerciseDilemmaSchema).default([]),
 });
-export type ScenarioInstance = z.infer<typeof ScenarioInstanceSchema>;
+export type ExerciseInstance = z.infer<typeof ExerciseInstanceSchema>;
 
 /* ------------------------------------------------------------------ */
 /* Matching engine                                                     */
 /* ------------------------------------------------------------------ */
 
 export const MatchResultSchema = z.object({
-  /** Id of the best-matching approved dilemma, or "" if nothing fits at all. */
-  dilemma_entry_id: z.string(),
+  /** Id of the best-matching approved scenario, or "" if nothing fits at all. */
+  scenario_entry_id: z.string(),
   /** 0.0 - 1.0. Below the clarification threshold triggers a follow-up question. */
   confidence: z.number(),
-  /** One sentence: why this dilemma matches the request. */
+  /** One sentence: why this scenario matches the request. */
   reasoning: z.string(),
   /** Populated only when confidence is low; "" otherwise. */
   clarifying_question: z.string(),
@@ -667,7 +667,7 @@ export const DifficultyLevelSchema = z.enum(["easy", "medium", "hard"]);
 export type DifficultyLevel = z.infer<typeof DifficultyLevelSchema>;
 
 /**
- * A scenario kept in its own right, rather than only inside the run it was
+ * An exercise kept in its own right, rather than only inside the run it was
  * generated for.
  *
  * Every exercise the generator produces used to exist in exactly one place: a
@@ -675,19 +675,19 @@ export type DifficultyLevel = z.infer<typeof DifficultyLevelSchema>;
  * at what had been generated, and a bad exercise could only be discovered by
  * flying it and could not be corrected at all.
  *
- * A record here is either a scenario a designer has taken hold of to correct,
+ * A record here is either an exercise a designer has taken hold of to correct,
  * or the corrected result. **A session is never rewritten.** Its debrief and
  * its score describe what was actually flown, so revising a flown exercise
  * produces one of these instead and leaves the record of the run alone.
  */
-export const SavedScenarioSchema = z.object({
+export const SavedExerciseSchema = z.object({
   id: z.string(),
-  /** The system it is flown on. Its profile bounds everything in the scenario. */
+  /** The system it is flown on. Its profile bounds everything in the exercise. */
   system_id: z.string(),
-  /** The dilemma it teaches. Kept so a revision can be regenerated from it. */
-  dilemma_entry_id: z.string(),
+  /** The scenario it teaches. Kept so a revision can be regenerated from it. */
+  scenario_entry_id: z.string(),
   difficulty_level: DifficultyLevelSchema,
-  scenario_instance: ScenarioInstanceSchema,
+  exercise_instance: ExerciseInstanceSchema,
   /**
    * What was asked of it and what came back, oldest first.
    *
@@ -699,7 +699,7 @@ export const SavedScenarioSchema = z.object({
   /**
    * Where it came from, in one line, for the library listing.
    *
-   * A scenario lifted out of a run says so, and names the run — because the
+   * An exercise lifted out of a run says so, and names the run — because the
    * run's debrief is the evidence for whatever was wrong with it.
    */
   source: z.string().default(""),
@@ -708,7 +708,7 @@ export const SavedScenarioSchema = z.object({
   created_at: z.string(),
   updated_at: z.string().default(""),
 });
-export type SavedScenario = z.infer<typeof SavedScenarioSchema>;
+export type SavedExercise = z.infer<typeof SavedExerciseSchema>;
 
 export const ClarificationRoundSchema = z.object({
   question: z.string(),
@@ -717,9 +717,9 @@ export const ClarificationRoundSchema = z.object({
 export type ClarificationRound = z.infer<typeof ClarificationRoundSchema>;
 
 export const DecisionMadeSchema = z.object({
-  decision_point_index: z.number().int(),
+  dilemma_index: z.number().int(),
   chosen_action: z.string(),
-  /** Milliseconds from when the decision point was shown to when it was answered. */
+  /** Milliseconds from when the dilemma was shown to when it was answered. */
   elapsed_ms: z.number(),
 });
 export type DecisionMade = z.infer<typeof DecisionMadeSchema>;
@@ -730,7 +730,7 @@ export const OutcomeSchema = z.object({
   summary: z.string(),
   per_decision: z.array(
     z.object({
-      decision_point_index: z.number().int(),
+      dilemma_index: z.number().int(),
       chosen_action: z.string(),
       preferred_action: z.string(),
       correct: z.boolean(),
@@ -760,11 +760,11 @@ export const SessionSchema = z.object({
   /** Which simulated system this run was on. Fixed at creation: the console
       and the profile it renders with must not change under a finished run. */
   system_id: z.string(),
-  dilemma_entry_id: z.string(),
+  scenario_entry_id: z.string(),
   requested_text: z.string(),
   clarification_rounds: z.array(ClarificationRoundSchema),
   difficulty_level: DifficultyLevelSchema,
-  scenario_instance: ScenarioInstanceSchema,
+  exercise_instance: ExerciseInstanceSchema,
   /** Legacy: the answers chosen, for runs recorded before the simulator. */
   decisions_made: z.array(DecisionMadeSchema),
   /** What actually happened, second by second. The debrief is built from this. */
