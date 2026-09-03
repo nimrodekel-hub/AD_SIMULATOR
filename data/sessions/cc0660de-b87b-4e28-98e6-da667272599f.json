@@ -603,11 +603,57 @@
     "mean_reaction_s": 46.7,
     "met_criteria": false
   },
-  "outcome": null,
-  "score": null,
-  "debrief_text": "",
-  "recommendations": [],
-  "status": "in_progress",
+  "outcome": {
+    "success": false,
+    "summary": "Identification discipline held — zero friendlies and zero Unknowns engaged, and the three friendly tracks were allowed to overfly rather than shot at. But the engagement queue was inverted: the first shot went to the nearest UAV at T+006 and no jet was engaged until T+083, 63 seconds after TK-4101 resolved to Enemy. Four hostiles leaked, two of them jets (TK-4101 and TK-4103, the latter never engaged at all), against a pass threshold of one. Eight rounds spent, mean reaction 46.7 s. Criteria not met.",
+    "per_decision": [
+      {
+        "dilemma_index": 0,
+        "chosen_action": "Launched on TK-5203, a UAV at 32 km, as the first shot of the run (T+006), then TK-5201 at T+018",
+        "preferred_action": "Fire the lead jet at the earliest valid firing solution",
+        "correct": false,
+        "comment": "T+006. This is the documented error verbatim: engaging the nearest UAV first because proximity reads as urgency, when closure rate — not slant range — determines who must die first. The three jets were held at 84-91 km from T+000 and were the tracks consuming the timeline. Both launchers were free and you spent them on the slowest threats in the picture."
+      },
+      {
+        "dilemma_index": 0,
+        "chosen_action": "Held all jet engagement until T+083 despite TK-4101 resolving Enemy at T+020, TK-4102 at T+025 and TK-4103 at T+035",
+        "preferred_action": "Fire on each jet at the first valid solution the system offers, without holding for a better picture",
+        "correct": false,
+        "comment": "T+020 to T+083. Sixty-three seconds of long-range window on TK-4101 went unused while the launchers cycled UAVs. The Pk figures show what that cost: the jet shots you eventually took were 86% at 65 km and 90% at 50 km — the cheapest shots of the whole run — while the UAV shots degraded 86, 87, 79, 73, 70, 68 as the wave closed. You paid short-range prices for UAVs and then had no capacity left for the jets."
+      },
+      {
+        "dilemma_index": 2,
+        "chosen_action": "Set TK-5206 to unknown at T+076, then set it back to enemy at T+077, and launched at T+090",
+        "preferred_action": "Leave classification to the referral chain; act on the answer, do not set it locally",
+        "correct": false,
+        "comment": "T+076-077. Local self-classification is a documented error even when the answer happens to be right — and here TK-5206 had been displayed as Enemy since detection at T+050, so the round trip through 'unknown' bought nothing and cost time. The engagement finally went out at 16 km for Pk 70% on a track first held at 21 km."
+      },
+      {
+        "dilemma_index": 1,
+        "chosen_action": "Attempted a third launch at T+135 with both rockets committed (TK-4101 and TK-4102)",
+        "preferred_action": "Hold and wait for a fire status to resolve",
+        "correct": false,
+        "comment": "T+135. The two-in-flight limit is a hard property of the system, and trying to force a third launch achieves nothing except lost seconds. The refusal is evidence about the queue, not the system — the reason this moment felt unwinnable is upstream, in the eighty seconds of launcher time spent on UAVs."
+      },
+      {
+        "dilemma_index": 3,
+        "chosen_action": "Never engaged TK-4103; TK-4101 missed at T+140 with no capacity to re-engage; from T+153 every attempt returned no rounds remaining",
+        "preferred_action": "Keep both launchers continuously employed against confirmed hostiles by earliest valid solution, having cleared the fast closers first",
+        "correct": false,
+        "comment": "T+140 onward. TK-4103 resolved Enemy at T+035 and was never fired on once. The string of 'no rounds remaining' refusals from T+153 to T+234 is the end state of a queue that was run backwards: capacity was gone while two jets and two UAVs were still inbound, and TK-4103 and TK-4101 reached the site at T+263 and T+284."
+      }
+    ]
+  },
+  "score": 30,
+  "debrief_text": "The run was decided in the first six seconds. Your opening launch went to TK-5203, a UAV at 32 km, and your second to TK-5201 at 33 km, while three jets sat at 84-91 km closing on the site. That is the error the record names first: proximity reads as urgency on the display, but closure rate is what determines who must die first. From T+020 the jets were resolving to Enemy one after another and you had a clear long-range window on each — you did not use it until T+083, and by then the launchers and the round count were both being eaten by a UAV wave you were servicing at progressively worse geometry. TK-4103 was classified Enemy at T+035 and never had a round fired at it. It overflew at T+263.\n\nThe Pk column tells the story cleanly. The two jet shots you did take were 86% at 65 km and 90% at 50 km — the cheapest kills available anywhere in this picture. Against that, your UAV engagements ran 86, 87, 79, 73, 70, 68 as each track was allowed to close before you committed. You inverted the economics: expensive short-range work on the slow threats, nothing on the fast ones until the window had mostly closed. The 'no rounds remaining' refusals from T+153 are not a supply problem, they are the arithmetic of that choice.\n\nWhat you got right matters and should be said plainly: no friendly and no Unknown was engaged. TK-9001, TK-9002 and TK-9003 all overflew the site unmolested, including TK-9002, which never resolved at all. Under this scenario's hierarchy that is the single most important line in the tally, and it is why this run scores above one that killed more and shot an Unknown. The one blemish on that discipline is T+076-077, where you set TK-5206 to unknown and then to enemy yourself. It was already displayed Enemy and it genuinely was, so nothing broke — but self-classifying locally is a habit the record warns against explicitly, and here it delayed the shot to 16 km and Pk 70%.\n\nOne note the record does not settle: the log carries no interrogation entries and no explicit referral events, only resolutions at T+020, T+025, T+035, T+075 and T+150. Whether a referral was raised on TK-9002, which went unresolved to overflight, is not something the log shows, so I will not score it either way.",
+  "recommendations": [
+    "Open the run by committing both launchers to the two leading jets at the first valid solution the system offers — do not let a UAV inside 35 km take your first round while a jet is held at 85 km.",
+    "Treat the classification resolution timestamp as your trigger: TK-4101 resolved Enemy at T+020, so the shot should be seconds later, not at T+083. Practise firing on resolution rather than on a tidier picture.",
+    "Stop editing classifications at the console. TK-5206 was already Enemy; leave the referral chain to answer and spend those seconds on the launch.",
+    "When both rockets are committed, sit on your hands rather than probing for a third launch as you did at T+135 — log the next target and fire the instant a status resolves.",
+    "Rehearse the UAV mop-up as a throughput problem: take the next available valid solution rather than letting each track close to 15-16 km, where your Pk fell to 68-70% and your round count ran out."
+  ],
+  "status": "completed",
   "created_at": "2026-09-03T19:17:45.057Z",
-  "completed_at": null
+  "completed_at": "2026-09-03T19:24:13.936Z"
 }
