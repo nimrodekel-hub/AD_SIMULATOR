@@ -30,8 +30,29 @@ import { polarToVec } from "@/lib/sim/geometry";
  * colour, so the picture still reads when the colours do not.
  */
 
-/** Range rings, as fractions of the radar's reach. */
+/** Range rings, as fractions of the range scale in use. */
 const RINGS = [0.25, 0.5, 0.75, 1];
+
+/**
+ * The range scales an operator can switch between, widest last.
+ *
+ * A real scope has a scale switch because the picture an operator needs is not
+ * always the whole picture: four tracks at 12 km sit on top of each other at
+ * 150 km, and deciding between them is exactly the moment that matters. Round
+ * numbers, because a scale legend is read at a glance and 37 km is not.
+ *
+ * The widest is always the radar's own reach, so "all the way out" is a real
+ * position on the switch rather than something adjacent to it.
+ */
+const LADDER = [5, 10, 20, 25, 40, 50, 75, 100, 150, 200, 300, 400, 600];
+
+export function rangeScales(reachKm: number): number[] {
+  const reach = Math.max(1, Math.round(reachKm));
+  // Three steps in plus the full picture: enough to close right in, few
+  // enough to press without reading the labels.
+  const inside = LADDER.filter((km) => km < reach * 0.95).slice(-3);
+  return [...inside, reach];
+}
 /** How far ahead of a track its velocity leader points, in seconds. */
 const LEADER_SECONDS = 60;
 
@@ -47,15 +68,22 @@ export function RadarScope({
   config,
   selected,
   onSelect,
+  rangeKm,
 }: {
   state: SimState;
   config: SimConfig;
   selected: string | null;
   onSelect: (designator: string) => void;
+  /**
+   * The range scale in use, in kilometres — the distance the outermost ring
+   * stands for. Owned above so the scale switch and the picture cannot
+   * disagree about it.
+   */
+  rangeKm: number;
 }) {
   /* The drawing is done in kilometres and mapped to the viewBox once, so every
      number below is a real distance and the scale lives in exactly one place. */
-  const reach = config.detection_range_km;
+  const reach = rangeKm;
   const scale = 100 / reach;
   const km = (value: number) => value * scale;
 
@@ -63,8 +91,11 @@ export function RadarScope({
     () =>
       state.tracks
         .map((track) => viewOf(track, state.t, config))
-        .filter((view) => view.visible),
-    [state.tracks, state.t, config],
+        .filter((view) => view.visible)
+        // Off the scale is off the scope. A track drawn beyond the outer ring
+        // would be claiming a range the legend says is not on screen.
+        .filter((view) => view.range_km <= reach),
+    [state.tracks, state.t, config, reach],
   );
 
   const sweep = (state.t * 60) % 360;
@@ -81,9 +112,17 @@ export function RadarScope({
           <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.10" />
           <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
         </radialGradient>
+        {/* Zoomed in, the engagement envelope and the covered arc are wider
+            than the face. Clipping keeps them inside the scope instead of
+            letting them paint over the panel around it. */}
+        <clipPath id="scope-face">
+          <circle r="100" />
+        </clipPath>
       </defs>
 
       <circle r="100" fill="url(#scope-glow)" />
+
+      <g clipPath="url(#scope-face)">
 
       {/* ---- The arc the radar actually covers ---------------------- */}
       {config.coverage_deg < 360 ? (
@@ -156,31 +195,6 @@ export function RadarScope({
           />
         );
       })}
-      {(
-        [
-          ["N", 0],
-          ["E", 90],
-          ["S", 180],
-          ["W", 270],
-        ] as const
-      ).map(([letter, bearing]) => {
-        const at = polarToVec(bearing, reach * 1.06);
-        return (
-          <text
-            key={letter}
-            x={km(at.x)}
-            y={-km(at.y)}
-            fill="var(--muted)"
-            fontSize="5"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontFamily="ui-monospace, monospace"
-          >
-            {letter}
-          </text>
-        );
-      })}
-
       {/* ---- The sweep, for a radar that turns ----------------------- */}
       {config.coverage_deg >= 360 ? (
         <line
@@ -239,6 +253,33 @@ export function RadarScope({
           onSelect={onSelect}
         />
       ))}
+      </g>
+
+      {/* ---- The compass, outside the face on purpose --------------- */}
+      {(
+        [
+          ["N", 0],
+          ["E", 90],
+          ["S", 180],
+          ["W", 270],
+        ] as const
+      ).map(([letter, bearing]) => {
+        const at = polarToVec(bearing, reach * 1.06);
+        return (
+          <text
+            key={letter}
+            x={km(at.x)}
+            y={-km(at.y)}
+            fill="var(--muted)"
+            fontSize="5"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontFamily="ui-monospace, monospace"
+          >
+            {letter}
+          </text>
+        );
+      })}
     </svg>
   );
 }
@@ -298,16 +339,7 @@ function TrackSymbol({
         strokeWidth="0.4"
       />
 
-      {selected ? (
-        <circle
-          cx={x}
-          cy={y}
-          r="5"
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth="0.6"
-        />
-      ) : null}
+      {selected ? <Designated x={x} y={y} /> : null}
 
       <Symbol tone={tone} x={x} y={y} colour={colour} />
 
@@ -320,6 +352,45 @@ function TrackSymbol({
       >
         {view.track.designator}
       </text>
+    </g>
+  );
+}
+
+/**
+ * The marker on the track the operator has designated.
+ *
+ * Four corner brackets rather than a ring, and drawn tight: the widest symbol
+ * reaches 3 units from its centre and a 0.9 stroke puts its outer edge at
+ * 3.45, so the brackets sit at 3.9 — close enough to read as *this symbol* and
+ * not as a halo hanging in the airspace around it. A ring at 5, which is what
+ * this was, enclosed an area more than twice the symbol and on a busy picture
+ * could sit over a neighbour.
+ *
+ * Brackets also stay out of the way of the velocity leader, which a closed
+ * ring crosses at whatever angle the track happens to be flying.
+ */
+function Designated({ x, y }: { x: number; y: number }) {
+  const reach = 3.9;
+  const arm = 1.5;
+  const corners = [
+    [-1, -1],
+    [1, -1],
+    [1, 1],
+    [-1, 1],
+  ] as const;
+
+  return (
+    <g stroke="var(--accent)" strokeWidth="0.55" fill="none" strokeLinecap="square">
+      {corners.map(([sx, sy]) => (
+        <path
+          key={`${sx}${sy}`}
+          d={[
+            `M ${x + sx * reach} ${y + sy * reach - sy * arm}`,
+            `L ${x + sx * reach} ${y + sy * reach}`,
+            `L ${x + sx * reach - sx * arm} ${y + sy * reach}`,
+          ].join(" ")}
+        />
+      ))}
     </g>
   );
 }
