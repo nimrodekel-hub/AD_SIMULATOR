@@ -15,6 +15,18 @@ const GuiJobResultSchema = z.object({
   design_notes: z.string(),
   screenshots: z.array(z.string()),
   missing_slots: z.array(z.string()),
+  /**
+   * Every change asked for, oldest first, that this build answers.
+   *
+   * Kept because the build outlives the page that started it. A designer who
+   * asks for a change and then goes to look at the result is on a different
+   * screen by the time it lands, and accepting it there has to write the same
+   * thread back — otherwise approving the console would quietly drop the
+   * requests that shaped it, and the next revision would undo them.
+   *
+   * Defaulted, so builds recorded before this existed still load.
+   */
+  requests: z.array(z.string()).default([]),
 });
 
 export type GuiJobResult = z.infer<typeof GuiJobResultSchema>;
