@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { GuiRevision, GuiTemplate } from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
 import { type JobView, formatWait, useBackgroundJob } from "@/lib/use-job";
@@ -88,6 +88,14 @@ export function GuiBuilder({
   /** What was just asked for and is still in flight. */
   const [pending, setPending] = useState<string>();
   const [message, setMessage] = useState("");
+  /**
+   * The same request, in a ref.
+   *
+   * A build outlives several renders, so the callback that handles its result
+   * cannot trust the `pending` it closed over. This is read instead — and read
+   * outside a state updater, because what happens next is navigation.
+   */
+  const askedRef = useRef<string | undefined>(undefined);
 
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string>();
@@ -108,22 +116,33 @@ export function GuiBuilder({
       setScreenshots(result.screenshots);
       setMissingSlots(result.missing_slots);
       setDirty(true);
+      setPending(undefined);
+
       // The request is only recorded once something came back for it, so a
       // failed attempt does not leave a change in the thread that was never
       // applied.
-      setPending((asked) => {
-        if (asked) {
-          setRevisions((current) => [
-            ...current,
-            {
-              request: asked,
-              notes: result.design_notes,
-              at: new Date().toISOString(),
-            },
-          ]);
-        }
-        return undefined;
-      });
+      const asked = askedRef.current;
+      askedRef.current = undefined;
+      if (!asked) return;
+
+      setRevisions((current) => [
+        ...current,
+        {
+          request: asked,
+          notes: result.design_notes,
+          at: new Date().toISOString(),
+        },
+      ]);
+
+      /* Straight to the changed console, running.
+         Nobody can judge "make the scope bigger" from an empty shell, and
+         after a minute of waiting the old behaviour was to quietly update an
+         iframe most of a page further down — which is why a change that had
+         been made looked like a change that had been ignored. The test page
+         is also where the build is accepted or sent back, so this is the
+         review, not a detour. The build itself is stored with its job, so
+         arriving there does not depend on this tab. */
+      router.push(`/designer/systems/${systemId}/test`);
     },
   });
 
@@ -132,6 +151,7 @@ export function GuiBuilder({
     const asked = (request ?? "").trim();
     setNotice(undefined);
     setPending(asked || undefined);
+    askedRef.current = asked || undefined;
     setMessage("");
     return start({
       requests: [...revisions.map((entry) => entry.request), asked].filter(
@@ -334,7 +354,10 @@ export function GuiBuilder({
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
             Say what is wrong and it is rebuilt with that change — and with
             everything you asked for before, so nothing you have already fixed
-            comes undone.
+            comes undone. When it is ready this opens the changed console with
+            live targets in it, where you either approve it or ask for
+            something else. Until you approve, training runs keep using the
+            console you approved last.
           </p>
 
           {revisions.length > 0 ? (
