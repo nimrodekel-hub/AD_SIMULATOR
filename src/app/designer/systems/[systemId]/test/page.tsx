@@ -71,6 +71,14 @@ export default async function TestSystemPage({
     );
   }
 
+  /* Interrogation is off unless the profile says otherwise, and a profile
+     approved before the question existed has it off without anyone ever
+     having been asked. On a system that genuinely cannot interrogate, showing
+     nothing is right. Here it is indistinguishable from a broken console —
+     which is how a designer ends up hunting the readout for a figure that was
+     never going to appear. So the page says which of the two it is. */
+  const canInterrogate = profile.iff_interrogation?.enabled === true;
+
   return (
     <ScreenShell
       theme="ops"
@@ -79,13 +87,29 @@ export default async function TestSystemPage({
       contained={false}
       fullHeight
     >
-      {hostsTheScope ? null : (
-        <div className="px-6 pt-4">
-          <p className="chip status-warn !normal-case">
-            {html
-              ? "This console has no radar-picture slot, so the test is running in the built-in layout instead. Ask the builder for a scope area and try again."
-              : "No console has been built for this system yet, so the test is running in the built-in layout. The behaviour under test is the same either way."}
-          </p>
+      {hostsTheScope && canInterrogate ? null : (
+        <div className="flex flex-col items-start gap-2 px-6 pt-4">
+          {hostsTheScope ? null : (
+            <p className="chip status-warn !normal-case">
+              {html
+                ? "This console has no radar-picture slot, so the test is running in the built-in layout instead. Ask the builder for a scope area and try again."
+                : "No console has been built for this system yet, so the test is running in the built-in layout. The behaviour under test is the same either way."}
+            </p>
+          )}
+          {canInterrogate ? null : (
+            <p className="chip !normal-case">
+              This system declares no IFF interrogator, so there is no IFF
+              reading on a locked track and no interrogate command.{" "}
+              <Link
+                href={`/designer/systems/${systemId}/profile`}
+                className="underline"
+              >
+                Turn it on in the profile
+              </Link>{" "}
+              — and say which track classes reply — to see transponder codes
+              here.
+            </p>
+          )}
         </div>
       )}
 

@@ -672,10 +672,20 @@ function Controls({
       {/* ---- What is it ---------------------------------------- */}
       <div>
         <p className="data text-sm font-semibold">{track.designator}</p>
+        {/* The squawk belongs on this line rather than only beside the
+            button: this is the row an operator's eye lands on once a track is
+            locked, and a reading kept somewhere else is a reading nobody
+            reads. */}
         <p className="text-[0.7rem] text-muted">
           {track.classification} · {view.range_km.toFixed(0)} km ·{" "}
           {view.bearing_deg.toFixed(0)}° · {track.altitude_ft.toLocaleString()} ft ·{" "}
           {track.speed_kts} kts
+          {config.iff.enabled ? (
+            <>
+              {" · IFF "}
+              <Squawk track={track} config={config} />
+            </>
+          ) : null}
         </p>
         {track.notes ? (
           <p className="mt-1 max-w-xs text-[0.7rem] text-muted">{track.notes}</p>
@@ -686,21 +696,18 @@ function Controls({
       {config.iff.enabled ? (
         <div>
           <p className="label">IFF</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="btn text-[0.7rem]"
-              disabled={busy}
-              onClick={() =>
-                onCommand({ kind: "interrogate", designator: track.designator })
-              }
-            >
-              {track.squawk_known ? "Interrogate again" : "Interrogate"}
-            </button>
-            <span className="data text-[0.7rem]">
-              <Squawk track={track} config={config} />
-            </span>
-          </div>
+          {/* Only the action here. The code itself reads off the line above,
+              and the sentence below says what it means. */}
+          <button
+            type="button"
+            className="btn text-[0.7rem]"
+            disabled={busy}
+            onClick={() =>
+              onCommand({ kind: "interrogate", designator: track.designator })
+            }
+          >
+            {track.squawk_known ? "Interrogate again" : "Interrogate"}
+          </button>
           {track.squawk_known ? (
             <p className="mt-1 max-w-xs text-[0.7rem] text-muted">
               {interrogationLine(track, config)}
