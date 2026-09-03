@@ -64,7 +64,7 @@ known:
 
 - **How far it detects**, which is not how far it can shoot. Detection range
   sets how much warning the operator gets, and therefore the clock on every
-  dilemma about time.
+  scenario about time.
 - **How far it can engage**, maximum *and* minimum. Many systems cannot engage
   something too close.
 - **How many interceptors may be in the air at once**, and how deep the
@@ -81,7 +81,7 @@ known:
 /** Lessons that hold across systems. The designer owns this list. */
 const SEED_LESSONS: Array<Omit<Lesson, "id">> = [
   {
-    title: "Dilemmas come from incomplete information under a clock",
+    title: "Scenarios come from incomplete information under a clock",
     body: `The recurring shape is not "what is the right answer" but "there is no
 time to find out". Identification that will not resolve; more threats than
 interceptors; a threat that must be engaged now or not at all; authority that is
@@ -93,7 +93,7 @@ worth training.`,
     title: "Engaging an unknown is often the operator's own call",
     body: `On many systems nothing decides an unresolved track for the operator:
 they may engage it or hold, and both are defensible. That makes it one of the
-richest dilemmas to simulate, because the trainee has to commit without the
+richest scenarios to simulate, because the trainee has to commit without the
 answer and can be asked afterwards why. Worth asking about explicitly rather
 than assuming a rule exists.`,
   },
@@ -105,7 +105,7 @@ from asking, never from the display.`,
   },
   {
     title: "The rationale matters more than the answer",
-    body: `A captured dilemma whose preferred action is recorded without the
+    body: `A captured scenario whose preferred action is recorded without the
 reasoning behind it produces a worthless debrief: the trainee is told they were
 wrong and not why. Push for the reasoning, and for the mistakes the expert has
 actually watched people make — those two are what a trainee reads afterwards.`,
