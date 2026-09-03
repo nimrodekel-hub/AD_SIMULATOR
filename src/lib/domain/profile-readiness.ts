@@ -67,7 +67,7 @@ export function simulationGaps(spec: SimulationSpec): Gap[] {
   const say = (where: string, what: string) => gaps.push({ where, what });
 
   /* ---- The radar ------------------------------------------------- */
-  // Detection range is the clock on every dilemma about time: it decides how
+  // Detection range is the clock on every scenario about time: it decides how
   // long the operator has between seeing something and having to act.
   if (!positive(spec.sensor.max_range_km)) {
     say(RADAR, "Detection range is empty. It decides how much warning the operator gets, so nothing can be placed on the scope without it.");
@@ -83,12 +83,12 @@ export function simulationGaps(spec: SimulationSpec): Gap[] {
 
   /* ---- What can appear ------------------------------------------- */
   if (spec.track_classifications.length === 0) {
-    say(CLASSES, "No track classes. A scenario may only produce tracks of the kinds declared here, so with none there is nothing to fly.");
+    say(CLASSES, "No track classes. An exercise may only produce tracks of the kinds declared here, so with none there is nothing to fly.");
   }
   spec.track_classifications.forEach((entry, index) => {
     const name = entry.name.trim() || `class ${index + 1}`;
     if (!entry.name.trim()) {
-      say(CLASSES, `Class ${index + 1} has no name. The scenario refers to classes by name.`);
+      say(CLASSES, `Class ${index + 1} has no name. The exercise refers to classes by name.`);
     }
     if (!positive(entry.typical_speed_kts.max)) {
       say(CLASSES, `“${name}” has no top speed. Speed is what moves the track across the scope — at zero it never arrives.`);
@@ -105,7 +105,7 @@ export function simulationGaps(spec: SimulationSpec): Gap[] {
     say(STATES, "No identification states. Every track carries one, and the operator's whole judgement is about which.");
   } else {
     if (spec.iff_states.some((state) => !state.name.trim())) {
-      say(STATES, "An identification state has no name. The scenario and the console both refer to them by name.");
+      say(STATES, "An identification state has no name. The exercise and the console both refer to them by name.");
     }
     // Without something hostile there is nothing to defend against; without
     // something that is not, there is no wrong thing to shoot — and a run
