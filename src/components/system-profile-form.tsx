@@ -32,7 +32,7 @@ import { readJson } from "@/lib/http";
  * prose into lists is what a model is actually good at.
  *
  * Then the extracted profile, fully editable, because this record silently
- * shapes every scenario a trainee will ever see.
+ * shapes every exercise a trainee will ever see.
  */
 
 type Phase = "answering" | "reviewing";
@@ -129,7 +129,7 @@ export function SystemProfileForm({
       if (!response.ok) throw new Error(payload.error ?? "Save failed.");
       setNotice(
         approved
-          ? "Approved. Scenarios and the console are now built from this."
+          ? "Approved. Exercises and the console are now built from this."
           : "Saved as a draft. Not yet driving anything.",
       );
       router.refresh();
@@ -160,7 +160,7 @@ export function SystemProfileForm({
       <div className="space-y-8">
         <div className="panel p-4">
           <p className="prose-block text-sm">
-            Everything here shapes every scenario a trainee will ever see — what
+            Everything here shapes every exercise a trainee will ever see — what
             tracks can appear, what numbers are plausible, what the operator is
             allowed to do.
           </p>
@@ -282,7 +282,7 @@ export function SystemProfileForm({
         </span>
         <p className="flex-1 text-sm text-muted">
           {existing?.approved
-            ? "This is what scenarios and the console are built from."
+            ? "This is what exercises and the console are built from."
             : "Not yet driving anything. Approve it to put it into use."}
         </p>
         <button
@@ -321,7 +321,7 @@ export function SystemProfileForm({
       {/* ---- Sensor coverage ---------------------------------------- */}
       <Section
         title="What the radar sees"
-        hint="Detection range decides how much warning the operator gets; the arc decides whether they get any from a given direction. Both are yours — nothing reads them but the scenario generator."
+        hint="Detection range decides how much warning the operator gets; the arc decides whether they get any from a given direction. Both are yours — nothing reads them but the exercise generator."
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Labelled label="Detection range (km)">
@@ -403,7 +403,7 @@ export function SystemProfileForm({
       {/* ---- Track classifications ---------------------------------- */}
       <Section
         title="Track classifications"
-        hint="Scenario generation may only produce tracks of these kinds, within these bands."
+        hint="Exercise generation may only produce tracks of these kinds, within these bands."
       >
         <div className="space-y-3">
           {draft.track_classifications.map((entry, index) => (
@@ -678,7 +678,7 @@ export function SystemProfileForm({
       {/* ---- Engagement --------------------------------------------- */}
       <Section
         title="Engagement constraints"
-        hint="Scenario geometry has to sit inside these, or the trade-off it presents is not a real one."
+        hint="Exercise geometry has to sit inside these, or the trade-off it presents is not a real one."
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Labelled label="Minimum range (km)">
@@ -741,7 +741,7 @@ export function SystemProfileForm({
       {/* ---- Roles ---------------------------------------------------- */}
       <Section
         title="Who does what"
-        hint="A scenario must never ask a trainee to do something the system does by itself."
+        hint="An exercise must never ask a trainee to do something the system does by itself."
       >
         <Labelled label="The operator decides" hint="One per line.">
           <textarea
@@ -1017,7 +1017,7 @@ function NumberInput({
  *
  * Empty and zero are different answers here: a radar with no stated ceiling is
  * not a radar that sees to zero feet, and storing one as the other would put a
- * limit into the scenario generator that nobody ever claimed.
+ * limit into the exercise generator that nobody ever claimed.
  */
 function NullableNumber({
   value,
