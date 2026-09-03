@@ -7,7 +7,7 @@ import { RangeControl } from "@/components/range-control";
 import { SimulatedConsole } from "@/components/simulated-console";
 import type {
   DifficultyLevel,
-  ScenarioInstance,
+  ExerciseInstance,
   SystemProfile,
 } from "@/lib/domain/schemas";
 import { describeReply, meaningOfMode3 } from "@/lib/domain/iff-codes";
@@ -62,7 +62,7 @@ type Stage = "brief" | "running" | "submitting" | "failed";
 
 export function LiveRun({
   runId,
-  scenario,
+  exercise,
   difficulty,
   profile,
   templateHtml,
@@ -73,7 +73,7 @@ export function LiveRun({
    * session the result is written to.
    */
   runId: string;
-  scenario: ScenarioInstance;
+  exercise: ExerciseInstance;
   difficulty: DifficultyLevel;
   profile: SystemProfile | null;
   /**
@@ -96,15 +96,15 @@ export function LiveRun({
 }) {
   const router = useRouter();
 
-  const config = useMemo(() => simConfig(profile, scenario), [profile, scenario]);
+  const config = useMemo(() => simConfig(profile, exercise), [profile, exercise]);
   /* Seeded from the session, so the luck of a run is fixed the moment it is
-     created: the same scenario deals the same hands, and a debrief that says a
+     created: the same exercise deals the same hands, and a debrief that says a
      shot missed is still true when someone reviews it. */
   const random = useMemo(() => seededRandom(runId), [runId]);
 
   const [stage, setStage] = useState<Stage>("brief");
   const [state, setState] = useState<SimState>(() =>
-    createSim(scenario.live_tracks),
+    createSim(exercise.live_tracks),
   );
   const [selected, setSelected] = useState<string | null>(null);
   const [round, setRound] = useState(config.interceptors[0]?.name ?? "");
@@ -121,7 +121,7 @@ export function LiveRun({
   const submitted = useRef(false);
   const finished = useRef<SimState | null>(null);
 
-  const remaining = Math.max(0, scenario.time_window_seconds - state.t);
+  const remaining = Math.max(0, exercise.time_window_seconds - state.t);
 
   const finish = useCallback(
     async (final: SimState) => {
@@ -137,7 +137,7 @@ export function LiveRun({
 
       setStage("submitting");
 
-      const result = summarise(final, config, scenario.success_criteria);
+      const result = summarise(final, config, exercise.success_criteria);
       try {
         const response = await fetch(`/api/sessions/${runId}/complete`, {
           method: "POST",
@@ -156,7 +156,7 @@ export function LiveRun({
         setStage("failed");
       }
     },
-    [config, onFinish, router, runId, scenario.success_criteria],
+    [config, onFinish, router, runId, exercise.success_criteria],
   );
 
   /* ---- The clock ------------------------------------------------ */
@@ -173,7 +173,7 @@ export function LiveRun({
         const nothingLeft =
           next.tracks.every((track) => track.state !== "airborne") &&
           next.engagements.every((engagement) => engagement.resolved);
-        const outOfTime = next.t >= scenario.time_window_seconds;
+        const outOfTime = next.t >= exercise.time_window_seconds;
 
         if (outOfTime || nothingLeft) {
           const done = end(
@@ -187,7 +187,7 @@ export function LiveRun({
       });
     }, TICK_MS);
     return () => clearInterval(timer);
-  }, [stage, config, scenario.time_window_seconds]);
+  }, [stage, config, exercise.time_window_seconds]);
 
   /* Submitting is a side effect of the run ending, not of the tick: doing it
      inside the interval would fire it several times before the state settled. */
@@ -208,7 +208,7 @@ export function LiveRun({
   if (stage === "brief") {
     return (
       <Brief
-        scenario={scenario}
+        exercise={exercise}
         config={config}
         difficulty={difficulty}
         onBegin={() => setStage("running")}
@@ -263,7 +263,7 @@ export function LiveRun({
   );
 
   const clock = (
-    <Clock remaining={remaining} window={scenario.time_window_seconds} />
+    <Clock remaining={remaining} window={exercise.time_window_seconds} />
   );
 
   const trackList = (
@@ -280,7 +280,7 @@ export function LiveRun({
       config={config}
       spent={state.spent}
       inFlight={inFlight}
-      criteria={scenario.success_criteria}
+      criteria={exercise.success_criteria}
     />
   );
 
@@ -306,7 +306,7 @@ export function LiveRun({
           html={templateHtml}
           slots={{
             "system-name": (
-              <span className="data text-xs">{scenario.scenario_name}</span>
+              <span className="data text-xs">{exercise.exercise_name}</span>
             ),
             clock,
             scope: (
@@ -352,7 +352,7 @@ export function LiveRun({
         </span>
         {rangeControl}
         <span className="ml-auto data text-xs text-muted">
-          {scenario.scenario_name}
+          {exercise.exercise_name}
         </span>
       </header>
 
@@ -394,12 +394,12 @@ export function LiveRun({
 /* ------------------------------------------------------------------ */
 
 function Brief({
-  scenario,
+  exercise,
   config,
   difficulty,
   onBegin,
 }: {
-  scenario: ScenarioInstance;
+  exercise: ExerciseInstance;
   config: ReturnType<typeof simConfig>;
   difficulty: string;
   onBegin: () => void;
@@ -409,13 +409,13 @@ function Brief({
       <div className="panel">
         <div className="panel-header">Situation brief</div>
         <div className="p-5">
-          <h2 className="text-lg font-semibold">{scenario.scenario_name}</h2>
+          <h2 className="text-lg font-semibold">{exercise.exercise_name}</h2>
           <p className="prose-block mt-3 whitespace-pre-wrap text-sm">
-            {scenario.situation_brief}
+            {exercise.situation_brief}
           </p>
 
           <dl className="data mt-5 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
-            <Stat label="Window" value={`${scenario.time_window_seconds}s`} />
+            <Stat label="Window" value={`${exercise.time_window_seconds}s`} />
             <Stat label="Rounds" value={String(config.magazine)} />
             <Stat label="At once" value={String(config.max_simultaneous)} />
             <Stat label="Level" value={difficulty} />
@@ -426,18 +426,18 @@ function Brief({
               What counts as success
             </p>
             <p className="mt-2 text-sm">
-              {scenario.success_criteria.statement ||
+              {exercise.success_criteria.statement ||
                 "Keep every hostile out of the defended area."}
             </p>
             <ul className="mt-3 space-y-1 text-xs text-muted">
               <li>
-                At most {scenario.success_criteria.max_leakers} hostile
-                {scenario.success_criteria.max_leakers === 1 ? "" : "s"} may
+                At most {exercise.success_criteria.max_leakers} hostile
+                {exercise.success_criteria.max_leakers === 1 ? "" : "s"} may
                 reach the defended area.
               </li>
               <li>Engaging anything friendly fails the run outright.</li>
               <li>
-                Efficient is {scenario.success_criteria.max_interceptors_spent}{" "}
+                Efficient is {exercise.success_criteria.max_interceptors_spent}{" "}
                 rounds or fewer.
               </li>
             </ul>
@@ -595,7 +595,7 @@ function Resources({
   config: ReturnType<typeof simConfig>;
   spent: number;
   inFlight: number;
-  criteria: ScenarioInstance["success_criteria"];
+  criteria: ExerciseInstance["success_criteria"];
 }) {
   const left = config.magazine - spent;
   return (
