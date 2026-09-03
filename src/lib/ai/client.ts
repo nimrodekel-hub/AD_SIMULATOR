@@ -85,9 +85,101 @@ function anthropic(): Anthropic {
     throw new AiNotConfiguredError();
   }
   if (!client) {
-    client = new Anthropic({ apiKey: config.anthropic.apiKey });
+    client = new Anthropic({
+      apiKey: config.anthropic.apiKey,
+      // The retry policy lives in `withRetry` below rather than here. The SDK's
+      // own default is three quick attempts a second or two apart, which is
+      // exactly the wrong shape for an overload: a provider that is saturated
+      // now is still saturated two seconds later, so all three attempts are
+      // spent inside the same bad moment and the caller sees the failure
+      // anyway. Waiting properly is the only thing that helps, and only the
+      // code that knows how long it is allowed to wait can do that.
+      maxRetries: 0,
+    });
   }
   return client;
+}
+
+/* ------------------------------------------------------------------ */
+/* Riding out a bad minute                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Whether a failure is worth trying again, or is the answer.
+ *
+ * Overload (529) and rate limiting are the provider saying "not now" rather
+ * than "no": the same request a minute later usually succeeds. Connection
+ * faults and 5xx are the same kind of thing. Everything else — a rejected key,
+ * a malformed request, a refusal — will fail identically however many times it
+ * is sent, and retrying it only makes the user wait longer to be told.
+ */
+function worthRetrying(reason: unknown): boolean {
+  if (reason instanceof Anthropic.RateLimitError) return true;
+  if (reason instanceof Anthropic.APIConnectionError) return true;
+  if (reason instanceof Anthropic.APIError) {
+    return typeof reason.status === "number" && reason.status >= 500;
+  }
+  return false;
+}
+
+/**
+ * How long to wait before each further attempt, in seconds.
+ *
+ * Deliberately long. These calls already run server-side inside a five-minute
+ * budget with the browser polling a job record, so nobody is holding a
+ * connection open and a two-minute recovery costs the designer nothing but
+ * patience they were already spending. Short retries would be free and useless
+ * — an overload lasts longer than a second.
+ */
+const BACKOFF_S = [3, 10, 25, 60];
+
+/**
+ * Runs a call, and keeps trying while the provider is merely busy.
+ *
+ * This exists because of a real report: a designer asked for a correction to
+ * an exercise and got `Anthropic API error 529 overloaded_error` back, which is
+ * not a fault in their request and not something they can do anything about.
+ * The work was already running in the background with nothing waiting on it,
+ * so the right response was to wait and go again rather than to hand a
+ * provider's bad minute to the person using the app.
+ */
+async function withRetry<T>(
+  label: string,
+  call: () => Promise<T>,
+  /**
+   * Asked before each further attempt. Streaming uses it: once a word has
+   * reached the browser the reply cannot be started over, because going again
+   * would splice a second answer onto the end of half of the first.
+   */
+  stillSafe: () => boolean = () => true,
+): Promise<T> {
+  let last: unknown;
+  for (let attempt = 0; attempt <= BACKOFF_S.length; attempt += 1) {
+    try {
+      return await call();
+    } catch (reason) {
+      last = reason;
+      const wait = BACKOFF_S[attempt];
+      if (wait === undefined || !worthRetrying(reason) || !stillSafe()) {
+        throw reason;
+      }
+      /* The log wants what happened, not the sentence shown to the designer:
+         that one says the call was already retried for a minute, which is not
+         yet true on the first go round. */
+      const what =
+        reason instanceof Anthropic.APIError
+          ? `${reason.status} ${apiErrorText(reason)}`
+          : reason instanceof Error
+            ? reason.message
+            : "unknown";
+      console.log(
+        `[ai:retry] ${label} attempt ${attempt + 1} failed (${what}) ` +
+          `— trying again in ${wait}s`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, wait * 1000));
+    }
+  }
+  throw last;
 }
 
 export class AiNotConfiguredError extends Error {
@@ -98,6 +190,22 @@ export class AiNotConfiguredError extends Error {
     );
     this.name = "AiNotConfiguredError";
   }
+}
+
+/** Whether the provider said it is saturated, whatever shape it said it in. */
+function isOverloaded(reason: unknown): boolean {
+  if (!(reason instanceof Anthropic.APIError)) return false;
+  if (reason.status === 529) return true;
+  const body = reason.error as { error?: { type?: string } } | undefined;
+  return body?.error?.type === "overloaded_error";
+}
+
+/** The provider's own sentence, without the status and JSON wrapper. */
+function apiErrorText(reason: InstanceType<typeof Anthropic.APIError>): string {
+  const body = reason.error as { error?: { message?: string } } | undefined;
+  const inner = body?.error?.message;
+  if (inner && inner.trim().length > 0) return inner;
+  return reason.message.replace(/^\s*\d{3}\s*/, "");
 }
 
 /**
@@ -111,10 +219,27 @@ export function describeAiError(reason: unknown): string {
     return "The Anthropic API key was rejected. Check that ANTHROPIC_API_KEY is correct and active.";
   }
   if (reason instanceof Anthropic.RateLimitError) {
-    return "Rate limited by the Anthropic API. Wait a few seconds and try again.";
+    return (
+      "The Anthropic API is rate-limiting this account. It was retried for " +
+      "over a minute and was still limited. Wait a few minutes and press it " +
+      "again — nothing was lost."
+    );
+  }
+  if (isOverloaded(reason)) {
+    return (
+      "The Anthropic API is overloaded at the moment. That is on their side, " +
+      "not a problem with what you asked for. It was already retried for over " +
+      "a minute; press it again and it will usually go through."
+    );
+  }
+  if (reason instanceof Anthropic.APIConnectionError) {
+    return "Could not reach the Anthropic API. Press it again in a moment.";
   }
   if (reason instanceof Anthropic.APIError) {
-    return `Anthropic API error ${reason.status}: ${reason.message}`;
+    /* The SDK's own message is the raw response body, which begins with the
+       status — printing both gives "529: 529 {...json...}". Prefer whatever
+       sentence the provider put inside the envelope. */
+    return `Anthropic API error ${reason.status}: ${apiErrorText(reason)}`;
   }
   return reason instanceof Error ? reason.message : "Unexpected error calling the AI.";
 }
@@ -162,17 +287,19 @@ export async function structured<T>({
 }: StructuredRequest<T>): Promise<T> {
   if (config.anthropic.mock && mock) return mock();
 
-  const response = await anthropic().messages.parse({
-    model: config.anthropic.model,
-    max_tokens: maxTokens,
-    thinking: { type: "adaptive" },
-    system: cacheableSystem(system),
-    messages,
-    output_config: {
-      effort,
-      format: zodOutputFormat(schema),
-    },
-  });
+  const response = await withRetry(label, () =>
+    anthropic().messages.parse({
+      model: config.anthropic.model,
+      max_tokens: maxTokens,
+      thinking: { type: "adaptive" },
+      system: cacheableSystem(system),
+      messages,
+      output_config: {
+        effort,
+        format: zodOutputFormat(schema),
+      },
+    }),
+  );
 
   reportUsage(label, response.usage as Usage);
 
@@ -244,44 +371,55 @@ export function streamChat({
           return;
         }
 
-        const stream = anthropic().messages.stream({
-          model: config.anthropic.model,
-          max_tokens: maxTokens,
-          thinking: { type: "adaptive" },
-          system: cacheableSystem(system),
-          messages,
-          output_config: { effort },
-          // A conversation re-sends everything said so far on every single
-          // turn, so its cost grows with the square of its length. Caching the
-          // growing tail as well as the system prompt is what stops that: the
-          // breakpoint moves forward by itself as turns are appended, so each
-          // turn pays full price only for what was just added.
-          cache_control: { type: "ephemeral" },
-        });
-
-        // Keep the connection warm while the model is still thinking. Stopped
-        // as soon as real text starts, so nothing is ever injected into the
-        // middle of a sentence.
+        // Keep the connection warm while the model is still thinking, and
+        // across any wait for an overloaded provider to recover. Stopped as
+        // soon as real text starts, so nothing is ever injected into the
+        // middle of a sentence — which is also why it spans the retries: the
+        // silence during a sixty-second backoff is exactly the silence a phone
+        // reads as a dead connection.
         let wroteText = false;
         const keepAlive = setInterval(() => {
           if (!wroteText) controller.enqueue(encoder.encode(" "));
         }, SILENCE_LIMIT_MS);
 
         try {
-          for await (const event of stream) {
-            if (
-              event.type === "content_block_delta" &&
-              event.delta.type === "text_delta"
-            ) {
-              wroteText = true;
-              controller.enqueue(encoder.encode(event.delta.text));
-            }
-          }
+          await withRetry(
+            label,
+            async () => {
+              const stream = anthropic().messages.stream({
+                model: config.anthropic.model,
+                max_tokens: maxTokens,
+                thinking: { type: "adaptive" },
+                system: cacheableSystem(system),
+                messages,
+                output_config: { effort },
+                // A conversation re-sends everything said so far on every
+                // single turn, so its cost grows with the square of its
+                // length. Caching the growing tail as well as the system
+                // prompt is what stops that: the breakpoint moves forward by
+                // itself as turns are appended, so each turn pays full price
+                // only for what was just added.
+                cache_control: { type: "ephemeral" },
+              });
+
+              for await (const event of stream) {
+                if (
+                  event.type === "content_block_delta" &&
+                  event.delta.type === "text_delta"
+                ) {
+                  wroteText = true;
+                  controller.enqueue(encoder.encode(event.delta.text));
+                }
+              }
+
+              reportUsage(label, (await stream.finalMessage()).usage as Usage);
+            },
+            () => !wroteText,
+          );
         } finally {
           clearInterval(keepAlive);
         }
 
-        reportUsage(label, (await stream.finalMessage()).usage as Usage);
         controller.close();
       } catch (reason) {
         // Headers are already sent by the time this runs, so the error cannot

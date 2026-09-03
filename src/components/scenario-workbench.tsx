@@ -87,6 +87,10 @@ export function ScenarioWorkbench({
       setPending(undefined);
       askedRef.current = undefined;
       setProposed(result);
+      // Cleared here rather than on send, so a failed attempt leaves the
+      // complaint where it was typed. A provider having a bad minute should
+      // cost one more press, not a rewrite of what was already said.
+      setMessage("");
     },
   });
 
@@ -96,7 +100,6 @@ export function ScenarioWorkbench({
     setNotice(undefined);
     setPending(asked);
     askedRef.current = asked;
-    setMessage("");
     return start({
       system_id: saved.system_id,
       requests: [...revisions.map((entry) => entry.request), asked],
