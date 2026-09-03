@@ -33,6 +33,8 @@ interface JobResult {
   scenario: ScenarioInstance;
   notes: string;
   requests?: string[];
+  /** What the system's own limits overrode, where they did. */
+  adjustments?: string[];
 }
 
 /** Complaints designers make often enough to be worth offering as a shortcut. */
@@ -287,6 +289,26 @@ export function ScenarioWorkbench({
               <span className="text-muted/70">What was changed: </span>
               {proposed.notes}
             </p>
+          ) : null}
+
+          {/* What could not be done, and why. Shown next to the account of
+              what was, because the two disagree often enough to matter: a
+              designer asking for a shorter run gets a floor set by the
+              geometry, and being told so is the difference between a limit
+              and a change that quietly did not happen. */}
+          {(proposed.adjustments ?? []).length > 0 ? (
+            <div className="panel mb-4 border-l-2 border-l-warn p-3">
+              <p className="label !mb-1">
+                What the system would not allow, and why
+              </p>
+              <ul className="space-y-1">
+                {(proposed.adjustments ?? []).map((entry, index) => (
+                  <li key={index} className="text-xs leading-relaxed text-muted">
+                    {entry}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <button
