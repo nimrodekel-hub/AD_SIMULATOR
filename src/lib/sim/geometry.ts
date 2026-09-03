@@ -169,7 +169,7 @@ export function timeToImpact(
  * A repeatable pseudo-random stream.
  *
  * Interception is probabilistic, and probabilistic must not mean unfair: two
- * trainees given the same scenario should meet the same luck, and a debrief
+ * trainees given the same exercise should meet the same luck, and a debrief
  * that says "your second shot missed" should still be true when the run is
  * reviewed. Seeding from the session id gives both.
  */

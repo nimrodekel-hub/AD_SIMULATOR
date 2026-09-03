@@ -8,11 +8,12 @@ import {
   type DifficultyLevel,
   type RunResult,
   type SimEvent,
-  type ScenarioInstance,
+  type ExerciseInstance,
   type Session,
   type Trainee,
 } from "../domain/schemas";
 import { repoFiles } from "./repo-files";
+import { currentNames } from "../domain/stored-names";
 
 /**
  * Session log: every training run, the decisions taken during it, and the
@@ -38,21 +39,21 @@ function serialise(value: unknown): string {
 export async function createSession(input: {
   traineeId: string;
   systemId: string;
-  dilemmaEntryId: string;
+  scenarioEntryId: string;
   requestedText: string;
   clarificationRounds: ClarificationRound[];
   difficulty: DifficultyLevel;
-  scenario: ScenarioInstance;
+  exercise: ExerciseInstance;
 }): Promise<Session> {
   const session: Session = {
     id: crypto.randomUUID(),
     trainee_id: input.traineeId,
     system_id: input.systemId,
-    dilemma_entry_id: input.dilemmaEntryId,
+    scenario_entry_id: input.scenarioEntryId,
     requested_text: input.requestedText,
     clarification_rounds: input.clarificationRounds,
     difficulty_level: input.difficulty,
-    scenario_instance: input.scenario,
+    exercise_instance: input.exercise,
     decisions_made: [],
     run_log: [],
     run_result: null,
@@ -73,7 +74,7 @@ export async function getSession(id: string): Promise<Session | null> {
   const raw = await repoFiles().read(fileFor(id));
   if (raw === null) return null;
 
-  const parsed = SessionSchema.safeParse(JSON.parse(raw));
+  const parsed = SessionSchema.safeParse(currentNames(JSON.parse(raw)));
   if (!parsed.success) {
     // One malformed run must not break the instructor's whole history view.
     console.error(`Skipping malformed session ${id}:`, parsed.error.message);
