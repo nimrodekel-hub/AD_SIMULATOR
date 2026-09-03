@@ -81,10 +81,25 @@ State plainly what winning means, and set \`max_interceptors_spent\` so that eff
 
 **situation_brief** is what the operator reads before the clock starts: their posture, what is expected, what they hold. It sets the problem and never hints at which track is which.
 
-Keep it vendor-neutral: invented track designators, no real unit or platform names.`;
+Keep it vendor-neutral: invented track designators, no real unit or platform names.
+
+## When you are given an exercise to correct
+
+You may be handed a scenario you produced before along with what the designer says is wrong with it, oldest complaint first.
+
+- **Fix what was named and leave the rest.** A request to move one arrival later is not licence to redraw the engagement. The designer is converging on an exercise they can use, and every unrequested change costs them ground they had already taken.
+- **All the complaints still stand.** The newest is what they just said; the earlier ones were fixed and must stay fixed.
+- **Keep what identifies the exercise where you can** — its name, the shape of the problem, the tracks they did not complain about. A correction that returns an unrecognisably different exercise is not a correction.
+- Every rule above still binds: the profile's classes and bands, the engagement envelope, the operator's own responsibilities. If a request cannot be met without breaking one, do the nearest thing that does not and say so in your notes.
+
+## notes_for_designer
+
+One or two sentences: what you changed this time and why, or — on a first generation — what you built the engagement around. This is read beside the request that prompted it, so be specific: "moved the second arrival from T+40 to T+95 so the first is resolved before it appears", not "improved the timing".`;
 
 /** What the model returns. Everything else is computed or clamped in code. */
 const ScenarioDraftSchema = z.object({
+  /** What was changed, or what the engagement was built around. */
+  notes_for_designer: z.string().default(""),
   scenario_name: z.string(),
   situation_brief: z.string(),
   time_window_seconds: z.number(),
@@ -108,12 +123,30 @@ const DIFFICULTY_GUIDANCE: Record<DifficultyLevel, string> = {
   hard: "Compress everything. Overlapping arrivals, an ambiguous track among them, and not enough rounds to be careless. The operator should finish aware that something had to be given up.",
 };
 
+/** What a generation produced, and its own account of what it did. */
+export interface GeneratedScenario {
+  scenario: ScenarioInstance;
+  notes: string;
+}
+
 export async function generateScenario(
   dilemma: DilemmaEntry,
   difficulty: DifficultyLevel,
   profile: SystemProfile | null,
-): Promise<ScenarioInstance> {
+  /**
+   * A correction rather than a first attempt.
+   *
+   * The scenario to fix and everything the designer has said is wrong with
+   * it, oldest first. The whole list travels every time, for the same reason
+   * the console's does: a fix that honours the newest complaint while undoing
+   * the last one is how this goes round in circles.
+   */
+  revise?: { previous: ScenarioInstance; requests: string[] },
+): Promise<GeneratedScenario> {
   const band = dilemma.difficulty_scaling[difficulty];
+  const asked = (revise?.requests ?? []).filter(
+    (entry) => entry.trim().length > 0,
+  );
 
   const draft = await structured({
     system: SCENARIO_SYSTEM,
@@ -127,18 +160,31 @@ export async function generateScenario(
           `<dilemma>\n${JSON.stringify(dilemma, null, 2)}\n</dilemma>`,
           `<difficulty level="${difficulty}">\n${JSON.stringify(band, null, 2)}\n</difficulty>`,
           `<guidance>${DIFFICULTY_GUIDANCE[difficulty]}</guidance>`,
-          "Lay out the engagement.",
-        ].join("\n\n"),
+          revise
+            ? `Here is the exercise as it stands. Correct it; do not start over.\n\n<current_exercise>\n${JSON.stringify(revise.previous, null, 2)}\n</current_exercise>`
+            : "",
+          asked.length > 0
+            ? `What the designer says is wrong with it, oldest first. All of it still stands.\n\n<complaints>\n${asked
+                .map((entry, index) => `${index + 1}. ${entry}`)
+                .join("\n")}\n</complaints>`
+            : "",
+          revise ? "Produce the corrected exercise." : "Lay out the engagement.",
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
       },
     ],
     schema: ScenarioDraftSchema,
     effort: "high",
     maxTokens: 16000,
-    label: "scenario",
+    label: revise ? "scenario-revision" : "scenario",
     mock: () => mockScenario(dilemma, difficulty, profile),
   });
 
-  return clampToProfile(draft, profile);
+  return {
+    scenario: clampToProfile(draft, profile),
+    notes: draft.notes_for_designer,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -440,6 +486,8 @@ function mockScenario(
   };
 
   return {
+    notes_for_designer:
+      "Mock generation — no ANTHROPIC_API_KEY is configured, so this engagement is a built-in placeholder rather than one laid out for this dilemma.",
     scenario_name: `Mock run — ${dilemma.title} (${difficulty})`,
     situation_brief:
       "Mock scenario. No ANTHROPIC_API_KEY is configured, so this engagement is laid out locally rather than by the model — but it runs exactly like a real one. Three inbounds, and one of them is not a threat.",

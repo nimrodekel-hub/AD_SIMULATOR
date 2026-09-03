@@ -377,14 +377,25 @@ export type SystemProfile = z.infer<typeof SystemProfileSchema>;
  * message says "and make the header darker". Handing the model only the newest
  * one is how a console loses a change it was already asked for.
  */
-export const GuiRevisionSchema = z.object({
+export const RevisionSchema = z.object({
   /** What the designer asked for, in their words. */
   request: z.string(),
   /** What came back — the model's own account of what it changed. */
   notes: z.string().default(""),
   at: z.string().default(""),
 });
-export type GuiRevision = z.infer<typeof GuiRevisionSchema>;
+export type Revision = z.infer<typeof RevisionSchema>;
+
+/**
+ * The same shape, under the name the console builder has always used.
+ *
+ * The pattern turned out to be general: a designer says what is wrong in
+ * words, something is rebuilt, and what came back is recorded beside the
+ * request. It is how consoles are corrected and now how scenarios are, so the
+ * schema is shared rather than copied.
+ */
+export const GuiRevisionSchema = RevisionSchema;
+export type GuiRevision = Revision;
 
 export const GuiTemplateSchema = z.object({
   /** Same value as the system's id — one console per system. */
@@ -654,6 +665,50 @@ export type MatchResult = z.infer<typeof MatchResultSchema>;
 
 export const DifficultyLevelSchema = z.enum(["easy", "medium", "hard"]);
 export type DifficultyLevel = z.infer<typeof DifficultyLevelSchema>;
+
+/**
+ * A scenario kept in its own right, rather than only inside the run it was
+ * generated for.
+ *
+ * Every exercise the generator produces used to exist in exactly one place: a
+ * trainee's session. That made the whole library invisible — nobody could look
+ * at what had been generated, and a bad exercise could only be discovered by
+ * flying it and could not be corrected at all.
+ *
+ * A record here is either a scenario a designer has taken hold of to correct,
+ * or the corrected result. **A session is never rewritten.** Its debrief and
+ * its score describe what was actually flown, so revising a flown exercise
+ * produces one of these instead and leaves the record of the run alone.
+ */
+export const SavedScenarioSchema = z.object({
+  id: z.string(),
+  /** The system it is flown on. Its profile bounds everything in the scenario. */
+  system_id: z.string(),
+  /** The dilemma it teaches. Kept so a revision can be regenerated from it. */
+  dilemma_entry_id: z.string(),
+  difficulty_level: DifficultyLevelSchema,
+  scenario_instance: ScenarioInstanceSchema,
+  /**
+   * What was asked of it and what came back, oldest first.
+   *
+   * Sent whole with every revision, for the same reason the console's thread
+   * is: a correction that honours the newest request while undoing the last
+   * one is how this goes in circles.
+   */
+  revisions: z.array(RevisionSchema).default([]),
+  /**
+   * Where it came from, in one line, for the library listing.
+   *
+   * A scenario lifted out of a run says so, and names the run — because the
+   * run's debrief is the evidence for whatever was wrong with it.
+   */
+  source: z.string().default(""),
+  /** The run it was lifted from, when it was. Empty for a fresh generation. */
+  from_session_id: z.string().default(""),
+  created_at: z.string(),
+  updated_at: z.string().default(""),
+});
+export type SavedScenario = z.infer<typeof SavedScenarioSchema>;
 
 export const ClarificationRoundSchema = z.object({
   question: z.string(),
