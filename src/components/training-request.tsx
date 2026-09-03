@@ -17,13 +17,13 @@ import { formatWait, useBackgroundJob } from "@/lib/use-job";
  * first and gets the room. But it was the *only* way in, and that turned out
  * to be a tax rather than a principle: a trainee who already knows they want
  * the leaker drill should not have to describe it to a matcher and wait for it
- * to agree. So the system's approved dilemmas are also listed, and picking one
+ * to agree. So the system's approved scenarios are also listed, and picking one
  * starts a run directly.
  *
  * Matching is still what the POC is testing, which is why the box is above the
  * list and not beside it.
  *
- * Matching is quick. Building the scenario is not — it runs for over a minute,
+ * Matching is quick. Building the exercise is not — it runs for over a minute,
  * which is longer than a phone will hold a connection open, and the trainee is
  * the person here most likely to be on one. So pressing "Begin training" starts
  * the work on the server and this screen asks every few seconds whether it is
@@ -35,7 +35,7 @@ type Phase =
   | { kind: "clarifying"; question: string; roundsRemaining: number }
   | {
       kind: "matched";
-      dilemma: { id: string; title: string };
+      scenario: { id: string; title: string };
       confidence: number;
       reasoning: string;
       difficulty: DifficultyLevel;
@@ -43,15 +43,15 @@ type Phase =
       /** Whether the matcher chose it or the trainee did. */
       source: "match" | "list";
     }
-  | { kind: "no_dilemmas" };
+  | { kind: "no_scenarios" };
 
 /** The three shapes /api/training/match answers with. */
 interface MatchReply {
   error?: string;
-  status: "no_dilemmas" | "needs_clarification" | "matched";
+  status: "no_scenarios" | "needs_clarification" | "matched";
   question: string;
   rounds_remaining: number;
-  dilemma: { id: string; title: string };
+  scenario: { id: string; title: string };
   confidence: number;
   reasoning: string;
   suggested_difficulty: DifficultyLevel;
@@ -76,7 +76,7 @@ export function TrainingRequest({
   systemName: string;
   trainees: Trainee[];
   /**
-   * This system's approved dilemmas, for the trainee who would rather choose
+   * This system's approved scenarios, for the trainee who would rather choose
    * than describe. Empty means there is nothing to train on at all.
    */
   catalogue: Array<{ id: string; title: string; tag: string; when: string }>;
@@ -99,7 +99,7 @@ export function TrainingRequest({
     running: building,
     waited,
     error: buildError,
-    start: startScenario,
+    start: startExercise,
   } = useBackgroundJob<{ session_id: string }>({
     startUrl: "/api/training/start",
     pollUrl: `/api/training/start?trainee_id=${encodeURIComponent(traineeId)}`,
@@ -125,8 +125,8 @@ export function TrainingRequest({
       const payload = await readJson<MatchReply>(response);
       if (!response.ok) throw new Error(payload.error ?? "Matching failed.");
 
-      if (payload.status === "no_dilemmas") {
-        setPhase({ kind: "no_dilemmas" });
+      if (payload.status === "no_scenarios") {
+        setPhase({ kind: "no_scenarios" });
       } else if (payload.status === "needs_clarification") {
         setPhase({
           kind: "clarifying",
@@ -136,7 +136,7 @@ export function TrainingRequest({
       } else {
         setPhase({
           kind: "matched",
-          dilemma: payload.dilemma,
+          scenario: payload.scenario,
           confidence: payload.confidence,
           reasoning: payload.reasoning,
           difficulty: payload.suggested_difficulty,
@@ -168,7 +168,7 @@ export function TrainingRequest({
     setClarifications([]);
     setPhase({
       kind: "matched",
-      dilemma: entry,
+      scenario: entry,
       confidence: 1,
       reasoning: "",
       difficulty: "medium",
@@ -180,16 +180,16 @@ export function TrainingRequest({
   function begin() {
     if (phase.kind !== "matched") return;
     setError(undefined);
-    return startScenario({
+    return startExercise({
       trainee_id: traineeId,
       system_id: systemId,
-      dilemma_id: phase.dilemma.id,
+      scenario_id: phase.scenario.id,
       // The record of why this run happened. A list pick has no request of its
       // own, and leaving it blank would make the debrief and the instructor's
       // history read as though nobody asked for anything.
       requested_text:
         phase.source === "list"
-          ? `Chose “${phase.dilemma.title}” from the list.`
+          ? `Chose “${phase.scenario.title}” from the list.`
           : request,
       clarifications,
       difficulty: phase.difficulty,
@@ -349,7 +349,7 @@ export function TrainingRequest({
             {phase.source === "match" ? (
               <p className="text-sm text-muted">Based on what you asked for:</p>
             ) : null}
-            <p className="mt-1 text-lg font-semibold">{phase.dilemma.title}</p>
+            <p className="mt-1 text-lg font-semibold">{phase.scenario.title}</p>
             {phase.source === "match" ? (
               <>
                 <p className="mt-2 text-sm text-muted">{phase.reasoning}</p>
@@ -384,7 +384,7 @@ export function TrainingRequest({
                 disabled={busy || building}
                 onClick={() => void begin()}
               >
-                {building ? "Building the scenario…" : "Begin training"}
+                {building ? "Building the exercise…" : "Begin training"}
               </button>
               <button
                 type="button"
@@ -399,7 +399,7 @@ export function TrainingRequest({
             {building ? (
               <div className="panel mt-4 p-4">
                 <p className="text-sm">
-                  Building your scenario
+                  Building your exercise
                   {waited > 0 ? ` — ${formatWait(waited)} so far` : "…"}
                 </p>
                 <p className="mt-2 text-xs leading-relaxed text-muted">
@@ -415,12 +415,12 @@ export function TrainingRequest({
       ) : null}
 
       {/* ---- Nothing to match against ------------------------------- */}
-      {phase.kind === "no_dilemmas" ? (
+      {phase.kind === "no_scenarios" ? (
         <div className="panel mt-4 p-4">
           <p className="text-sm">
-            {systemName} has no approved dilemmas yet, so there is nothing to
+            {systemName} has no approved scenarios yet, so there is nothing to
             match your request against. A system designer needs to teach and
-            approve at least one for this system first — dilemmas taught on
+            approve at least one for this system first — scenarios taught on
             another system do not carry across.
           </p>
         </div>
