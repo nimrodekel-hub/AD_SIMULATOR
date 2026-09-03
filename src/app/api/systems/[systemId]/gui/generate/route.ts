@@ -123,6 +123,9 @@ export async function POST(
         // A shell without its slots cannot host a scenario. Recorded rather
         // than thrown, so the designer sees what is wrong and can regenerate.
         missing_slots: missingSlots(draft.html),
+        // Stored with the build, so whichever screen accepts it can write the
+        // whole thread back rather than only what that page happened to hold.
+        requests,
       });
     } catch (reason) {
       await failGuiJob(systemId, system.name, describeAiError(reason));
