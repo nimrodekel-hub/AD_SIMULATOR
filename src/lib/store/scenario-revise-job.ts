@@ -25,6 +25,15 @@ const ReviseJobResultSchema = z.object({
   notes: z.string().default(""),
   /** Every complaint this correction answers, oldest first. */
   requests: z.array(z.string()).default([]),
+  /**
+   * What the profile's own limits overrode, in the designer's terms.
+   *
+   * Kept beside the notes because it is the half the model cannot know: a
+   * window shortened below what the geometry allows is put back by the
+   * enforcement in the generator, and without this the account of what
+   * changed would describe a change that did not survive.
+   */
+  adjustments: z.array(z.string()).default([]),
 });
 
 export type ReviseJobResult = z.infer<typeof ReviseJobResultSchema>;

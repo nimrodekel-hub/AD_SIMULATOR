@@ -73,6 +73,14 @@ A code is not decoration. Give an airliner an ordinary code and it reads as an a
 
 **appears_at_s staggers entries.** Tracks already up at zero should be a manageable picture; later arrivals are what turns it into a problem.
 
+## time_window_seconds is a floor, not a free choice
+
+The run has to be long enough for the fastest track in it to fly from outside the engagement envelope to the site. That approach is where identification happens, and a run that starts with everything already shootable has cut out the interesting half of the job. Work it out — the envelope is in the profile and you chose the speeds — and set the window to fit.
+
+**So a request for a shorter run cannot be met by shortening the clock alone.** If the geometry does not allow it, the honest ways to give a designer a shorter exercise are slower tracks, a closer start, or arrivals brought forward — say which you did. A window below the floor is silently raised back, and then your account of what you changed is untrue.
+
+Ten minutes is the longest a run goes.
+
 ## success_criteria
 
 State plainly what winning means, and set \`max_interceptors_spent\` so that efficiency actually costs something — roughly one round per hostile plus one spare, not the whole magazine.
@@ -127,6 +135,14 @@ const DIFFICULTY_GUIDANCE: Record<DifficultyLevel, string> = {
 export interface GeneratedScenario {
   scenario: ScenarioInstance;
   notes: string;
+  /**
+   * What the enforcement below had to override, in the designer's terms.
+   *
+   * Shown beside the notes rather than swallowed: a request the system cannot
+   * honour is worth one sentence saying so, and without it the model's account
+   * of what it changed can be flatly untrue.
+   */
+  adjustments: string[];
 }
 
 export async function generateScenario(
@@ -181,10 +197,8 @@ export async function generateScenario(
     mock: () => mockScenario(dilemma, difficulty, profile),
   });
 
-  return {
-    scenario: clampToProfile(draft, profile),
-    notes: draft.notes_for_designer,
-  };
+  const { scenario, adjustments } = clampToProfile(draft, profile);
+  return { scenario, notes: draft.notes_for_designer, adjustments };
 }
 
 /* ------------------------------------------------------------------ */
@@ -208,7 +222,13 @@ export async function generateScenario(
 function clampToProfile(
   draft: z.infer<typeof ScenarioDraftSchema>,
   profile: SystemProfile | null,
-): ScenarioInstance {
+): { scenario: ScenarioInstance; adjustments: string[] } {
+  /* What had to be overridden, in words the designer can act on.
+     Silence here was a real fault: a designer said the run was too long, the
+     model said it had shortened it, the floor below put it back, and the only
+     record was a note claiming a change that had not happened. A clamp the
+     designer cannot see is a clamp that makes the notes lie. */
+  const adjustments: string[] = [];
   const detection = detectionRangeKm(profile);
   const blind = profile?.sensor?.min_range_km ?? 0;
 
@@ -278,8 +298,16 @@ function clampToProfile(
   });
 
   const window = windowFor(draft.time_window_seconds, live_tracks, profile);
+  if (window !== Math.round(draft.time_window_seconds)) {
+    adjustments.push(
+      `The run is ${window} seconds rather than the ${Math.round(draft.time_window_seconds)} asked for. ` +
+        (window > draft.time_window_seconds
+          ? "Any shorter and the fastest track would start already inside the engagement envelope, leaving nothing to identify on the way in."
+          : "Ten minutes is the longest a run goes."),
+    );
+  }
 
-  return {
+  const scenario: ScenarioInstance = {
     scenario_name: draft.scenario_name,
     situation_brief: draft.situation_brief,
     time_window_seconds: window,
@@ -298,6 +326,8 @@ function clampToProfile(
     tracks: [],
     decision_points: [],
   };
+
+  return { scenario, adjustments };
 }
 
 /**
