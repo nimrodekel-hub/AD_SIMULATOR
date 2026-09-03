@@ -6,9 +6,9 @@ import { getSystemBundle, listScreenshots } from "@/lib/store/kb";
 /**
  * One system's setup sequence, then its knowledge base.
  *
- * The order matters and is shown as an order. A dilemma is a judgement call
- * *within* a system — teaching dilemmas before the system is described means
- * every scenario is generated against a system the model invented, and nothing
+ * The order matters and is shown as an order. A scenario is a judgement call
+ * *within* a system — teaching scenarios before the system is described means
+ * every exercise is generated against a system the model invented, and nothing
  * about the result looks wrong.
  *
  * The screenshots come first for the same kind of reason. The questions in step
@@ -23,7 +23,7 @@ export default async function SystemSetupPage({
   params,
 }: PageProps<"/designer/systems/[systemId]">) {
   const { systemId } = await params;
-  const [{ system, profile, gui, dilemmas }, screenshots] = await Promise.all([
+  const [{ system, profile, gui, scenarios }, screenshots] = await Promise.all([
     getSystemBundle(systemId),
     listScreenshots(systemId),
   ]);
@@ -40,7 +40,7 @@ export default async function SystemSetupPage({
       eyebrow="System Designer"
       title={system.name}
       subtitle={
-        system.note || "Describe the system, build its console, then teach it dilemmas"
+        system.note || "Describe the system, build its console, then teach it scenarios"
       }
     >
       <div className="mb-8 flex flex-wrap items-center gap-4">
@@ -89,7 +89,7 @@ export default async function SystemSetupPage({
                   ? "Draft, not approved"
                   : "Not described"
             }
-            blurb="Answer a set of questions about track classes, identification, the operator's actions and the engagement envelope. Everything downstream is built from it — without it the model invents a system, and the scenarios look right without being right."
+            blurb="Answer a set of questions about track classes, identification, the operator's actions and the engagement envelope. Everything downstream is built from it — without it the model invents a system, and the exercises look right without being right."
             warnNote={
               referencesReady
                 ? undefined
@@ -132,55 +132,72 @@ export default async function SystemSetupPage({
           <SetupStep
             number={5}
             href={`${base}/learn`}
-            title="Teach a dilemma"
-            done={dilemmas.some((entry) => entry.status === "approved")}
+            title="Teach a scenario"
+            done={scenarios.some((entry) => entry.status === "approved")}
             state={
-              dilemmas.length === 0
+              scenarios.length === 0
                 ? "None captured"
-                : `${dilemmas.filter((d) => d.status === "approved").length} approved`
+                : `${scenarios.filter((d) => d.status === "approved").length} approved`
             }
-            blurb="Talk a real operational dilemma through, review the record extracted from it, correct it, approve it."
+            blurb="Talk a real operational scenario through, review the record extracted from it, correct it, approve it."
             warnNote={
               profileReady
                 ? undefined
-                : "You can start now, but scenarios built from this dilemma will use an invented system until the profile is approved."
+                : "You can start now, but exercises built from this scenario will use an invented system until the profile is approved."
             }
           />
         </ol>
       </section>
 
-      {/* ---- This system's dilemmas ---------------------------------- */}
+      {/* ---- This system's scenarios ---------------------------------- */}
       <section className="mt-12 border-t border-line pt-8">
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <h2 className="flex-1 text-sm font-semibold">Dilemmas</h2>
+        <div className="mb-2 flex flex-wrap items-center gap-3">
+          <h2 className="flex-1 text-sm font-semibold">Scenarios</h2>
           <Link href={`${base}/learn`} className="btn btn-primary">
-            Teach a dilemma
+            Teach a scenario
           </Link>
         </div>
 
-        {dilemmas.length === 0 ? (
+        {/* What the three words mean to each other. Written down because the
+            distinction is the whole structure of the app and is invisible
+            from any one screen: a designer looking at this list cannot tell
+            from it that the dilemmas live inside these, or that what a
+            trainee actually flies is generated from one of them later. */}
+        <p className="mb-4 max-w-2xl text-xs leading-relaxed text-muted">
+          A <strong>scenario</strong> is a situation an operator can be put in,
+          and it holds however many <strong>dilemmas</strong> — hard choices —
+          you decide belong in it. An <strong>exercise</strong> is one concrete
+          run of a scenario, laid out with real tracks and timings when a
+          trainee asks for it; those collect in{" "}
+          <Link href="/designer/exercises" className="hover:text-accent">
+            Exercises
+          </Link>
+          .
+        </p>
+
+        {scenarios.length === 0 ? (
           <div className="panel p-8 text-center">
             <p className="text-sm">Nothing captured yet.</p>
             <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-              Teaching a dilemma is a conversation: describe the situation the
+              Teaching a scenario is a conversation: describe the situation the
               way you would to a new operator of {system.name}, and the system
               will extract a structured record for you to correct and approve.
             </p>
           </div>
         ) : (
           <ul className="space-y-3">
-            {dilemmas.map((entry) => (
+            {scenarios.map((entry) => (
               <li key={entry.id}>
                 <Link
-                  href={`${base}/dilemmas/${entry.id}`}
+                  href={`${base}/scenarios/${entry.id}`}
                   className="panel flex flex-wrap items-center gap-x-4 gap-y-2 p-4 transition-colors hover:border-accent"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{entry.title}</p>
                     <p className="data mt-1 truncate text-xs text-muted">
-                      {entry.sub_domain_tag} · {entry.decision_points.length}{" "}
-                      decision point
-                      {entry.decision_points.length === 1 ? "" : "s"}
+                      {entry.sub_domain_tag} · {entry.dilemmas.length}{" "}
+                      dilemma
+                      {entry.dilemmas.length === 1 ? "" : "s"}
                     </p>
                   </div>
                   <span
