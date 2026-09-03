@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 /**
- * Renders the designer's console shell and puts the live scenario inside it.
+ * Renders the designer's console shell and puts the live exercise inside it.
  *
  * The shell is static markup generated once from reference screenshots. It
  * carries `data-slot` markers where information belongs; this component finds

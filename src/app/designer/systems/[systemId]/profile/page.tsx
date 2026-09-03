@@ -8,9 +8,9 @@ import { getSystem, getSystemProfile } from "@/lib/store/kb";
 /**
  * Setup step one: teaching the app how this system behaves.
  *
- * Comes before the console and before any dilemma on purpose. A dilemma is a
+ * Comes before the console and before any scenario on purpose. A scenario is a
  * judgement call *within* a system; without knowing the system, the model
- * invents one — and every scenario after that is built on the invention.
+ * invents one — and every exercise after that is built on the invention.
  */
 
 export const dynamic = "force-dynamic";
@@ -30,7 +30,7 @@ export default async function SystemProfilePage({
       theme="work"
       eyebrow={system.name}
       title="How the system behaves"
-      subtitle="Taught once. Every scenario, console and debrief on this system is built from it."
+      subtitle="Taught once. Every exercise, console and debrief on this system is built from it."
     >
       <div className="mb-8 flex flex-wrap items-center gap-4">
         <Link
