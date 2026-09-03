@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/store/sessions";
-import { newScenario, saveScenario } from "@/lib/store/scenarios";
+import { newExercise, saveExercise } from "@/lib/store/exercises";
 
 /**
  * Taking hold of an exercise so it can be corrected.
  *
- * A scenario generated for a run lives inside that run, and a finished run is
+ * An exercise generated for a run lives inside that run, and a finished run is
  * a record: its debrief and its score describe what was actually flown, so it
  * is never rewritten. Correcting one therefore starts by copying it out into
  * the library, and everything after that happens to the copy.
@@ -28,21 +28,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
-  const scenario = newScenario({
+  const exercise = newExercise({
     systemId: session.system_id,
-    dilemmaEntryId: session.dilemma_entry_id,
+    scenarioEntryId: session.scenario_entry_id,
     difficulty: session.difficulty_level,
-    scenario: session.scenario_instance,
+    exercise: session.exercise_instance,
     source: `Copied from a run of ${session.created_at.slice(0, 10)}`,
     fromSessionId: session.id,
   });
 
   try {
-    await saveScenario(
-      scenario,
+    await saveExercise(
+      exercise,
       `Take hold of the exercise from run ${session.id.slice(0, 8)}`,
     );
-    return NextResponse.json({ scenario });
+    return NextResponse.json({ exercise });
   } catch (reason) {
     return NextResponse.json(
       { error: reason instanceof Error ? reason.message : "Failed to save." },

@@ -39,7 +39,7 @@ export default async function RunPage({
      nothing to fly. Rather than render an empty scope, say so plainly and let
      them start a fresh run — the old multiple-choice renderer is gone, and
      pretending otherwise would waste their time. */
-  if (session.scenario_instance.live_tracks.length === 0) {
+  if (session.exercise_instance.live_tracks.length === 0) {
     return (
       <ScreenShell
         theme="ops"
@@ -62,13 +62,13 @@ export default async function RunPage({
     <ScreenShell
       theme="ops"
       eyebrow="Trainee · Live engagement"
-      title={session.scenario_instance.scenario_name}
+      title={session.exercise_instance.exercise_name}
       contained={false}
       fullHeight
     >
       <LiveRun
         runId={session.id}
-        scenario={session.scenario_instance}
+        exercise={session.exercise_instance}
         difficulty={session.difficulty_level}
         profile={profile?.approved ? profile : null}
         templateHtml={usableConsole(template?.approved ? template.generated_ui_code : undefined)}

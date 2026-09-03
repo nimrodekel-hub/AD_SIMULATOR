@@ -1,30 +1,30 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 import { z } from "zod";
 import { describeAiError } from "@/lib/ai/client";
-import { extractDilemma } from "@/lib/ai/tasks/learn-dilemma";
+import { extractScenario } from "@/lib/ai/tasks/learn-scenario";
 import { getSystem } from "@/lib/store/kb";
 import {
   asReported,
-  clearDilemmaJob,
-  failDilemmaJob,
-  finishDilemmaJob,
+  clearScenarioJob,
+  failScenarioJob,
+  finishScenarioJob,
   isStale,
-  readDilemmaJob,
-  startDilemmaJob,
-} from "@/lib/store/dilemma-job";
+  readScenarioJob,
+  startScenarioJob,
+} from "@/lib/store/scenario-job";
 
 /**
  * Turns a finished interview transcript into a structured record for review.
  *
  * The browser does not wait for it. Reading a whole interview and extracting a
- * dilemma from it measures at a minute and a half to nearly two against
+ * scenario from it measures at a minute and a half to nearly two against
  * production — far past what a phone will hold a connection open for. So POST
  * starts the work and returns at once, the work continues here until it is
  * done, and GET reports where it got to.
  *
  * It hangs off the system rather than sitting under `/api/designer`, because
  * the job has to be filed somewhere and the system is what it belongs to: this
- * is the dilemma being taught inside that system.
+ * is the scenario being taught inside that system.
  */
 
 /**
@@ -39,7 +39,7 @@ const BodySchema = z.object({ transcript: z.string().min(1) });
 
 export async function POST(
   request: NextRequest,
-  ctx: RouteContext<"/api/systems/[systemId]/dilemmas/extract">,
+  ctx: RouteContext<"/api/systems/[systemId]/scenarios/extract">,
 ) {
   const { systemId } = await ctx.params;
   const system = await getSystem(systemId);
@@ -55,19 +55,19 @@ export async function POST(
 
   // A second press, or a reload followed by one, must not start a second
   // extraction of the same conversation.
-  const existing = await readDilemmaJob(systemId);
+  const existing = await readScenarioJob(systemId);
   if (existing?.status === "running" && !isStale(existing)) {
     return NextResponse.json(asReported(existing), { status: 202 });
   }
 
-  const job = await startDilemmaJob(systemId, system.name);
+  const job = await startScenarioJob(systemId, system.name);
 
   after(async () => {
     try {
-      const draft = await extractDilemma(transcript);
-      await finishDilemmaJob(systemId, system.name, { draft, transcript });
+      const draft = await extractScenario(transcript);
+      await finishScenarioJob(systemId, system.name, { draft, transcript });
     } catch (reason) {
-      await failDilemmaJob(systemId, system.name, describeAiError(reason));
+      await failScenarioJob(systemId, system.name, describeAiError(reason));
     }
   });
 
@@ -77,10 +77,10 @@ export async function POST(
 /** Where the current extraction got to. Safe to call as often as you like. */
 export async function GET(
   _request: NextRequest,
-  ctx: RouteContext<"/api/systems/[systemId]/dilemmas/extract">,
+  ctx: RouteContext<"/api/systems/[systemId]/scenarios/extract">,
 ) {
   const { systemId } = await ctx.params;
-  return NextResponse.json(asReported(await readDilemmaJob(systemId)));
+  return NextResponse.json(asReported(await readScenarioJob(systemId)));
 }
 
 /**
@@ -92,13 +92,13 @@ export async function GET(
  */
 export async function DELETE(
   _request: NextRequest,
-  ctx: RouteContext<"/api/systems/[systemId]/dilemmas/extract">,
+  ctx: RouteContext<"/api/systems/[systemId]/scenarios/extract">,
 ) {
   const { systemId } = await ctx.params;
   const system = await getSystem(systemId);
   if (!system) {
     return NextResponse.json({ error: "System not found" }, { status: 404 });
   }
-  await clearDilemmaJob(systemId, system.name);
+  await clearScenarioJob(systemId, system.name);
   return NextResponse.json({ status: "idle" as const });
 }

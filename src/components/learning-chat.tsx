@@ -2,13 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { DilemmaForm } from "@/components/dilemma-form";
-import type { DilemmaDraft } from "@/lib/domain/schemas";
+import { ScenarioForm } from "@/components/scenario-form";
+import type { ScenarioDraft } from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
 import { type JobView, formatWait, useBackgroundJob } from "@/lib/use-job";
 
 /**
- * Screen 1a — the designer teaches the system a dilemma.
+ * Screen 1a — the designer teaches the system a scenario.
  *
  * Two phases in one screen. First a conversation, which is where the expertise
  * actually comes out. Then a structured record extracted from that conversation
@@ -30,14 +30,14 @@ interface ChatMessage {
 
 /** What the extraction hands back once it finishes. */
 interface ExtractionResult {
-  draft: DilemmaDraft;
+  draft: ScenarioDraft;
   transcript: string;
 }
 
 /** Names the system, so the designer answers about that one and not in general. */
 const openingMessage = (systemName: string): ChatMessage => ({
   role: "assistant",
-  content: `Let's capture one dilemma an operator of ${systemName} faces. Start anywhere — the situation that makes them hesitate, a decision you have seen go wrong, or the trade-off you most want trainees to feel.\n\nI'll ask follow-up questions as we go, and when there's enough to work with I'll say so.`,
+  content: `Let's capture one scenario an operator of ${systemName} faces. Start anywhere — the situation that makes them hesitate, a decision you have seen go wrong, or the trade-off you most want trainees to feel.\n\nI'll ask follow-up questions as we go, and when there's enough to work with I'll say so.`,
 });
 
 export function LearningChat({
@@ -45,7 +45,7 @@ export function LearningChat({
   systemName,
   initialJob,
 }: {
-  /** The system this dilemma is being taught inside. It is filed under it. */
+  /** The system this scenario is being taught inside. It is filed under it. */
   systemId: string;
   systemName: string;
   /** Whatever extraction was under way, or finished, when this page loaded. */
@@ -59,7 +59,7 @@ export function LearningChat({
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
-  const [draft, setDraft] = useState<DilemmaDraft | null>(
+  const [draft, setDraft] = useState<ScenarioDraft | null>(
     initialJob.result?.draft ?? null,
   );
   /**
@@ -93,7 +93,7 @@ export function LearningChat({
     setError: setExtractError,
     start: startExtraction,
   } = useBackgroundJob<ExtractionResult>({
-    startUrl: `/api/systems/${systemId}/dilemmas/extract`,
+    startUrl: `/api/systems/${systemId}/scenarios/extract`,
     initial: initialJob,
     onDone: (result) => {
       setDraft(result.draft);
@@ -221,7 +221,7 @@ export function LearningChat({
     setDraft(null);
     setExtractedFrom("");
     setExtractError(undefined);
-    await fetch(`/api/systems/${systemId}/dilemmas/extract`, {
+    await fetch(`/api/systems/${systemId}/scenarios/extract`, {
       method: "DELETE",
     }).catch(() => {
       // Worth trying, not worth blocking on: the record is overwritten by the
@@ -229,11 +229,11 @@ export function LearningChat({
     });
   }
 
-  async function save(edited: DilemmaDraft) {
+  async function save(edited: ScenarioDraft) {
     setSaving(true);
     setChatError(undefined);
     try {
-      const response = await fetch(`/api/systems/${systemId}/dilemmas`, {
+      const response = await fetch(`/api/systems/${systemId}/scenarios`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -249,12 +249,12 @@ export function LearningChat({
       if (!response.ok) throw new Error(payload.error ?? "Save failed.");
 
       // Saved: the extraction has been reviewed and is no longer pending.
-      await fetch(`/api/systems/${systemId}/dilemmas/extract`, {
+      await fetch(`/api/systems/${systemId}/scenarios/extract`, {
         method: "DELETE",
       }).catch(() => undefined);
 
       router.push(
-        `/designer/systems/${systemId}/dilemmas/${payload.entry.id}`,
+        `/designer/systems/${systemId}/scenarios/${payload.entry.id}`,
       );
     } catch (reason) {
       setChatError(reason instanceof Error ? reason.message : "Save failed.");
@@ -274,7 +274,7 @@ export function LearningChat({
           </p>
         </div>
 
-        <DilemmaForm
+        <ScenarioForm
           initial={draft}
           saving={saving}
           error={error}
@@ -331,7 +331,7 @@ export function LearningChat({
       <div className="sticky bottom-0 mt-6 border-t border-line bg-bg pt-4">
         <textarea
           className="field min-h-24 resize-y"
-          placeholder="Describe the dilemma in your own words…"
+          placeholder="Describe the scenario in your own words…"
           value={input}
           disabled={streaming}
           onChange={(event) => setInput(event.target.value)}

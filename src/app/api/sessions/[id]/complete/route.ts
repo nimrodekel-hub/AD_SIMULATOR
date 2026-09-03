@@ -3,7 +3,7 @@ import { z } from "zod";
 import { describeAiError } from "@/lib/ai/client";
 import { generateDebrief } from "@/lib/ai/tasks/debrief";
 import { RunResultSchema, SimEventSchema } from "@/lib/domain/schemas";
-import { getDilemma } from "@/lib/store/kb";
+import { getScenario } from "@/lib/store/kb";
 import { completeSession, getSession, recordRun } from "@/lib/store/sessions";
 
 /**
@@ -29,7 +29,7 @@ import { completeSession, getSession, recordRun } from "@/lib/store/sessions";
  * surviving a slow step, though: past about a minute it is the browser that
  * gives up, not the server. Measured against production this route stays well
  * inside that, so it answers in the request. The three that do not — extracting
- * a dilemma, generating a scenario and building a console — hand back a job
+ * a scenario, generating an exercise and building a console — hand back a job
  * record instead and let the page ask how it is getting on. See
  * `lib/store/job.ts`.
  */
@@ -59,18 +59,18 @@ export async function POST(
 
   await recordRun(id, parsed.data.run_log, parsed.data.run_result);
 
-  const dilemma = await getDilemma(session.system_id, session.dilemma_entry_id);
-  if (!dilemma) {
+  const scenario = await getScenario(session.system_id, session.scenario_entry_id);
+  if (!scenario) {
     return NextResponse.json(
-      { error: "The dilemma this session was built from no longer exists." },
+      { error: "The scenario this session was built from no longer exists." },
       { status: 409 },
     );
   }
 
   try {
     const debrief = await generateDebrief({
-      dilemma,
-      scenario: session.scenario_instance,
+      scenario,
+      exercise: session.exercise_instance,
       log: parsed.data.run_log,
       result: parsed.data.run_result,
     });

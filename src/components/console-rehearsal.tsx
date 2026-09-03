@@ -6,7 +6,7 @@ import { ConsoleReview } from "@/components/console-review";
 import { LiveRun } from "@/components/live-run";
 import type { GuiRevision, SystemProfile } from "@/lib/domain/schemas";
 import { simConfig, summarise, type SimState } from "@/lib/sim/engine";
-import { rehearsalScenario } from "@/lib/sim/rehearsal";
+import { rehearsalExercise } from "@/lib/sim/rehearsal";
 
 /**
  * The designer flying their own system.
@@ -61,7 +61,7 @@ export function ConsoleRehearsal({
   /**
    * Set when the designer stops the look early.
    *
-   * A test scenario runs for minutes, and someone judging a layout change
+   * A test exercise runs for minutes, and someone judging a layout change
    * often knows inside twenty seconds. Without this the only ways to the
    * verdict were to sit out the whole engagement or to leave the page, so the
    * order being enforced here would have become an obstacle rather than a
@@ -69,8 +69,8 @@ export function ConsoleRehearsal({
    */
   const [seenEnough, setSeenEnough] = useState(false);
 
-  const scenario = useMemo(() => rehearsalScenario(profile), [profile]);
-  const config = useMemo(() => simConfig(profile, scenario), [profile, scenario]);
+  const exercise = useMemo(() => rehearsalExercise(profile), [profile]);
+  const config = useMemo(() => simConfig(profile, exercise), [profile, exercise]);
 
   if (done || seenEnough) {
     return (
@@ -85,7 +85,7 @@ export function ConsoleRehearsal({
             : " You stopped it early, so there is no tally — the point was to look at the console."}
         </p>
 
-        {done ? <Tally done={done} config={config} scenario={scenario} /> : null}
+        {done ? <Tally done={done} config={config} exercise={exercise} /> : null}
 
         {/* The verdict on a change, in the order it is useful: what was done,
             then anything else, then the approval. */}
@@ -137,7 +137,7 @@ export function ConsoleRehearsal({
         // as the first — a designer testing a miss should be able to get one.
         key={attempt}
         runId={`rehearsal-${systemId}-${attempt}`}
-        scenario={scenario}
+        exercise={exercise}
         difficulty="medium"
         profile={profile}
         templateHtml={templateHtml}
@@ -151,13 +151,13 @@ export function ConsoleRehearsal({
 function Tally({
   done,
   config,
-  scenario,
+  exercise,
 }: {
   done: SimState;
   config: ReturnType<typeof simConfig>;
-  scenario: ReturnType<typeof rehearsalScenario>;
+  exercise: ReturnType<typeof rehearsalExercise>;
 }) {
-  const result = summarise(done, config, scenario.success_criteria);
+  const result = summarise(done, config, exercise.success_criteria);
   return (
     <>
       <dl className="panel mt-4 grid grid-cols-2 gap-4 p-4 sm:grid-cols-3">

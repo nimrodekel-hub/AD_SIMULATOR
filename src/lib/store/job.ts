@@ -5,8 +5,8 @@ import { repoFiles } from "./repo-files";
 /**
  * A piece of work the browser does not wait for.
  *
- * Three things this app does take longer than a minute: extracting a dilemma
- * from an interview, generating a scenario, and building a console. A phone
+ * Three things this app does take longer than a minute: extracting a scenario
+ * from an interview, generating an exercise, and building a console. A phone
  * will not hold a connection that long — the screen locks, the tab is
  * suspended, and the request dies with a bare "Load failed" while the server is
  * still working perfectly. Raising the server's own ceiling does not help,
@@ -73,7 +73,7 @@ export function asReported<TResult>(
  * The four operations every job needs, over one result shape.
  *
  * The caller supplies the path, because what a job belongs to differs: a
- * console belongs to a system, a scenario to the trainee waiting for it. Each
+ * console belongs to a system, an exercise to the trainee waiting for it. Each
  * key holds one job and is overwritten by the next, so these records never
  * accumulate.
  */

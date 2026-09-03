@@ -1,27 +1,27 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { DilemmaDraftSchema } from "@/lib/domain/schemas";
-import { createDilemmaDraft, getSystem, listDilemmas } from "@/lib/store/kb";
+import { ScenarioDraftSchema } from "@/lib/domain/schemas";
+import { createScenarioDraft, getSystem, listScenarios } from "@/lib/store/kb";
 
-/** The dilemmas taught inside one simulated system. */
+/** The scenarios taught inside one simulated system. */
 
 const CreateSchema = z.object({
-  draft: DilemmaDraftSchema,
+  draft: ScenarioDraftSchema,
   /** The conversation this was extracted from, kept for later audit. */
   transcript: z.string(),
 });
 
 export async function GET(
   _request: NextRequest,
-  ctx: RouteContext<"/api/systems/[systemId]/dilemmas">,
+  ctx: RouteContext<"/api/systems/[systemId]/scenarios">,
 ) {
   const { systemId } = await ctx.params;
-  return NextResponse.json({ dilemmas: await listDilemmas(systemId) });
+  return NextResponse.json({ scenarios: await listScenarios(systemId) });
 }
 
 export async function POST(
   request: NextRequest,
-  ctx: RouteContext<"/api/systems/[systemId]/dilemmas">,
+  ctx: RouteContext<"/api/systems/[systemId]/scenarios">,
 ) {
   const { systemId } = await ctx.params;
   if (!(await getSystem(systemId))) {
@@ -31,13 +31,13 @@ export async function POST(
   const parsed = CreateSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid dilemma", issues: z.treeifyError(parsed.error) },
+      { error: "Invalid scenario", issues: z.treeifyError(parsed.error) },
       { status: 400 },
     );
   }
 
   try {
-    const entry = await createDilemmaDraft(
+    const entry = await createScenarioDraft(
       systemId,
       parsed.data.draft,
       parsed.data.transcript,
@@ -49,5 +49,5 @@ export async function POST(
 }
 
 function describe(reason: unknown): string {
-  return reason instanceof Error ? reason.message : "Failed to save the dilemma.";
+  return reason instanceof Error ? reason.message : "Failed to save the scenario.";
 }

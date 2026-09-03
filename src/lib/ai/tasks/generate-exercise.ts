@@ -3,9 +3,9 @@ import {
   LiveTrackSchema,
   SuccessCriteriaSchema,
   type DifficultyLevel,
-  type DilemmaEntry,
+  type ScenarioEntry,
   type LiveTrack,
-  type ScenarioInstance,
+  type ExerciseInstance,
   type SystemProfile,
   type TrackClassification,
 } from "../../domain/schemas";
@@ -16,9 +16,9 @@ import { knotsToKmPerSecond } from "../../sim/geometry";
 import { z } from "zod";
 
 /**
- * Screen 3, step 2 — turning an abstract dilemma into one runnable engagement.
+ * Screen 3, step 2 — turning an abstract scenario into one runnable engagement.
  *
- * The dilemma says "between 3 and 6 threats, one of them ambiguous". This call
+ * The scenario says "between 3 and 6 threats, one of them ambiguous". This call
  * decides that today there are four, that TK-2214 is the ambiguous one, that it
  * comes in from 340° at 140 km doing 480 knots, and that the system will not
  * resolve it until it is already inside the envelope.
@@ -33,10 +33,12 @@ import { z } from "zod";
  * The profile still governs everything it covers, and this time it is enforced
  * rather than asked for: `clampToProfile` below rewrites anything outside the
  * declared bands. A model that puts a jet at 90,000 feet is not an error to
- * catch in review, it is a scenario that must never reach a trainee.
+ * catch in review, it is an exercise that must never reach a trainee.
  */
 
-const SCENARIO_SYSTEM = `You lay out one concrete, runnable air-defence engagement from a stored dilemma definition.
+const EXERCISE_SYSTEM = `You lay out one concrete, runnable air-defence engagement — an **exercise** — from a stored **scenario**.
+
+The scenario is the situation and the **dilemmas** its designer decided belong in it. Your job is to make those dilemmas actually happen to somebody: an exercise where a dilemma the scenario names never arises has not rendered the scenario, however good the geometry looks.
 
 The trainee will fly this in real time: tracks move at the speeds you give them, from where you put them, and the operator has to detect, identify and engage before they arrive. You are placing a tactical problem on a map, not writing questions.
 
@@ -53,7 +55,7 @@ The trainee will fly this in real time: tracks move at the speeds you give them,
 - **Speed and altitude must sit inside the band that classification declares.**
 - **truth_iff and initial_iff must be declared identification states, by name.**
 - **Spawn range must be inside the radar's detection range**, and outside any close-in blind zone. A track that starts where it cannot be seen is invisible for the whole run.
-- **Where the radar covers less than 360°, it faces \`radar_boresight_deg\` and is blind behind it.** Put the main threat inside that arc unless the dilemma is specifically about a gap — and if it is, say so in the brief.
+- **Where the radar covers less than 360°, it faces \`radar_boresight_deg\` and is blind behind it.** Put the main threat inside that arc unless the scenario is specifically about a gap — and if it is, say so in the brief.
 
 ## Making it a real problem
 
@@ -69,7 +71,7 @@ The trainee will fly this in real time: tracks move at the speeds you give them,
 
 A code is not decoration. Give an airliner an ordinary code and it reads as an airliner; give one \`7700\` (general emergency), \`7600\` (radio failure) or \`7500\` (hijack) and you have built a specific and much harder problem — **do that deliberately, and say so in the brief**, never by accident. Two tracks squawking the same Mode 3 code is also a real and vicious problem, and again only worth doing on purpose.
 
-**Include at least one track that must not be engaged** — a friendly or a civil transit — unless the dilemma is explicitly about something else. An exercise where everything airborne is a valid target trains the wrong reflex.
+**Include at least one track that must not be engaged** — a friendly or a civil transit — unless the scenario is explicitly about something else. An exercise where everything airborne is a valid target trains the wrong reflex.
 
 **appears_at_s staggers entries.** Tracks already up at zero should be a manageable picture; later arrivals are what turns it into a problem.
 
@@ -99,7 +101,7 @@ Keep it vendor-neutral: invented track designators, no real unit or platform nam
 
 ## When you are given an exercise to correct
 
-You may be handed a scenario you produced before along with what the designer says is wrong with it, oldest complaint first.
+You may be handed an exercise you produced before along with what the designer says is wrong with it, oldest complaint first.
 
 - **Fix what was named and leave the rest.** A request to move one arrival later is not licence to redraw the engagement. The designer is converging on an exercise they can use, and every unrequested change costs them ground they had already taken.
 - **All the complaints still stand.** The newest is what they just said; the earlier ones were fixed and must stay fixed.
@@ -111,10 +113,10 @@ You may be handed a scenario you produced before along with what the designer sa
 One or two sentences: what you changed this time and why, or — on a first generation — what you built the engagement around. This is read beside the request that prompted it, so be specific: "moved the second arrival from T+40 to T+95 so the first is resolved before it appears", not "improved the timing".`;
 
 /** What the model returns. Everything else is computed or clamped in code. */
-const ScenarioDraftSchema = z.object({
+const ExerciseDraftSchema = z.object({
   /** What was changed, or what the engagement was built around. */
   notes_for_designer: z.string().default(""),
-  scenario_name: z.string(),
+  exercise_name: z.string(),
   situation_brief: z.string(),
   time_window_seconds: z.number(),
   radar_boresight_deg: z.number(),
@@ -131,15 +133,15 @@ const ScenarioDraftSchema = z.object({
 });
 
 const DIFFICULTY_GUIDANCE: Record<DifficultyLevel, string> = {
-  easy: "Keep the geometry legible and the arrivals separated. One decision at a time, with room to think. The dilemma should still bite, but not as a scramble.",
+  easy: "Keep the geometry legible and the arrivals separated. One decision at a time, with room to think. The scenario should still bite, but not as a scramble.",
   medium:
     "Standard operational pressure. At least one moment where two things need attention at once, and the trade-off should be uncomfortable.",
   hard: "Compress everything. Overlapping arrivals, an ambiguous track among them, and not enough rounds to be careless. The operator should finish aware that something had to be given up.",
 };
 
 /** What a generation produced, and its own account of what it did. */
-export interface GeneratedScenario {
-  scenario: ScenarioInstance;
+export interface GeneratedExercise {
+  exercise: ExerciseInstance;
   notes: string;
   /**
    * What the enforcement below had to override, in the designer's terms.
@@ -151,27 +153,27 @@ export interface GeneratedScenario {
   adjustments: string[];
 }
 
-export async function generateScenario(
-  dilemma: DilemmaEntry,
+export async function generateExercise(
+  scenario: ScenarioEntry,
   difficulty: DifficultyLevel,
   profile: SystemProfile | null,
   /**
    * A correction rather than a first attempt.
    *
-   * The scenario to fix and everything the designer has said is wrong with
+   * The exercise to fix and everything the designer has said is wrong with
    * it, oldest first. The whole list travels every time, for the same reason
    * the console's does: a fix that honours the newest complaint while undoing
    * the last one is how this goes round in circles.
    */
-  revise?: { previous: ScenarioInstance; requests: string[] },
-): Promise<GeneratedScenario> {
-  const band = dilemma.difficulty_scaling[difficulty];
+  revise?: { previous: ExerciseInstance; requests: string[] },
+): Promise<GeneratedExercise> {
+  const band = scenario.difficulty_scaling[difficulty];
   const asked = (revise?.requests ?? []).filter(
     (entry) => entry.trim().length > 0,
   );
 
   const draft = await structured({
-    system: SCENARIO_SYSTEM,
+    system: EXERCISE_SYSTEM,
     messages: [
       {
         role: "user",
@@ -179,7 +181,7 @@ export async function generateScenario(
           profile
             ? `<system_profile>\n${JSON.stringify(stripProvenance(profile), null, 2)}\n</system_profile>`
             : "<system_profile>none taught — use generic conventions</system_profile>",
-          `<dilemma>\n${JSON.stringify(forGeneration(dilemma), null, 2)}\n</dilemma>`,
+          `<scenario>\n${JSON.stringify(forGeneration(scenario), null, 2)}\n</scenario>`,
           `<difficulty level="${difficulty}">\n${JSON.stringify(band, null, 2)}\n</difficulty>`,
           `<guidance>${DIFFICULTY_GUIDANCE[difficulty]}</guidance>`,
           revise
@@ -196,15 +198,15 @@ export async function generateScenario(
           .join("\n\n"),
       },
     ],
-    schema: ScenarioDraftSchema,
+    schema: ExerciseDraftSchema,
     effort: "high",
     maxTokens: 16000,
-    label: revise ? "scenario-revision" : "scenario",
-    mock: () => mockScenario(dilemma, difficulty, profile),
+    label: revise ? "exercise-revision" : "exercise",
+    mock: () => mockExercise(scenario, difficulty, profile),
   });
 
-  const { scenario, adjustments } = clampToProfile(draft, profile);
-  return { scenario, notes: draft.notes_for_designer, adjustments };
+  const { exercise, adjustments } = clampToProfile(draft, profile);
+  return { exercise, notes: draft.notes_for_designer, adjustments };
 }
 
 /* ------------------------------------------------------------------ */
@@ -217,7 +219,7 @@ export async function generateScenario(
  * Asking a prompt nicely is not enforcement. A track spawned beyond the radar
  * is invisible for the whole run; one inside the blind zone never appears; a
  * speed outside its class band makes the class label a lie. None of those are
- * caught by review, because the scenario *looks* fine — they only show up as a
+ * caught by review, because the exercise *looks* fine — they only show up as a
  * trainee sitting in front of a picture that will not behave.
  *
  * So every figure the simulation depends on is clamped here, against the same
@@ -226,9 +228,9 @@ export async function generateScenario(
  * problem.
  */
 function clampToProfile(
-  draft: z.infer<typeof ScenarioDraftSchema>,
+  draft: z.infer<typeof ExerciseDraftSchema>,
   profile: SystemProfile | null,
-): { scenario: ScenarioInstance; adjustments: string[] } {
+): { exercise: ExerciseInstance; adjustments: string[] } {
   /* What had to be overridden, in words the designer can act on.
      Silence here was a real fault: a designer said the run was too long, the
      model said it had shortened it, the floor below put it back, and the only
@@ -313,8 +315,8 @@ function clampToProfile(
     );
   }
 
-  const scenario: ScenarioInstance = {
-    scenario_name: draft.scenario_name,
+  const exercise: ExerciseInstance = {
+    exercise_name: draft.exercise_name,
     situation_brief: draft.situation_brief,
     time_window_seconds: window,
     radar_boresight_deg: ((draft.radar_boresight_deg % 360) + 360) % 360,
@@ -330,10 +332,10 @@ function clampToProfile(
     },
     resources: draft.resources,
     tracks: [],
-    decision_points: [],
+    dilemmas: [],
   };
 
-  return { scenario, adjustments };
+  return { exercise, adjustments };
 }
 
 /**
@@ -354,7 +356,7 @@ function clampToProfile(
  * approach to read; a slow one starts closer, which is where a slow mover is
  * detected anyway on a radar whose range does not care how fast the target is.
  *
- * The dilemma's own time window is a floor rather than a ceiling here: it
+ * The scenario's own time window is a floor rather than a ceiling here: it
  * describes how long a *decision* should take, and was never a claim about how
  * long an aircraft needs to fly a hundred kilometres.
  */
@@ -458,7 +460,7 @@ function transponderReply(
 }
 
 /**
- * The dilemma, without the parts a generation cannot use.
+ * The scenario, without the parts a generation cannot use.
  *
  * `source_chat_log` is the whole transcript of the interview the entry was
  * extracted from — measured at a fifth of everything this call sends on a real
@@ -471,7 +473,7 @@ function transponderReply(
  * drops them from the profile: they record how the entry came to exist, not
  * what it says.
  */
-function forGeneration(dilemma: DilemmaEntry) {
+function forGeneration(scenario: ScenarioEntry) {
   const {
     source_chat_log,
     created_at,
@@ -479,7 +481,7 @@ function forGeneration(dilemma: DilemmaEntry) {
     status,
     system_id,
     ...substance
-  } = dilemma;
+  } = scenario;
   void source_chat_log;
   void created_at;
   void approved_at;
@@ -510,12 +512,12 @@ function stripProvenance(profile: SystemProfile) {
  * console can be exercised — select, identify, fire, hit, miss, leak — without
  * spending anything.
  */
-function mockScenario(
-  dilemma: DilemmaEntry,
+function mockExercise(
+  scenario: ScenarioEntry,
   difficulty: DifficultyLevel,
   profile: SystemProfile | null,
-): z.infer<typeof ScenarioDraftSchema> {
-  const band = dilemma.difficulty_scaling[difficulty];
+): z.infer<typeof ExerciseDraftSchema> {
+  const band = scenario.difficulty_scaling[difficulty];
   const classes = profile?.track_classifications ?? [];
   const states = profile?.iff_states ?? [];
 
@@ -560,10 +562,10 @@ function mockScenario(
 
   return {
     notes_for_designer:
-      "Mock generation — no ANTHROPIC_API_KEY is configured, so this engagement is a built-in placeholder rather than one laid out for this dilemma.",
-    scenario_name: `Mock run — ${dilemma.title} (${difficulty})`,
+      "Mock generation — no ANTHROPIC_API_KEY is configured, so this engagement is a built-in placeholder rather than one laid out for this scenario.",
+    exercise_name: `Mock run — ${scenario.title} (${difficulty})`,
     situation_brief:
-      "Mock scenario. No ANTHROPIC_API_KEY is configured, so this engagement is laid out locally rather than by the model — but it runs exactly like a real one. Three inbounds, and one of them is not a threat.",
+      "Mock exercise. No ANTHROPIC_API_KEY is configured, so this engagement is laid out locally rather than by the model — but it runs exactly like a real one. Three inbounds, and one of them is not a threat.",
     time_window_seconds: Math.max(180, band.time_window_seconds.min),
     radar_boresight_deg: boresight,
     live_tracks: [
@@ -592,7 +594,7 @@ function mockScenario(
       statement:
         "Stop both hostiles outside the defended area without engaging the friendly.",
     },
-    resources: dilemma.key_variables.resource_levels.map((resource) => ({
+    resources: scenario.key_variables.resource_levels.map((resource) => ({
       name: resource.name,
       unit: resource.unit,
       available: resource.min,

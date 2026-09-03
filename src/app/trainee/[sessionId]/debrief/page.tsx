@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ScreenShell } from "@/components/screen-shell";
-import { getDilemma } from "@/lib/store/kb";
+import { getScenario } from "@/lib/store/kb";
 import { getSession } from "@/lib/store/sessions";
 
 /**
@@ -23,7 +23,7 @@ export default async function DebriefPage({
   const session = await getSession(sessionId);
   if (!session) notFound();
 
-  const dilemma = await getDilemma(session.system_id, session.dilemma_entry_id);
+  const scenario = await getScenario(session.system_id, session.scenario_entry_id);
   const outcome = session.outcome;
 
   if (session.status !== "completed" || !outcome) {
@@ -45,8 +45,8 @@ export default async function DebriefPage({
     <ScreenShell
       theme="work"
       eyebrow="Trainee · Debrief"
-      title={session.scenario_instance.scenario_name}
-      subtitle={dilemma?.title}
+      title={session.exercise_instance.exercise_name}
+      subtitle={scenario?.title}
     >
       {/* ---- Result ------------------------------------------------- */}
       <div className="panel flex flex-wrap items-center gap-6 p-6">
@@ -118,11 +118,11 @@ export default async function DebriefPage({
         <p className="mt-1 text-xs text-muted">
           The turning points of the run, taken from what actually happened. The
           comments come from the knowledge base — the reasoning the domain
-          expert recorded when this dilemma was captured.
+          expert recorded when this scenario was captured.
         </p>
         <ol className="mt-4 space-y-3">
           {outcome.per_decision.map((entry) => (
-            <li key={entry.decision_point_index} className="panel p-4">
+            <li key={entry.dilemma_index} className="panel p-4">
               <div className="flex flex-wrap items-center gap-3">
                 <span
                   className={`chip ${entry.correct ? "status-ok" : "status-danger"}`}

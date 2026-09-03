@@ -103,7 +103,7 @@ export function KnowledgeEditor({ initial }: { initial: GeneralKnowledge }) {
           beginning. It is <strong>orientation, never authority</strong>: where
           it disagrees with a system&rsquo;s approved profile the profile wins,
           and where it disagrees with you, you win. It is never used to fill a
-          gap in what you actually said &mdash; the record a dilemma becomes is
+          gap in what you actually said &mdash; the record a scenario becomes is
           built from your transcript alone.
         </p>
         <p className="mt-3 text-xs text-muted">

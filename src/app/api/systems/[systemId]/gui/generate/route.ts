@@ -120,7 +120,7 @@ export async function POST(
         html: draft.html,
         design_notes: draft.design_notes,
         screenshots: screenshots.map((shot) => shot.path),
-        // A shell without its slots cannot host a scenario. Recorded rather
+        // A shell without its slots cannot host an exercise. Recorded rather
         // than thrown, so the designer sees what is wrong and can regenerate.
         missing_slots: missingSlots(draft.html),
         // Stored with the build, so whichever screen accepts it can write the

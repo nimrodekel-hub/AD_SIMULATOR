@@ -7,7 +7,7 @@ import { readJson } from "@/lib/http";
  * Waiting for work the server does without holding the connection open.
  *
  * Three steps here take longer than a phone will keep a request alive:
- * extracting a dilemma from an interview, generating a scenario, and building
+ * extracting a scenario from an interview, generating an exercise, and building
  * a console. Each of them answers a press immediately with a job record and
  * carries on server-side; this hook does the other half — start it, ask every
  * few seconds how it is getting on, and hand back the result when it lands.

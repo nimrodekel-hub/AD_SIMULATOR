@@ -1,4 +1,4 @@
-import type { ScenarioInstance, SystemProfile } from "../domain/schemas";
+import type { ExerciseInstance, SystemProfile } from "../domain/schemas";
 import { codesFor } from "../domain/iff-codes";
 import { detectionRangeKm } from "./engine";
 import { knotsToKmPerSecond, seededRandom } from "./geometry";
@@ -15,13 +15,13 @@ import { knotsToKmPerSecond, seededRandom } from "./geometry";
  * whether the fire controls still fit when the firing solution appears beside
  * them. The only way to know any of it is to put things in the air and watch.
  *
- * Deliberately **no model call and no dilemma**. A designer testing their own
+ * Deliberately **no model call and no scenario**. A designer testing their own
  * figures should not wait seventy seconds or spend anything, and should not
- * need an approved dilemma to exist yet — this step comes before any of that.
+ * need an approved scenario to exist yet — this step comes before any of that.
  * It is also why the exercise is dull on purpose: it exists to exercise every
  * figure and load every panel, not to teach a lesson.
  *
- * What it does insist on is being the *real* thing: the same `ScenarioInstance`
+ * What it does insist on is being the *real* thing: the same `ExerciseInstance`
  * the trainee's run is given, so it flows through the same engine and the same
  * console. A test against a near-copy would prove nothing about the real one.
  */
@@ -29,7 +29,7 @@ import { knotsToKmPerSecond, seededRandom } from "./geometry";
 /** Enough tracks to fill a list and force a second decision. */
 const TRACK_COUNT = 5;
 
-export function rehearsalScenario(profile: SystemProfile | null): ScenarioInstance {
+export function rehearsalExercise(profile: SystemProfile | null): ExerciseInstance {
   const detection = detectionRangeKm(profile);
   const blind = profile?.sensor?.min_range_km ?? 0;
   const envelope = profile?.engagement.max_range_km ?? 70;
@@ -55,7 +55,7 @@ export function rehearsalScenario(profile: SystemProfile | null): ScenarioInstan
   /**
    * Where a track starts so that it arrives when we want it to.
    *
-   * Same reasoning as the scenario generator: put a slow track where a fast
+   * Same reasoning as the exercise generator: put a slow track where a fast
    * one belongs and the designer watches a symbol creep for ten minutes.
    */
   const spawnFor = (speedKts: number, arriveAtS: number) => {
@@ -135,7 +135,7 @@ export function rehearsalScenario(profile: SystemProfile | null): ScenarioInstan
   );
 
   return {
-    scenario_name: "System test",
+    exercise_name: "System test",
     situation_brief: [
       "This is your own test of the system, not a training exercise. Nothing is recorded and nobody is scored.",
       "",
@@ -162,6 +162,6 @@ export function rehearsalScenario(profile: SystemProfile | null): ScenarioInstan
     },
     resources: [],
     tracks: [],
-    decision_points: [],
+    dilemmas: [],
   };
 }

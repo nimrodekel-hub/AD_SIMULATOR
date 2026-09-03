@@ -7,7 +7,7 @@ import { getSystemBundle, listSystems } from "@/lib/store/kb";
  * The designer's home: every simulated system the app holds.
  *
  * Systems are independent. Each one owns how it behaves, what its console looks
- * like and which dilemmas were taught inside it, so a second system can be
+ * like and which scenarios were taught inside it, so a second system can be
  * started before the first is finished, and neither affects the other.
  */
 
@@ -19,8 +19,8 @@ export default async function DesignerHome() {
     systems.map(async (system) => {
       // The bundle re-reads the system record; the one from the listing is
       // already known to exist, so keep that and take only the rest.
-      const { profile, gui, dilemmas } = await getSystemBundle(system.id);
-      return { system, profile, gui, dilemmas };
+      const { profile, gui, scenarios } = await getSystemBundle(system.id);
+      return { system, profile, gui, scenarios };
     }),
   );
 
@@ -29,14 +29,14 @@ export default async function DesignerHome() {
       theme="work"
       eyebrow="System Designer"
       title="Simulated systems"
-      subtitle="Each system has its own behaviour, console and dilemmas"
+      subtitle="Each system has its own behaviour, console and scenarios"
     >
       {/* The library of exercises. Placed beside general knowledge because
           both are about everything rather than about one system, and because
           what trainees are actually being given was invisible until it had a
           front door. */}
       <Link
-        href="/designer/simulations"
+        href="/designer/exercises"
         className="panel mb-6 block p-5 transition-colors hover:border-accent"
       >
         <div className="flex flex-wrap items-baseline gap-x-3">
@@ -75,14 +75,14 @@ export default async function DesignerHome() {
           <p className="text-sm">No systems yet.</p>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted">
             A system is everything a trainee sees: how it behaves, what its
-            console shows, and the dilemmas its operators face. Name one to
+            console shows, and the scenarios its operators face. Name one to
             begin — you can add more later, and they stay independent.
           </p>
         </div>
       ) : (
         <ul className="space-y-3">
-          {bundles.map(({ system, profile, gui, dilemmas }) => {
-            const approved = dilemmas.filter(
+          {bundles.map(({ system, profile, gui, scenarios }) => {
+            const approved = scenarios.filter(
               (entry) => entry.status === "approved",
             ).length;
 
@@ -131,10 +131,10 @@ export default async function DesignerHome() {
                       }
                     />
                     <Step
-                      label="Dilemmas"
+                      label="Scenarios"
                       done={approved > 0}
                       state={
-                        dilemmas.length === 0
+                        scenarios.length === 0
                           ? "none"
                           : `${approved} approved`
                       }

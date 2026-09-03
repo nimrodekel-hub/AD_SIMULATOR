@@ -42,7 +42,7 @@ export default async function InstructorPage() {
             <p className="text-sm">No training runs yet.</p>
             <p className="mx-auto mt-2 max-w-md text-sm text-muted">
               Scores, trends and decision histories appear here once trainees
-              start running scenarios.
+              start running exercises.
             </p>
           </div>
         ) : null}

@@ -7,9 +7,9 @@ import { listTrainees } from "@/lib/store/sessions";
 /**
  * Where a trainee starts: pick the system, then say what to train on.
  *
- * The system comes first because a dilemma is only meaningful inside one. Its
+ * The system comes first because a scenario is only meaningful inside one. Its
  * identification states, its operator actions and its plausible numbers all
- * come from that system's profile, so matching a request against dilemmas from
+ * come from that system's profile, so matching a request against scenarios from
  * a different system would teach a procedure the trainee's console does not
  * have.
  *
@@ -56,7 +56,7 @@ export default async function TraineePage({
           <p className="text-sm">
             No simulated system has been set up. A system designer needs to
             create one, describe how it behaves and teach it at least one
-            dilemma before training can start.
+            scenario before training can start.
           </p>
           <Link href="/designer" className="btn btn-primary mt-4">
             Go to the designer
@@ -70,13 +70,13 @@ export default async function TraineePage({
   if (!chosen) {
     const bundles = await Promise.all(
       systems.map(async (system) => {
-        const { profile, dilemmas } = await getSystemBundle(system.id);
+        const { profile, scenarios } = await getSystemBundle(system.id);
         return {
           system,
           ready:
             profile?.approved === true &&
-            dilemmas.some((entry) => entry.status === "approved"),
-          approved: dilemmas.filter((entry) => entry.status === "approved").length,
+            scenarios.some((entry) => entry.status === "approved"),
+          approved: scenarios.filter((entry) => entry.status === "approved").length,
         };
       }),
     );
@@ -105,7 +105,7 @@ export default async function TraineePage({
                   <p className="mt-1 text-xs text-muted">
                     {system.note ||
                       (ready
-                        ? `${approved} dilemma${approved === 1 ? "" : "s"} to train on`
+                        ? `${approved} scenario${approved === 1 ? "" : "s"} to train on`
                         : "Still being set up")}
                   </p>
                 </div>
@@ -125,8 +125,8 @@ export default async function TraineePage({
   /* The approved drills for the chosen system, so the trainee can pick one
      instead of describing it. Only approved ones: a draft is the designer
      still working, and half-taught doctrine trains the wrong thing. */
-  const { dilemmas } = await getSystemBundle(chosen.id);
-  const catalogue = dilemmas
+  const { scenarios } = await getSystemBundle(chosen.id);
+  const catalogue = scenarios
     .filter((entry) => entry.status === "approved")
     .map((entry) => ({
       id: entry.id,

@@ -12,7 +12,7 @@ const ROLES = [
     href: "/designer",
     name: "System Designer",
     blurb:
-      "Set up a simulated system: describe how it behaves, build its console from screenshots, and teach it operational dilemmas through conversation. As many systems as you need, side by side.",
+      "Set up a simulated system: describe how it behaves, build its console from screenshots, and teach it operational scenarios through conversation. As many systems as you need, side by side.",
     responsibility: "Owns the knowledge base",
   },
   {
@@ -26,7 +26,7 @@ const ROLES = [
     href: "/trainee",
     name: "Trainee",
     blurb:
-      "Pick the system you operate, then ask for the training you want in your own words. It finds the matching dilemma and builds a scenario around it.",
+      "Pick the system you operate, then ask for the training you want in your own words. It finds the matching scenario and builds an exercise around it.",
     responsibility: "Runs the training",
   },
 ] as const;
@@ -40,9 +40,9 @@ export default async function Home() {
     isGitBacked() ? githubWriteAccess() : Promise.resolve(null),
   ]);
 
-  const dilemmas = bundles.flatMap((bundle) => bundle.dilemmas);
-  const approved = dilemmas.filter((entry) => entry.status === "approved").length;
-  const drafts = dilemmas.length - approved;
+  const scenarios = bundles.flatMap((bundle) => bundle.scenarios);
+  const approved = scenarios.filter((entry) => entry.status === "approved").length;
+  const drafts = scenarios.length - approved;
 
   // A system is trainable only when its behaviour is in force and it has
   // something to teach. Counting systems without that would report readiness
@@ -50,7 +50,7 @@ export default async function Home() {
   const trainable = bundles.filter(
     (bundle) =>
       bundle.profile?.approved === true &&
-      bundle.dilemmas.some((entry) => entry.status === "approved"),
+      bundle.scenarios.some((entry) => entry.status === "approved"),
   ).length;
   const consoles = bundles.filter((bundle) => bundle.gui?.approved === true).length;
 
@@ -65,8 +65,8 @@ export default async function Home() {
         </h1>
         <p className="prose-block mt-4 max-w-2xl text-muted">
           A generic operational trainer. A domain expert teaches the system real
-          dilemmas by talking through them; trainees then ask for the practice
-          they want in plain language, and the system builds a scenario from the
+          scenarios by talking through them; trainees then ask for the practice
+          they want in plain language, and the system builds an exercise from the
           captured expertise — then debriefs them against the expert&rsquo;s own
           reasoning.
         </p>
@@ -110,7 +110,7 @@ export default async function Home() {
               systems.length === 0
                 ? "Nothing has been set up yet. A system is where everything else hangs."
                 : trainable === 0
-                  ? "A system is ready once its behaviour profile is approved and it has an approved dilemma."
+                  ? "A system is ready once its behaviour profile is approved and it has an approved scenario."
                   : systems
                       .map((system) => system.name)
                       .join(", ")
@@ -122,8 +122,8 @@ export default async function Home() {
             tone={approved > 0 ? "ok" : "warn"}
             note={
               approved === 0
-                ? "No approved dilemmas yet — trainees have nothing to match against."
-                : "Counted across every system. A dilemma only ever matches within its own."
+                ? "No approved scenarios yet — trainees have nothing to match against."
+                : "Counted across every system. A scenario only ever matches within its own."
             }
           />
           <StatusRow
@@ -152,7 +152,7 @@ export default async function Home() {
               !isGitBacked()
                 ? `Nothing you save will survive. ${githubConfigProblems().join("; ")}. Fix in Vercel under Settings → Environment Variables, then redeploy — environment changes only take effect on a new build.`
                 : storage?.ok
-                  ? "Dilemmas and training runs alike are committed as files."
+                  ? "Scenarios and training runs alike are committed as files."
                   : `Nothing you save will survive: ${storage?.problem} Nothing here needs a redeploy unless you replace the token itself.`
             }
           />

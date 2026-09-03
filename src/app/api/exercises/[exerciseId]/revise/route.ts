@@ -1,8 +1,8 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 import { describeAiError } from "@/lib/ai/client";
-import { generateScenario } from "@/lib/ai/tasks/generate-scenario";
-import { getDilemma, getSystemProfile } from "@/lib/store/kb";
-import { getSavedScenario } from "@/lib/store/scenarios";
+import { generateExercise } from "@/lib/ai/tasks/generate-exercise";
+import { getScenario, getSystemProfile } from "@/lib/store/kb";
+import { getSavedExercise } from "@/lib/store/exercises";
 import {
   asReported,
   failReviseJob,
@@ -10,7 +10,7 @@ import {
   isStale,
   readReviseJob,
   startReviseJob,
-} from "@/lib/store/scenario-revise-job";
+} from "@/lib/store/exercise-revise-job";
 
 /**
  * Correcting one exercise, in the background.
@@ -29,9 +29,9 @@ export const maxDuration = 300;
 
 export async function POST(
   request: NextRequest,
-  ctx: RouteContext<"/api/scenarios/[scenarioId]/revise">,
+  ctx: RouteContext<"/api/exercises/[exerciseId]/revise">,
 ) {
-  const { scenarioId } = await ctx.params;
+  const { exerciseId } = await ctx.params;
 
   let body: { system_id?: string; requests?: unknown };
   try {
@@ -41,7 +41,7 @@ export async function POST(
   }
 
   const systemId = String(body.system_id ?? "");
-  const saved = systemId ? await getSavedScenario(systemId, scenarioId) : null;
+  const saved = systemId ? await getSavedExercise(systemId, exerciseId) : null;
   if (!saved) {
     return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
   }
@@ -64,12 +64,12 @@ export async function POST(
     );
   }
 
-  const dilemma = await getDilemma(saved.system_id, saved.dilemma_entry_id);
-  if (!dilemma) {
+  const scenario = await getScenario(saved.system_id, saved.scenario_entry_id);
+  if (!scenario) {
     return NextResponse.json(
       {
         error:
-          "The dilemma this exercise teaches is no longer in the knowledge base, so it cannot be laid out again.",
+          "The scenario this exercise teaches is no longer in the knowledge base, so it cannot be laid out again.",
       },
       { status: 409 },
     );
@@ -77,32 +77,32 @@ export async function POST(
 
   // Two tabs on the same exercise join the same wait rather than start a
   // second correction against it.
-  const existing = await readReviseJob(scenarioId);
+  const existing = await readReviseJob(exerciseId);
   if (existing?.status === "running" && !isStale(existing)) {
     return NextResponse.json(asReported(existing), { status: 202 });
   }
 
-  const job = await startReviseJob(scenarioId);
+  const job = await startReviseJob(exerciseId);
 
   after(async () => {
     try {
-      // Only an approved profile bounds a scenario. A draft is the designer
+      // Only an approved profile bounds an exercise. A draft is the designer
       // still working, and half-taught doctrine is worse than none.
       const profile = await getSystemProfile(saved.system_id);
-      const { scenario, notes, adjustments } = await generateScenario(
-        dilemma,
+      const { exercise, notes, adjustments } = await generateExercise(
+        scenario,
         saved.difficulty_level,
         profile?.approved ? profile : null,
-        { previous: saved.scenario_instance, requests },
+        { previous: saved.exercise_instance, requests },
       );
-      await finishReviseJob(scenarioId, {
-        scenario,
+      await finishReviseJob(exerciseId, {
+        exercise,
         notes,
         requests,
         adjustments,
       });
     } catch (reason) {
-      await failReviseJob(scenarioId, describeAiError(reason));
+      await failReviseJob(exerciseId, describeAiError(reason));
     }
   });
 
@@ -112,8 +112,8 @@ export async function POST(
 /** Where the correction got to. Safe to call as often as you like. */
 export async function GET(
   _request: NextRequest,
-  ctx: RouteContext<"/api/scenarios/[scenarioId]/revise">,
+  ctx: RouteContext<"/api/exercises/[exerciseId]/revise">,
 ) {
-  const { scenarioId } = await ctx.params;
-  return NextResponse.json(asReported(await readReviseJob(scenarioId)));
+  const { exerciseId } = await ctx.params;
+  return NextResponse.json(asReported(await readReviseJob(exerciseId)));
 }

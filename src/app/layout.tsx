@@ -17,7 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Air Defence Training Simulator",
   description:
-    "Generic operational training simulator for air-defence operators. Capture expert dilemmas, generate tailored scenarios, debrief against captured reasoning.",
+    "Generic operational training simulator for air-defence operators. Capture expert scenarios, generate tailored exercises, debrief against captured reasoning.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

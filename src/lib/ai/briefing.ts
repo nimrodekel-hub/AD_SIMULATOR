@@ -112,7 +112,7 @@ about this system and rely on it.
 **Do not ask about anything answered here.** Asking an expert to repeat what
 they have already written is the fastest way to lose their patience and their
 time. Use it instead to make your questions specific — name their identification
-states, their readouts and their real actions when you ask about a dilemma.
+states, their readouts and their real actions when you ask about a scenario.
 
 If something here looks wrong or contradicts what they tell you, say so plainly
 and let them correct it; the profile can be edited.

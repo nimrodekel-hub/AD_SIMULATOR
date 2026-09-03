@@ -31,7 +31,7 @@ import { getSystem, loadScreenshots } from "@/lib/store/kb";
  * surviving a slow step, though: past about a minute it is the browser that
  * gives up, not the server. Measured against production this route stays well
  * inside that, so it answers in the request. The three that do not — extracting
- * a dilemma, generating a scenario and building a console — hand back a job
+ * a scenario, generating an exercise and building a console — hand back a job
  * record instead and let the page ask how it is getting on. See
  * `lib/store/job.ts`.
  */

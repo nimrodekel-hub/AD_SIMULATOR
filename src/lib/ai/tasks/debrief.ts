@@ -2,9 +2,9 @@ import "server-only";
 import {
   DebriefSchema,
   type Debrief,
-  type DilemmaEntry,
+  type ScenarioEntry,
   type RunResult,
-  type ScenarioInstance,
+  type ExerciseInstance,
   type SimEvent,
 } from "../../domain/schemas";
 import { structured } from "../client";
@@ -28,7 +28,7 @@ import { structured } from "../client";
 
 const DEBRIEF_SYSTEM = `You debrief an air-defence operator after one live engagement.
 
-They did not answer questions. They sat at the console while tracks closed in real time, identified what they could, chose rounds and fired — or did not. You are given the dilemma record from the knowledge base (the expert's reasoning and the errors trainees commonly make), what the run was scored on, the second-by-second log of what happened, and the tally the simulation counted.
+They did not answer questions. They sat at the console while tracks closed in real time, identified what they could, chose rounds and fired — or did not. You are given the scenario record from the knowledge base (the expert's reasoning and the errors trainees commonly make), what the run was scored on, the second-by-second log of what happened, and the tally the simulation counted.
 
 ## The binding rule
 
@@ -68,17 +68,17 @@ Address the trainee as "you". Two to four short paragraphs.
 Two to four concrete things to work on next, each tied to something that happened in this run. "Commit to the closing track before it reaches 20 km, rather than waiting for the system to resolve it" — not "continue to develop situational awareness".`;
 
 export async function generateDebrief(input: {
-  dilemma: DilemmaEntry;
-  scenario: ScenarioInstance;
+  scenario: ScenarioEntry;
+  exercise: ExerciseInstance;
   log: SimEvent[];
   result: RunResult;
 }): Promise<Debrief> {
-  const { dilemma, scenario, log, result } = input;
+  const { scenario, exercise, log, result } = input;
 
-  /* What the expert said about this dilemma, flattened once so the model is
+  /* What the expert said about this scenario, flattened once so the model is
      not asked to correlate two lists by index — the old shape paired each
-     decision point with an answer, and there are no answers any more. */
-  const doctrine = dilemma.decision_points.map((point, index) => ({
+     dilemma with an answer, and there are no answers any more. */
+  const doctrine = scenario.dilemmas.map((point, index) => ({
     situation: point.situation,
     preferred_action: point.preferred_action,
     expert_rationale: point.rationale,
@@ -92,11 +92,11 @@ export async function generateDebrief(input: {
       {
         role: "user",
         content: [
-          `<evaluation_criteria>\n${JSON.stringify(dilemma.evaluation_criteria, null, 2)}\n</evaluation_criteria>`,
+          `<evaluation_criteria>\n${JSON.stringify(scenario.evaluation_criteria, null, 2)}\n</evaluation_criteria>`,
           `<expert_doctrine>\n${JSON.stringify(doctrine, null, 2)}\n</expert_doctrine>`,
-          `<success_criteria>\n${JSON.stringify(scenario.success_criteria, null, 2)}\n</success_criteria>`,
-          `<what_was_flown>\n${scenario.situation_brief}\n\nTracks: ${JSON.stringify(
-            scenario.live_tracks.map((track) => ({
+          `<success_criteria>\n${JSON.stringify(exercise.success_criteria, null, 2)}\n</success_criteria>`,
+          `<what_was_flown>\n${exercise.situation_brief}\n\nTracks: ${JSON.stringify(
+            exercise.live_tracks.map((track) => ({
               designator: track.designator,
               classification: track.classification,
               it_really_was: track.truth_iff,
@@ -138,7 +138,7 @@ function mockDebrief(result: RunResult, log: SimEvent[]): Debrief {
     .filter((entry) => ["hit", "leaked", "miss", "refused"].includes(entry.kind))
     .slice(0, 6)
     .map((entry, index) => ({
-      decision_point_index: index,
+      dilemma_index: index,
       chosen_action: entry.detail,
       preferred_action: "(mock mode — no assessment made)",
       correct: entry.kind === "hit",

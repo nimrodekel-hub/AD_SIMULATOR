@@ -2,7 +2,7 @@ import type {
   IffState,
   LiveTrack,
   RunResult,
-  ScenarioInstance,
+  ExerciseInstance,
   SimEvent,
   SuccessCriteria,
   SystemProfile,
@@ -38,7 +38,7 @@ import {
  *     refusal goes in the log, and the debrief can talk about it.
  *   - **Hit or miss is decided when the round is launched**, from a seeded
  *     draw, and only revealed on impact. That keeps a run replayable and keeps
- *     two trainees on the same scenario facing the same luck.
+ *     two trainees on the same exercise facing the same luck.
  */
 
 /* ------------------------------------------------------------------ */
@@ -178,10 +178,10 @@ const DEFAULT_DEFENDED_RADIUS_KM = 3;
 /**
  * How far the radar sees, for a given profile.
  *
- * Exported because the scenario generator needs the same answer: it places
+ * Exported because the exercise generator needs the same answer: it places
  * tracks, and a track placed beyond what the engine will later consider
  * visible never appears at all. That failure is invisible in review — the
- * scenario reads perfectly — so the two callers share one definition rather
+ * exercise reads perfectly — so the two callers share one definition rather
  * than each carrying a fallback that happened to differ.
  */
 export function detectionRangeKm(profile: SystemProfile | null): number {
@@ -205,7 +205,7 @@ export function detectionRangeKm(profile: SystemProfile | null): number {
  */
 export function simConfig(
   profile: SystemProfile | null,
-  scenario: ScenarioInstance,
+  exercise: ExerciseInstance,
 ): SimConfig {
   const engagement = profile?.engagement;
   const sensor = profile?.sensor;
@@ -234,7 +234,7 @@ export function simConfig(
     detection_range_km: detectionRangeKm(profile),
     blind_range_km: sensor?.min_range_km ?? 0,
     coverage_deg: sensor?.azimuth_coverage_deg ?? 360,
-    boresight_deg: scenario.radar_boresight_deg ?? 0,
+    boresight_deg: exercise.radar_boresight_deg ?? 0,
     altitude_ft: sensor?.altitude_ft ?? null,
 
     interceptors,

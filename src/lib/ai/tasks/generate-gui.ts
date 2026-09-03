@@ -7,11 +7,11 @@ import { structured, type Anthropic } from "../client";
  * Screen 1b — rebuilding the operator's console from reference screenshots.
  *
  * The brief rules out generating a GUI at runtime: this runs once, the designer
- * approves the result, and every scenario afterwards renders inside it.
+ * approves the result, and every exercise afterwards renders inside it.
  *
  * The generated markup is a *shell*, not a working interface. It supplies the
  * chrome — the header, the panel frames, the palette, the typography — and
- * marks the places where the live scenario is injected. The trainee console
+ * marks the places where the live exercise is injected. The trainee console
  * renders real React into those slots, so the data stays interactive and only
  * the appearance comes from the model — including the radar picture, which is
  * a running simulation rather than anything the model could draw.

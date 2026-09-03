@@ -6,8 +6,8 @@ import { useRef, useState } from "react";
 import { threadFor } from "@/lib/domain/gui-thread";
 import type {
   Revision,
-  SavedScenario,
-  ScenarioInstance,
+  SavedExercise,
+  ExerciseInstance,
 } from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
 import { type JobView, formatWait, useBackgroundJob } from "@/lib/use-job";
@@ -30,7 +30,7 @@ import { type JobView, formatWait, useBackgroundJob } from "@/lib/use-job";
 
 /** What the correction job hands back. */
 interface JobResult {
-  scenario: ScenarioInstance;
+  exercise: ExerciseInstance;
   notes: string;
   requests?: string[];
   /** What the system's own limits overrode, where they did. */
@@ -45,14 +45,14 @@ const COMMON = [
   "The window is too long — nothing happens for the first two minutes.",
 ];
 
-export function ScenarioWorkbench({
+export function ExerciseWorkbench({
   saved,
   canRevise,
   profileApproved,
   initialJob,
 }: {
-  saved: SavedScenario;
-  /** False when the dilemma is gone: nothing to lay the exercise out from. */
+  saved: SavedExercise;
+  /** False when the scenario is gone: nothing to lay the exercise out from. */
   canRevise: boolean;
   profileApproved: boolean;
   initialJob: JobView<JobResult>;
@@ -81,7 +81,7 @@ export function ScenarioWorkbench({
     setError,
     start,
   } = useBackgroundJob<JobResult>({
-    startUrl: `/api/scenarios/${saved.id}/revise`,
+    startUrl: `/api/exercises/${saved.id}/revise`,
     initial: initialJob,
     onDone: (result) => {
       setPending(undefined);
@@ -120,12 +120,12 @@ export function ScenarioWorkbench({
         entry.at ? entry : { ...entry, at: new Date().toISOString() },
       );
 
-      const response = await fetch(`/api/scenarios/${saved.id}`, {
+      const response = await fetch(`/api/exercises/${saved.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           system_id: saved.system_id,
-          scenario_instance: proposed.scenario,
+          exercise_instance: proposed.exercise,
           revisions: thread,
         }),
       });
@@ -146,7 +146,7 @@ export function ScenarioWorkbench({
   const busy = running || saving;
   /* What is on screen: the correction if one is waiting to be read, otherwise
      the exercise as it stands. */
-  const showing = proposed?.scenario ?? saved.scenario_instance;
+  const showing = proposed?.exercise ?? saved.exercise_instance;
 
   return (
     <div className="space-y-8">
@@ -159,7 +159,7 @@ export function ScenarioWorkbench({
       ) : null}
       {!canRevise ? (
         <p className="chip status-danger !normal-case">
-          The dilemma this exercise teaches is gone from the knowledge base, so
+          The scenario this exercise teaches is gone from the knowledge base, so
           it can be read but not laid out again.
         </p>
       ) : null}
@@ -180,7 +180,7 @@ export function ScenarioWorkbench({
           </p>
         ) : null}
 
-        <ScenarioView scenario={showing} />
+        <ExerciseView exercise={showing} />
       </section>
 
       {/* ---- The record --------------------------------------------- */}
@@ -349,42 +349,42 @@ export function ScenarioWorkbench({
 /* ------------------------------------------------------------------ */
 
 /** The exercise, laid out to be read rather than to be flown. */
-function ScenarioView({ scenario }: { scenario: ScenarioInstance }) {
+function ExerciseView({ exercise }: { exercise: ExerciseInstance }) {
   return (
     <div className="mt-4 space-y-4">
       <div className="panel p-4">
         <p className="label">The brief the trainee reads</p>
         <p className="prose-block mt-2 whitespace-pre-wrap text-sm">
-          {scenario.situation_brief}
+          {exercise.situation_brief}
         </p>
       </div>
 
       <dl className="data grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Stat label="Window" value={`${scenario.time_window_seconds}s`} />
-        <Stat label="Tracks" value={String(scenario.live_tracks.length)} />
+        <Stat label="Window" value={`${exercise.time_window_seconds}s`} />
+        <Stat label="Tracks" value={String(exercise.live_tracks.length)} />
         <Stat
           label="Boresight"
-          value={`${Math.round(scenario.radar_boresight_deg)}°`}
+          value={`${Math.round(exercise.radar_boresight_deg)}°`}
         />
         <Stat
           label="Rounds allowed"
-          value={String(scenario.success_criteria.max_interceptors_spent)}
+          value={String(exercise.success_criteria.max_interceptors_spent)}
         />
       </dl>
 
       <div className="panel p-4">
         <p className="label">What counts as success</p>
         <p className="mt-1 text-sm">
-          {scenario.success_criteria.statement || "Not stated."}
+          {exercise.success_criteria.statement || "Not stated."}
         </p>
         <p className="mt-1 text-xs text-muted">
-          At most {scenario.success_criteria.max_leakers} hostile
-          {scenario.success_criteria.max_leakers === 1 ? "" : "s"} may reach the
+          At most {exercise.success_criteria.max_leakers} hostile
+          {exercise.success_criteria.max_leakers === 1 ? "" : "s"} may reach the
           defended area.
         </p>
       </div>
 
-      {scenario.live_tracks.length > 0 ? (
+      {exercise.live_tracks.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="data w-full text-xs">
             <thead className="text-muted">
@@ -401,7 +401,7 @@ function ScenarioView({ scenario }: { scenario: ScenarioInstance }) {
               </tr>
             </thead>
             <tbody>
-              {scenario.live_tracks.map((track) => (
+              {exercise.live_tracks.map((track) => (
                 <tr
                   key={track.designator}
                   className="border-b border-line/60 align-top"

@@ -129,7 +129,7 @@ class LocalFiles implements RepoFiles {
  * How many times a refused write will re-read the parent and try again.
  *
  * The queue below orders one instance's writes. Production has many instances:
- * a designer approving a profile while a trainee's scenario job records its
+ * a designer approving a profile while a trainee's exercise job records its
  * result is two writers on one branch, and the second commit is refused because
  * its parent moved. The losing write is never wrong, only late — so re-read and
  * repeat it rather than surfacing a conflict the user cannot act on.

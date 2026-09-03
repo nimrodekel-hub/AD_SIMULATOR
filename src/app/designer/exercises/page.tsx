@@ -2,13 +2,13 @@ import Link from "next/link";
 import { ScreenShell } from "@/components/screen-shell";
 import { TakeHoldButton } from "@/components/take-hold-button";
 import { listSystems } from "@/lib/store/kb";
-import { listAllScenarios } from "@/lib/store/scenarios";
+import { listAllExercises } from "@/lib/store/exercises";
 import { listAllSessions } from "@/lib/store/sessions";
 
 /**
  * Every exercise the generator has produced.
  *
- * There was no such page, and its absence was a real hole: a scenario existed
+ * There was no such page, and its absence was a real hole: an exercise existed
  * only inside the run it was made for, so nobody could see what trainees had
  * actually been given, and a poor exercise could be found only by flying it.
  *
@@ -24,10 +24,10 @@ import { listAllSessions } from "@/lib/store/sessions";
 
 export const dynamic = "force-dynamic";
 
-export default async function SimulationsPage() {
+export default async function ExercisesPage() {
   const [systems, saved, sessions] = await Promise.all([
     listSystems(),
-    listAllScenarios(),
+    listAllExercises(),
     listAllSessions(),
   ]);
 
@@ -70,10 +70,10 @@ export default async function SimulationsPage() {
               <li key={entry.id} className="panel p-4">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <Link
-                    href={`/designer/simulations/${entry.id}?system=${entry.system_id}`}
+                    href={`/designer/exercises/${entry.id}?system=${entry.system_id}`}
                     className="text-sm font-semibold hover:text-accent"
                   >
-                    {entry.scenario_instance.scenario_name || "Untitled exercise"}
+                    {entry.exercise_instance.exercise_name || "Untitled exercise"}
                   </Link>
                   <span className="chip">{entry.difficulty_level}</span>
                   {entry.revisions.length > 0 ? (
@@ -85,9 +85,9 @@ export default async function SimulationsPage() {
                 </div>
                 <p className="mt-1 text-xs text-muted">
                   {systemName(entry.system_id)} ·{" "}
-                  {entry.scenario_instance.live_tracks.length} track
-                  {entry.scenario_instance.live_tracks.length === 1 ? "" : "s"} ·{" "}
-                  {entry.scenario_instance.time_window_seconds}s
+                  {entry.exercise_instance.live_tracks.length} track
+                  {entry.exercise_instance.live_tracks.length === 1 ? "" : "s"} ·{" "}
+                  {entry.exercise_instance.time_window_seconds}s
                   {entry.source ? ` · ${entry.source}` : ""}
                 </p>
               </li>
@@ -116,7 +116,7 @@ export default async function SimulationsPage() {
               <li key={session.id} className="panel p-4">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="text-sm font-semibold">
-                    {session.scenario_instance.scenario_name ||
+                    {session.exercise_instance.exercise_name ||
                       "Untitled exercise"}
                   </span>
                   <span className="chip">{session.difficulty_level}</span>
@@ -137,8 +137,8 @@ export default async function SimulationsPage() {
                 </div>
                 <p className="mt-1 text-xs text-muted">
                   {systemName(session.system_id)} ·{" "}
-                  {session.scenario_instance.live_tracks.length} track
-                  {session.scenario_instance.live_tracks.length === 1
+                  {session.exercise_instance.live_tracks.length} track
+                  {session.exercise_instance.live_tracks.length === 1
                     ? ""
                     : "s"}{" "}
                   · {session.created_at.slice(0, 10)}

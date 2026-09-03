@@ -3,8 +3,8 @@
 import { useState } from "react";
 import type {
   Action,
-  DecisionPoint,
-  DilemmaDraft,
+  Dilemma,
+  ScenarioDraft,
   Range,
 } from "@/lib/domain/schemas";
 
@@ -21,7 +21,7 @@ import type {
  * while reacting.
  */
 
-export function DilemmaForm({
+export function ScenarioForm({
   initial,
   saving,
   error,
@@ -29,17 +29,17 @@ export function DilemmaForm({
   onSubmit,
   secondary,
 }: {
-  initial: DilemmaDraft;
+  initial: ScenarioDraft;
   saving: boolean;
   error?: string;
   primaryLabel: string;
-  onSubmit: (draft: DilemmaDraft) => void;
+  onSubmit: (draft: ScenarioDraft) => void;
   secondary?: React.ReactNode;
 }) {
-  const [draft, setDraft] = useState<DilemmaDraft>(initial);
+  const [draft, setDraft] = useState<ScenarioDraft>(initial);
 
   /** Narrow updater so each field edits one key without clobbering the rest. */
-  const set = <K extends keyof DilemmaDraft>(key: K, value: DilemmaDraft[K]) =>
+  const set = <K extends keyof ScenarioDraft>(key: K, value: ScenarioDraft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
 
   return (
@@ -53,7 +53,7 @@ export function DilemmaForm({
       {/* ---- Identity ------------------------------------------------ */}
       <Section
         title="Identity"
-        hint="How this dilemma is named and filed."
+        hint="How this scenario is named and filed."
       >
         <Labelled label="Title">
           <input
@@ -90,7 +90,7 @@ export function DilemmaForm({
       {/* ---- Key variables ------------------------------------------- */}
       <Section
         title="Key variables"
-        hint="The dials scenario generation turns. Every generated run stays inside these bounds."
+        hint="The dials exercise generation turns. Every generated run stays inside these bounds."
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <RangeField
@@ -224,30 +224,30 @@ export function DilemmaForm({
         </Labelled>
       </Section>
 
-      {/* ---- Decision points ----------------------------------------- */}
+      {/* ---- Dilemmas ----------------------------------------- */}
       <Section
-        title="Decision points"
+        title="Dilemmas"
         hint="The branch points, in the order the trainee meets them. The rationale and common errors here are quoted back verbatim in the debrief — vague text here produces a vague debrief."
       >
         <div className="space-y-4">
-          {draft.decision_points.map((point, index) => (
-            <DecisionPointEditor
+          {draft.dilemmas.map((point, index) => (
+            <DilemmaEditor
               key={index}
               index={index}
               point={point}
               onChange={(next) =>
-                set("decision_points", replaceAt(draft.decision_points, index, next))
+                set("dilemmas", replaceAt(draft.dilemmas, index, next))
               }
               onRemove={() =>
-                set("decision_points", removeAt(draft.decision_points, index))
+                set("dilemmas", removeAt(draft.dilemmas, index))
               }
             />
           ))}
           <AddButton
-            label="Add decision point"
+            label="Add dilemma"
             onClick={() =>
-              set("decision_points", [
-                ...draft.decision_points,
+              set("dilemmas", [
+                ...draft.dilemmas,
                 {
                   situation: "",
                   valid_actions: [{ label: "", description: "" }],
@@ -264,7 +264,7 @@ export function DilemmaForm({
       {/* ---- Difficulty ---------------------------------------------- */}
       <Section
         title="Difficulty scaling"
-        hint="How the same dilemma tightens. Each band should stay inside the key-variable ranges above."
+        hint="How the same scenario tightens. Each band should stay inside the key-variable ranges above."
       >
         <div className="space-y-4">
           {(["easy", "medium", "hard"] as const).map((level) => {
@@ -378,18 +378,18 @@ export function DilemmaForm({
 }
 
 /* ------------------------------------------------------------------ */
-/* Decision point                                                      */
+/* Dilemma                                                      */
 /* ------------------------------------------------------------------ */
 
-function DecisionPointEditor({
+function DilemmaEditor({
   index,
   point,
   onChange,
   onRemove,
 }: {
   index: number;
-  point: DecisionPoint;
-  onChange: (next: DecisionPoint) => void;
+  point: Dilemma;
+  onChange: (next: Dilemma) => void;
   onRemove: () => void;
 }) {
   const setActions = (valid_actions: Action[]) => {
@@ -409,9 +409,9 @@ function DecisionPointEditor({
     <div className="panel p-4">
       <div className="mb-3 flex items-center justify-between">
         <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-accent">
-          Decision point {index + 1}
+          Dilemma {index + 1}
         </p>
-        <RemoveButton label="Remove decision point" onClick={onRemove} />
+        <RemoveButton label="Remove dilemma" onClick={onRemove} />
       </div>
 
       <Labelled label="Situation">

@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { DilemmaForm } from "@/components/dilemma-form";
-import type { DilemmaDraft, DilemmaEntry } from "@/lib/domain/schemas";
+import { ScenarioForm } from "@/components/scenario-form";
+import type { ScenarioDraft, ScenarioEntry } from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
 
 /**
@@ -12,12 +12,12 @@ import { readJson } from "@/lib/http";
  * Approval is what makes an entry visible to trainees, so it is a separate,
  * deliberate action rather than a side effect of saving.
  */
-export function DilemmaEditor({
+export function ScenarioEditor({
   systemId,
   entry,
 }: {
   systemId: string;
-  entry: DilemmaEntry;
+  entry: ScenarioEntry;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -25,12 +25,12 @@ export function DilemmaEditor({
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
 
-  async function save(draft: DilemmaDraft) {
+  async function save(draft: ScenarioDraft) {
     setSaving(true);
     setError(undefined);
     setNotice(undefined);
     try {
-      const response = await fetch(`/api/systems/${systemId}/dilemmas/${entry.id}`, {
+      const response = await fetch(`/api/systems/${systemId}/scenarios/${entry.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ draft }),
@@ -50,7 +50,7 @@ export function DilemmaEditor({
     setApproving(true);
     setError(undefined);
     try {
-      const response = await fetch(`/api/systems/${systemId}/dilemmas/${entry.id}/approve`, {
+      const response = await fetch(`/api/systems/${systemId}/scenarios/${entry.id}/approve`, {
         method: "POST",
       });
       const payload = await readJson<{ error?: string }>(response);
@@ -90,7 +90,7 @@ export function DilemmaEditor({
 
       {notice ? <p className="chip status-ok mb-4 !normal-case">{notice}</p> : null}
 
-      <DilemmaForm
+      <ScenarioForm
         initial={toDraft(entry)}
         saving={saving}
         error={error}
@@ -102,13 +102,13 @@ export function DilemmaEditor({
 }
 
 /** Strips the server-owned fields, leaving just the editable content. */
-function toDraft(entry: DilemmaEntry): DilemmaDraft {
+function toDraft(entry: ScenarioEntry): ScenarioDraft {
   return {
     title: entry.title,
     sub_domain_tag: entry.sub_domain_tag,
     trigger_conditions: entry.trigger_conditions,
     key_variables: entry.key_variables,
-    decision_points: entry.decision_points,
+    dilemmas: entry.dilemmas,
     difficulty_scaling: entry.difficulty_scaling,
     evaluation_criteria: entry.evaluation_criteria,
   };

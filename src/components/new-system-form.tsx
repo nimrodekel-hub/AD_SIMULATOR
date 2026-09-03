@@ -8,7 +8,7 @@ import { readJson } from "@/lib/http";
  * Naming a new simulated system.
  *
  * Creating it is deliberately this small: a system exists as soon as it has a
- * name, and the behaviour profile, console and dilemmas are filled in
+ * name, and the behaviour profile, console and scenarios are filled in
  * afterwards, each on its own screen. That way a designer can start a second
  * system without finishing the first.
  */

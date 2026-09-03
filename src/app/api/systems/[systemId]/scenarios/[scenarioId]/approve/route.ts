@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { approveDilemma } from "@/lib/store/kb";
+import { approveScenario } from "@/lib/store/kb";
 
 /**
  * Approval is the one gate in the system: until an entry is approved it is
@@ -8,11 +8,11 @@ import { approveDilemma } from "@/lib/store/kb";
  */
 export async function POST(
   _request: NextRequest,
-  ctx: RouteContext<"/api/systems/[systemId]/dilemmas/[dilemmaId]/approve">,
+  ctx: RouteContext<"/api/systems/[systemId]/scenarios/[scenarioId]/approve">,
 ) {
-  const { systemId, dilemmaId } = await ctx.params;
+  const { systemId, scenarioId } = await ctx.params;
   try {
-    const entry = await approveDilemma(systemId, dilemmaId);
+    const entry = await approveScenario(systemId, scenarioId);
     if (!entry) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ entry });
   } catch (reason) {

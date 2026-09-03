@@ -1,18 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { DilemmaEditor } from "@/components/dilemma-editor";
+import { ScenarioEditor } from "@/components/scenario-editor";
 import { ScreenShell } from "@/components/screen-shell";
-import { getDilemma, getSystem } from "@/lib/store/kb";
+import { getScenario, getSystem } from "@/lib/store/kb";
 
 export const dynamic = "force-dynamic";
 
-export default async function DilemmaPage({
+export default async function ScenarioPage({
   params,
-}: PageProps<"/designer/systems/[systemId]/dilemmas/[dilemmaId]">) {
-  const { systemId, dilemmaId } = await params;
+}: PageProps<"/designer/systems/[systemId]/scenarios/[scenarioId]">) {
+  const { systemId, scenarioId } = await params;
   const [system, entry] = await Promise.all([
     getSystem(systemId),
-    getDilemma(systemId, dilemmaId),
+    getScenario(systemId, scenarioId),
   ]);
   if (!system || !entry) notFound();
 
@@ -32,7 +32,7 @@ export default async function DilemmaPage({
         </Link>
       </p>
 
-      <DilemmaEditor systemId={systemId} entry={entry} />
+      <ScenarioEditor systemId={systemId} entry={entry} />
     </ScreenShell>
   );
 }

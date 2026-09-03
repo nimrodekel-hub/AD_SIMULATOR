@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { DATA_PATHS } from "../config";
-import { ScenarioInstanceSchema } from "../domain/schemas";
+import { ExerciseInstanceSchema } from "../domain/schemas";
 import { type Job, asReported, isStale, jobRecord } from "./job";
 
 /**
@@ -13,14 +13,14 @@ import { type Job, asReported, isStale, jobRecord } from "./job";
  * answers at once with a job record, the work carries on server-side, and the
  * screen asks every few seconds whether it has finished.
  *
- * Keyed by the scenario rather than by whoever is looking at it: the thing
+ * Keyed by the exercise rather than by whoever is looking at it: the thing
  * being corrected is what can only have one correction under way at a time,
  * and two tabs on the same exercise should join the same wait rather than
  * start a second one.
  */
 
 const ReviseJobResultSchema = z.object({
-  scenario: ScenarioInstanceSchema,
+  exercise: ExerciseInstanceSchema,
   /** The model's own account of what it changed, shown beside the request. */
   notes: z.string().default(""),
   /** Every complaint this correction answers, oldest first. */
@@ -40,38 +40,38 @@ export type ReviseJobResult = z.infer<typeof ReviseJobResultSchema>;
 export type ReviseJob = Job<ReviseJobResult>;
 
 const record = jobRecord(ReviseJobResultSchema);
-const pathFor = (scenarioId: string) =>
-  `${DATA_PATHS.jobs}/scenario-revise-${scenarioId}.json`;
+const pathFor = (exerciseId: string) =>
+  `${DATA_PATHS.jobs}/exercise-revise-${exerciseId}.json`;
 
-export function readReviseJob(scenarioId: string): Promise<ReviseJob | null> {
-  return record.read(pathFor(scenarioId));
+export function readReviseJob(exerciseId: string): Promise<ReviseJob | null> {
+  return record.read(pathFor(exerciseId));
 }
 
-export function startReviseJob(scenarioId: string): Promise<ReviseJob> {
+export function startReviseJob(exerciseId: string): Promise<ReviseJob> {
   return record.start(
-    pathFor(scenarioId),
-    `Start exercise correction ${scenarioId.slice(0, 8)}`,
+    pathFor(exerciseId),
+    `Start exercise correction ${exerciseId.slice(0, 8)}`,
   );
 }
 
 export function finishReviseJob(
-  scenarioId: string,
+  exerciseId: string,
   result: ReviseJobResult,
 ): Promise<void> {
   return record.finish(
-    pathFor(scenarioId),
-    `Exercise corrected ${scenarioId.slice(0, 8)}`,
+    pathFor(exerciseId),
+    `Exercise corrected ${exerciseId.slice(0, 8)}`,
     result,
   );
 }
 
 export function failReviseJob(
-  scenarioId: string,
+  exerciseId: string,
   error: string,
 ): Promise<void> {
   return record.fail(
-    pathFor(scenarioId),
-    `Exercise correction failed ${scenarioId.slice(0, 8)}`,
+    pathFor(exerciseId),
+    `Exercise correction failed ${exerciseId.slice(0, 8)}`,
     error,
   );
 }

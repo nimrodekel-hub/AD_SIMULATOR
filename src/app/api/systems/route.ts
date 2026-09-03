@@ -6,7 +6,7 @@ import { createSystem, listSystems } from "@/lib/store/kb";
  * The collection of simulated systems.
  *
  * A system exists as soon as it is named. The behaviour profile, the console
- * and the dilemmas are filled in afterwards, each on its own screen, so a
+ * and the scenarios are filled in afterwards, each on its own screen, so a
  * designer can start a second system without finishing the first.
  */
 

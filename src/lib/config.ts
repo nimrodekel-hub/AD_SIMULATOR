@@ -57,7 +57,7 @@ export const config = {
  *
  * One model for the whole app was the right start and is the wrong end: these
  * steps are not the same kind of work. Routing a request to one of a handful
- * of dilemmas is a classification that measured at nine seconds. Laying out an
+ * of scenarios is a classification that measured at nine seconds. Laying out an
  * engagement inside a system's declared envelope, or copying a console from
  * screenshots, is judgement — and it is the part a designer has already sent
  * back three times for not being good enough.
@@ -68,12 +68,12 @@ export const config = {
  *
  *     ANTHROPIC_MODEL_MATCH               routing a trainee's request
  *     ANTHROPIC_MODEL_EXTRACT_NARRATIVE   tidying prose into lists
- *     ANTHROPIC_MODEL_SCENARIO            laying out an engagement
- *     ANTHROPIC_MODEL_SCENARIO_REVISION   correcting one
+ *     ANTHROPIC_MODEL_EXERCISE            laying out an engagement
+ *     ANTHROPIC_MODEL_EXERCISE_REVISION   correcting one
  *     ANTHROPIC_MODEL_CONSOLE             building the console
  *     ANTHROPIC_MODEL_DEBRIEF             judging a run
  *     ANTHROPIC_MODEL_INTERVIEW           the designer's conversation
- *     ANTHROPIC_MODEL_EXTRACT_DILEMMA     extracting a dilemma from it
+ *     ANTHROPIC_MODEL_EXTRACT_SCENARIO     extracting a scenario from it
  *
  * Both are read at request time rather than at build time, so a step can be
  * moved to a cheaper model, watched, and moved back from Vercel's environment
@@ -115,9 +115,9 @@ export function githubConfigProblems(): string[] {
  *
  * Each simulated system owns a directory, and everything that only makes sense
  * inside that system lives under it: how it behaves, its console, its
- * reference screenshots and the dilemmas taught within it. Listing one
- * system's dilemmas is then a single directory read rather than a scan of
- * every dilemma in the repository.
+ * reference screenshots and the scenarios taught within it. Listing one
+ * system's scenarios is then a single directory read rather than a scan of
+ * every scenario in the repository.
  */
 export const DATA_PATHS = {
   systems: "data/kb/systems",
@@ -137,9 +137,9 @@ export const DATA_PATHS = {
   generalKnowledge: "data/kb/general-knowledge.json",
 } as const;
 
-/** Where a trainee's in-flight scenario generation is recorded. */
-export const scenarioJobPath = (traineeId: string) =>
-  `${DATA_PATHS.jobs}/scenario-${traineeId}.json`;
+/** Where a trainee's in-flight exercise generation is recorded. */
+export const exerciseJobPath = (traineeId: string) =>
+  `${DATA_PATHS.jobs}/exercise-${traineeId}.json`;
 
 /** The files and directories inside one system's directory. */
 export const systemPaths = (systemId: string) => {
@@ -150,10 +150,10 @@ export const systemPaths = (systemId: string) => {
     profile: `${root}/profile.json`,
     gui: `${root}/gui.json`,
     guiJob: `${root}/gui-job.json`,
-    dilemmaJob: `${root}/dilemma-job.json`,
+    scenarioJob: `${root}/scenario-job.json`,
     screenshots: `${root}/screenshots`,
-    dilemmas: `${root}/dilemmas`,
-    /** Scenarios a designer has taken hold of, and the corrected versions. */
     scenarios: `${root}/scenarios`,
+    /** Exercises a designer has taken hold of, and the corrected versions. */
+    exercises: `${root}/exercises`,
   };
 };
