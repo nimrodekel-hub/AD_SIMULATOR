@@ -2,18 +2,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LearningChat } from "@/components/learning-chat";
 import { ScreenShell } from "@/components/screen-shell";
-import { asReported, readDilemmaJob } from "@/lib/store/dilemma-job";
+import { asReported, readScenarioJob } from "@/lib/store/scenario-job";
 import { getSystem } from "@/lib/store/kb";
 
 export const dynamic = "force-dynamic";
 
-export default async function LearnDilemmaPage({
+export default async function LearnScenarioPage({
   params,
 }: PageProps<"/designer/systems/[systemId]/learn">) {
   const { systemId } = await params;
   const [system, job] = await Promise.all([
     getSystem(systemId),
-    readDilemmaJob(systemId),
+    readScenarioJob(systemId),
   ]);
   if (!system) notFound();
 
@@ -21,7 +21,7 @@ export default async function LearnDilemmaPage({
     <ScreenShell
       theme="work"
       eyebrow={system.name}
-      title="Teach a dilemma"
+      title="Teach a scenario"
       subtitle="Talk it through; the system extracts the structured record"
     >
       <p className="mb-8">
