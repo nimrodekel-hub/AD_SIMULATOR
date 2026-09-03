@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConsoleRehearsal } from "@/components/console-rehearsal";
-import { ConsoleReview } from "@/components/console-review";
 import { ScreenShell } from "@/components/screen-shell";
 import { readGuiJob } from "@/lib/store/gui-job";
 import { getGuiTemplate, getSystem, getSystemProfile } from "@/lib/store/kb";
@@ -29,7 +28,8 @@ import { getGuiTemplate, getSystem, getSystemProfile } from "@/lib/store/kb";
  * showed the version from before the change, and a builder that had done what
  * it was asked looked like one that had ignored it. The newest finished build
  * is kept with its job, so this page can run that instead and ask for a
- * verdict on it.
+ * verdict on it — after it has been flown, which is the run's business rather
+ * than this page's.
  */
 
 export const dynamic = "force-dynamic";
@@ -105,19 +105,6 @@ export default async function TestSystemPage({
       contained={false}
       fullHeight
     >
-      {review ? (
-        <ConsoleReview
-          systemId={systemId}
-          html={review.html}
-          screenshots={review.screenshots}
-          requests={review.requests}
-          designNotes={review.design_notes}
-          missingSlots={review.missing_slots}
-          storedRevisions={template?.revisions ?? []}
-          wasApproved={template?.approved === true}
-        />
-      ) : null}
-
       {hostsTheScope && canInterrogate ? null : (
         <div className="flex flex-col items-start gap-2 px-6 pt-4">
           {hostsTheScope ? null : (
@@ -144,10 +131,26 @@ export default async function TestSystemPage({
         </div>
       )}
 
+      {/* The review travels *into* the run rather than sitting above it: the
+          verdict on a change belongs after it has been flown, and the run is
+          what knows when that has happened. */}
       <ConsoleRehearsal
         systemId={systemId}
         profile={profile}
         templateHtml={hostsTheScope ? html : undefined}
+        review={
+          review
+            ? {
+                html: review.html,
+                screenshots: review.screenshots,
+                requests: review.requests,
+                designNotes: review.design_notes,
+                missingSlots: review.missing_slots,
+                storedRevisions: template?.revisions ?? [],
+                wasApproved: template?.approved === true,
+              }
+            : undefined
+        }
       />
     </ScreenShell>
   );
