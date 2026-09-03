@@ -2,7 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
-import { config } from "../config";
+import { config, modelFor } from "../config";
 
 /**
  * The single place that talks to the Anthropic API.
@@ -23,6 +23,37 @@ export interface Usage {
 }
 
 /**
+ * Dollars per million tokens, for the estimate in the log line only.
+ *
+ * A snapshot, not a source of truth: prices change, and the invoice is what is
+ * actually charged. It is here because a token count is not a decision — a
+ * designer asking "would a cheaper model be worth it" needs to know what this
+ * call costs today, and four numbers per line do not answer that. An unknown
+ * model simply prints no estimate rather than a wrong one.
+ */
+const RATES: Record<string, { in: number; out: number }> = {
+  "claude-opus-5": { in: 5, out: 25 },
+  "claude-sonnet-5": { in: 2, out: 10 },
+  "claude-haiku-4-5": { in: 1, out: 5 },
+  "claude-fable-5-1": { in: 10, out: 50 },
+};
+
+/** Cache reads are a tenth of input; a 1-hour write is double it. */
+const CACHE_READ = 0.1;
+const CACHE_WRITE_1H = 2;
+
+/** What one call cost, in dollars, or null for a model with no known rate. */
+function costOf(model: string, usage: Usage): number | null {
+  const rate = RATES[model];
+  if (!rate) return null;
+  const input =
+    usage.input_tokens +
+    (usage.cache_read_input_tokens ?? 0) * CACHE_READ +
+    (usage.cache_creation_input_tokens ?? 0) * CACHE_WRITE_1H;
+  return (input * rate.in + usage.output_tokens * rate.out) / 1_000_000;
+}
+
+/**
  * Records what a call cost, so that "why is the bill this size" is answerable.
  *
  * Output tokens include the model's thinking, which is invisible in the reply
@@ -32,14 +63,25 @@ export interface Usage {
  * `input_tokens` is the *uncached remainder* only — the full prompt is the sum
  * of all three input figures. A healthy cached turn shows a large `cached` and
  * a small `in`.
+ *
+ * The model and the dollar estimate are on the line because the question this
+ * log exists to answer is a money question, and answering it from token counts
+ * needs a rate card and a calculator. Grepping `[ai:usage]` out of the hosting
+ * logs now gives a per-step bill directly.
  */
-function reportUsage(label: string, usage: Usage | null | undefined): void {
+function reportUsage(
+  label: string,
+  model: string,
+  usage: Usage | null | undefined,
+): void {
   if (!usage) return;
+  const cost = costOf(model, usage);
   console.log(
-    `[ai:usage] ${label} in=${usage.input_tokens} ` +
+    `[ai:usage] ${label} model=${model} in=${usage.input_tokens} ` +
       `cached=${usage.cache_read_input_tokens ?? 0} ` +
       `written=${usage.cache_creation_input_tokens ?? 0} ` +
-      `out=${usage.output_tokens}`,
+      `out=${usage.output_tokens}` +
+      (cost === null ? "" : ` cost=$${cost.toFixed(4)}`),
   );
 }
 
@@ -259,7 +301,10 @@ export interface StructuredRequest<T> {
    */
   effort?: Effort;
   maxTokens?: number;
-  /** Names this call in the usage log, so spend can be attributed to a step. */
+  /**
+   * Names this call in the usage log, so spend can be attributed to a step —
+   * and chooses which model runs it, via `modelFor`.
+   */
   label?: string;
   /**
    * Canned result used when the app runs without an API key, so the screens can
@@ -287,9 +332,10 @@ export async function structured<T>({
 }: StructuredRequest<T>): Promise<T> {
   if (config.anthropic.mock && mock) return mock();
 
+  const model = modelFor(label);
   const response = await withRetry(label, () =>
     anthropic().messages.parse({
-      model: config.anthropic.model,
+      model,
       max_tokens: maxTokens,
       thinking: { type: "adaptive" },
       system: cacheableSystem(system),
@@ -301,7 +347,7 @@ export async function structured<T>({
     }),
   );
 
-  reportUsage(label, response.usage as Usage);
+  reportUsage(label, model, response.usage as Usage);
 
   if (response.stop_reason === "refusal") {
     throw new Error(
@@ -327,7 +373,10 @@ export interface StreamRequest {
   messages: Anthropic.MessageParam[];
   effort?: Effort;
   maxTokens?: number;
-  /** Names this call in the usage log, so spend can be attributed to a step. */
+  /**
+   * Names this call in the usage log, so spend can be attributed to a step —
+   * and chooses which model runs it, via `modelFor`.
+   */
   label?: string;
   /** Canned reply for keyless operation — see `StructuredRequest.mock`. */
   mock?: string;
@@ -361,6 +410,7 @@ export function streamChat({
 }: StreamRequest): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const canned = config.anthropic.mock ? mock : undefined;
+  const model = modelFor(label);
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -387,7 +437,7 @@ export function streamChat({
             label,
             async () => {
               const stream = anthropic().messages.stream({
-                model: config.anthropic.model,
+                model,
                 max_tokens: maxTokens,
                 thinking: { type: "adaptive" },
                 system: cacheableSystem(system),
@@ -412,7 +462,7 @@ export function streamChat({
                 }
               }
 
-              reportUsage(label, (await stream.finalMessage()).usage as Usage);
+              reportUsage(label, model, (await stream.finalMessage()).usage as Usage);
             },
             () => !wroteText,
           );
