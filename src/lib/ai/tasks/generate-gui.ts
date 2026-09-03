@@ -95,6 +95,21 @@ Place these exactly where the corresponding information sits in the reference co
 
 Leave them completely empty. Live content is injected at runtime.
 
+## One more slot, if the reference has the control
+
+- \`<div data-slot="range"></div>\` — **optional.** Where the reference console shows a range-scale or zoom control for the radar picture, put this there and the real one is rendered into it. Omit it and the operator gets a compact one over the corner of the picture instead.
+
+## Never draw a control that has no slot
+
+**A control you paint but do not wire is worse than one you leave out.** This is not a style rule — it happened: a console came back with a zoom stepper and a row of range-scale buttons copied faithfully from the screenshots, as plain markup with nothing behind them. They looked exactly right, they were the first thing the operator pressed, and pressing them did nothing. A missing control is honest; a dead one teaches that the system does not respond.
+
+So, for anything that looks like it can be operated — buttons, steppers, toggles, scale switches, mode selectors, a filter row:
+
+- if it is one of the slots above, emit the slot and let the real control be rendered into it;
+- otherwise **draw it as a readout, not as a control** — the current value as text, without the button chrome — or leave it out.
+
+Labels, legends, keys, status lamps and fixed readouts are not controls and are welcome. The test is whether it invites a press.
+
 ## Making it usable
 
 The slots must be **legible and large**. A faithful frame that leaves the air picture two centimetres of space is a failure: that slot should dominate, as it does on the real console.

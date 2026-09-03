@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { RadarScope } from "@/components/radar-scope";
+import { RadarScope, rangeScales } from "@/components/radar-scope";
+import { RangeControl } from "@/components/range-control";
 import { SimulatedConsole } from "@/components/simulated-console";
 import type {
   DifficultyLevel,
@@ -107,6 +108,14 @@ export function LiveRun({
   );
   const [selected, setSelected] = useState<string | null>(null);
   const [round, setRound] = useState(config.interceptors[0]?.name ?? "");
+  /* The scope's range scale. Owned here rather than inside the scope so the
+     switch and the picture are the same piece of state, wherever the shell
+     happens to put the switch. Opens on the full picture. */
+  const scales = useMemo(
+    () => rangeScales(config.detection_range_km),
+    [config.detection_range_km],
+  );
+  const [rangeKm, setRangeKm] = useState(scales[scales.length - 1]);
   const [error, setError] = useState<string>();
 
   const submitted = useRef(false);
@@ -208,6 +217,8 @@ export function LiveRun({
   }
 
   /* ---- The live pieces ------------------------------------------ */
+  const hostsRangeSlot = templateHtml?.includes('data-slot="range"') === true;
+
   const views = state.tracks
     .map((track) => viewOf(track, state.t, config))
     .filter((view) => view.visible)
@@ -218,13 +229,37 @@ export function LiveRun({
 
   const inFlight = state.engagements.filter((e) => !e.resolved).length;
 
+  const rangeControl = (
+    <RangeControl scales={scales} value={rangeKm} onChange={setRangeKm} />
+  );
+
   const scope = (
     <RadarScope
       state={state}
       config={config}
       selected={selected}
       onSelect={setSelected}
+      rangeKm={rangeKm}
     />
+  );
+
+  /* Consoles built before the range slot existed have nowhere to put the
+     switch, and the designer should not have to rebuild their console to get
+     a working one. So it sits over the corner of the picture instead. */
+  const scopeWithRange = (
+    <div className="relative h-full min-h-0 w-full">
+      {scope}
+      {hostsRangeSlot ? null : (
+        <div className="pointer-events-auto absolute left-0 top-0">
+          <RangeControl
+            scales={scales}
+            value={rangeKm}
+            onChange={setRangeKm}
+            compact
+          />
+        </div>
+      )}
+    </div>
   );
 
   const clock = (
@@ -277,10 +312,11 @@ export function LiveRun({
             scope: (
               <div className="grid h-full min-h-0 place-items-center">
                 <div className="aspect-square max-h-full max-w-full [height:100%]">
-                  {scope}
+                  {scopeWithRange}
                 </div>
               </div>
             ),
+            range: rangeControl,
             tracks: (
               <div className="h-full min-h-0 overflow-y-auto">{trackList}</div>
             ),
@@ -314,6 +350,7 @@ export function LiveRun({
           {views.length} HELD · {inFlight} IN FLIGHT ·{" "}
           {config.magazine - state.spent} ROUNDS
         </span>
+        {rangeControl}
         <span className="ml-auto data text-xs text-muted">
           {scenario.scenario_name}
         </span>
