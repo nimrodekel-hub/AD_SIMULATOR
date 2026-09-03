@@ -89,13 +89,18 @@ export async function POST(
       // Only an approved profile bounds a scenario. A draft is the designer
       // still working, and half-taught doctrine is worse than none.
       const profile = await getSystemProfile(saved.system_id);
-      const { scenario, notes } = await generateScenario(
+      const { scenario, notes, adjustments } = await generateScenario(
         dilemma,
         saved.difficulty_level,
         profile?.approved ? profile : null,
         { previous: saved.scenario_instance, requests },
       );
-      await finishReviseJob(scenarioId, { scenario, notes, requests });
+      await finishReviseJob(scenarioId, {
+        scenario,
+        notes,
+        requests,
+        adjustments,
+      });
     } catch (reason) {
       await failReviseJob(scenarioId, describeAiError(reason));
     }
