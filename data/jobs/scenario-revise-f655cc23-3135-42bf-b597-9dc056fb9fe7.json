@@ -1,7 +1,7 @@
 {
-  "status": "failed",
-  "started_at": "2026-09-03T13:35:49.431Z",
-  "finished_at": "2026-09-03T13:36:22.889Z",
-  "error": "Anthropic API error 529: 529 {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"},\"request_id\":\"req_011CegbUWSKCvhNg2dUsaKGU\"}",
+  "status": "running",
+  "started_at": "2026-09-03T13:56:07.496Z",
+  "finished_at": null,
+  "error": null,
   "result": null
 }
