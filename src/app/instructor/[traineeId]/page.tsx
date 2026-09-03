@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ScoreHistoryChart } from "@/components/score-trend";
 import { ScreenShell } from "@/components/screen-shell";
 import { scoreTone, summarise } from "@/lib/stats";
-import { listAllDilemmas, listSystems } from "@/lib/store/kb";
+import { listAllScenarios, listSystems } from "@/lib/store/kb";
 import { getTrainee, listSessionsForTrainee } from "@/lib/store/sessions";
 
 /**
@@ -22,10 +22,10 @@ export default async function TraineeHistoryPage({
 }: PageProps<"/instructor/[traineeId]">) {
   const { traineeId } = await params;
 
-  const [trainee, sessions, dilemmas, systems] = await Promise.all([
+  const [trainee, sessions, scenarios, systems] = await Promise.all([
     getTrainee(traineeId),
     listSessionsForTrainee(traineeId),
-    listAllDilemmas(),
+    listAllScenarios(),
     listSystems(),
   ]);
   if (!trainee) notFound();
@@ -33,7 +33,7 @@ export default async function TraineeHistoryPage({
   const stats = summarise(sessions);
   // Runs span systems, so a title is resolved without knowing which system it
   // came from, and the system is named alongside it.
-  const titleFor = new Map(dilemmas.map((entry) => [entry.id, entry.title]));
+  const titleFor = new Map(scenarios.map((entry) => [entry.id, entry.title]));
   const systemFor = new Map(systems.map((system) => [system.id, system.name]));
 
   return (
@@ -94,7 +94,7 @@ export default async function TraineeHistoryPage({
 
           {sessions.length === 0 ? (
             <div className="panel p-8 text-center text-sm text-muted">
-              This trainee has not run a scenario yet.
+              This trainee has not run an exercise yet.
             </div>
           ) : (
             <ul className="space-y-3">
@@ -114,8 +114,8 @@ export default async function TraineeHistoryPage({
                           : Math.round(session.score ?? 0)}
                       </span>
                       <span className="min-w-0 flex-1 truncate text-sm">
-                        {titleFor.get(session.dilemma_entry_id) ??
-                          "(dilemma since removed)"}
+                        {titleFor.get(session.scenario_entry_id) ??
+                          "(scenario since removed)"}
                       </span>
                       <span className="data text-xs text-muted">
                         {systemFor.get(session.system_id) ?? "(system removed)"}
@@ -152,7 +152,7 @@ export default async function TraineeHistoryPage({
                           <ol className="space-y-2">
                             {session.outcome.per_decision.map((entry) => (
                               <li
-                                key={entry.decision_point_index}
+                                key={entry.dilemma_index}
                                 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm"
                               >
                                 <span

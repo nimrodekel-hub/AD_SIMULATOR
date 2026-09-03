@@ -11,12 +11,12 @@ import { structured } from "../client";
  *
  * Everything downstream depends on this. Without it the model invents an air
  * defence system: it guesses what classifications exist, what makes a track
- * hostile, what an operator may do and in what order. The scenarios it then
+ * hostile, what an operator may do and in what order. The exercises it then
  * produces look plausible and are not necessarily right — which is the worst
  * failure mode for a trainer, because nobody can see it.
  *
- * This is a guided form rather than an open conversation. The dilemma
- * interview is a conversation because a dilemma lives in the expert's judgement
+ * This is a guided form rather than an open conversation. The scenario
+ * interview is a conversation because a scenario lives in the expert's judgement
  * and has to be drawn out; the system's behaviour is a specification, and a
  * specification is better collected by asking for it directly.
  *
@@ -64,7 +64,7 @@ export const SYSTEM_QUESTIONS: GuidedQuestion[] = [
   {
     id: "automatic",
     question: "What does the system do on its own, without the operator?",
-    hint: "Anything the operator does not have to decide. It changes what the training is about — a scenario must never ask a trainee to do something the system does for them.",
+    hint: "Anything the operator does not have to decide. It changes what the training is about — an exercise must never ask a trainee to do something the system does for them.",
     placeholder:
       "e.g. Correlates radar returns into tracks, calculates time to impact, warns when a track enters the engagement envelope…",
   },
@@ -90,7 +90,7 @@ What you produce is the prose half, and nothing else:
 
 **Ground everything in what they wrote.** Every entry must trace to a sentence of theirs. Where an answer is thin, generalise conservatively from what is there — never import doctrine from elsewhere, and never invent a capability that was not described.
 
-**Separating what the operator decides from what the system does is the point of this call.** If the system correlates tracks automatically, that is not an operator responsibility, and a scenario must never ask a trainee to do it. When they are ambiguous about which side something falls on, put it in general_notes and say so rather than guessing.
+**Separating what the operator decides from what the system does is the point of this call.** If the system correlates tracks automatically, that is not an operator responsibility, and an exercise must never ask a trainee to do it. When they are ambiguous about which side something falls on, put it in general_notes and say so rather than guessing.
 
 **Split, do not summarise.** "Select, identify, assign, commit" is four workflow steps, not one. A list with one long entry in it has failed.
 
