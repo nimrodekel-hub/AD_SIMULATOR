@@ -8,20 +8,22 @@ import type { GuiRevision } from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
 
 /**
- * The verdict on a console the designer has just asked to be changed.
+ * The verdict on a console the designer has just asked to be changed — asked
+ * for **after** they have flown it, never before.
  *
- * A revision used to land in the builder's own React state and nowhere else,
- * so the one button that invited the designer to go and look at it — the test,
- * which is a server page reading the stored console — showed them the version
- * from *before* their change. The change had been made and the screen said
- * otherwise, which reads exactly like a builder that ignores what it is told.
+ * The order took three goes to get right, and the reason is worth keeping.
+ * First the rebuilt console was not stored at all, so going to look at it
+ * showed the version from before the change. Then it was stored and the trip
+ * was offered, but this panel sat *above* the console as a header, with its
+ * approve button live from the moment the page opened — so the question
+ * "do you accept this?" arrived while the thing being accepted was still an
+ * unflown brief further down the page. Which is no better than approving from
+ * an empty preview: it just moved the empty preview.
  *
- * So a finished build is now kept with the job that produced it, the test
- * renders that build rather than the stored one, and this bar sits over it to
- * close the loop: here is what you asked for, running — do you accept it, or
- * is there something else? Accepting is what finally writes it to the console,
- * because approving is a deliberate act in this app and never a side effect of
- * asking a question.
+ * So this is now the closing panel of the test. It appears when the run is
+ * over — or when the designer says they have seen enough — and it goes in the
+ * order a person actually needs: here is what you asked for and what was done,
+ * is there anything else, and only then the approval.
  *
  * Until it is accepted the stored console is untouched, so a trainee starting
  * a run mid-review still gets the last console their instructor approved
@@ -96,28 +98,22 @@ export function ConsoleReview({
   }
 
   return (
-    <div className="border-b border-line bg-panel-raised px-6 py-3">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <span className="chip status-warn">under review</span>
-        <p className="min-w-0 flex-1 text-sm">
-          This is the console with your change applied. Take the position below
-          and look at it with things moving on it before you decide. It is not
-          saved yet
-          {wasApproved
-            ? " — training runs are still using the version you approved before."
-            : "."}
-        </p>
-      </div>
+    <div className="panel mt-8 border-l-2 border-l-accent p-5">
+      <h2 className="text-sm font-semibold">
+        You have just flown the change. Is it right?
+      </h2>
+      <p className="mt-1 text-xs leading-relaxed text-muted">
+        {wasApproved
+          ? "Nothing has been saved — training runs are still using the console you approved before."
+          : "Nothing has been saved yet."}
+      </p>
 
       {/* Everything asked for, in order, with what came back for each. The
           console is the sum of all of it, so approving is a decision about
           the whole list and not only about the newest line. */}
       {record.length > 0 ? (
-        <details className="mt-2" open>
-          <summary className="cursor-pointer text-xs text-muted">
-            {record.length} change{record.length === 1 ? "" : "s"} asked for so
-            far — what was requested, and what was done
-          </summary>
+        <div className="mt-4">
+          <h3 className="label">What you asked for, and what was done</h3>
           <ol className="mt-2 space-y-2">
             {record.map((entry, index) => (
               <li
@@ -148,9 +144,9 @@ export function ConsoleReview({
               </li>
             ))}
           </ol>
-        </details>
+        </div>
       ) : newest ? (
-        <p className="mt-2 text-xs italic text-muted">“{newest}”</p>
+        <p className="mt-4 text-xs italic text-muted">“{newest}”</p>
       ) : null}
 
       {missingSlots.length > 0 ? (
@@ -163,34 +159,47 @@ export function ConsoleReview({
         <p className="chip status-danger mt-2 !normal-case">{error}</p>
       ) : null}
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={busy !== null || missingSlots.length > 0}
-          onClick={() => void accept(true)}
-        >
-          {busy === "approve" ? "Approving…" : "Approve these changes"}
-        </button>
+      {/* The question before the verdict. Something to change is the more
+          likely answer on a first look, and asking it second would be asking
+          it after the decision had already been offered. */}
+      <div className="mt-5 border-t border-line pt-4">
+        <p className="text-sm">Anything you want changed?</p>
         <Link
           href={`/designer/systems/${systemId}/gui`}
-          className="btn"
+          className="btn mt-2"
           aria-disabled={busy !== null}
         >
           Ask for another change
         </Link>
-        <button
-          type="button"
-          className="btn"
-          disabled={busy !== null}
-          onClick={() => void accept(false)}
-        >
-          {busy === "draft" ? "Saving…" : "Keep as a draft"}
-        </button>
-        <span className="text-xs text-muted">
-          Approving puts this console in front of trainees. A draft keeps it
-          without using it.
-        </span>
+      </div>
+
+      {/* Only now. */}
+      <div className="mt-5 border-t border-line pt-4">
+        <p className="text-sm">
+          Happy with it? Approving is what puts this console in front of
+          trainees.
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={busy !== null || missingSlots.length > 0}
+            onClick={() => void accept(true)}
+          >
+            {busy === "approve" ? "Approving…" : "Approve these changes"}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            disabled={busy !== null}
+            onClick={() => void accept(false)}
+          >
+            {busy === "draft" ? "Saving…" : "Keep as a draft"}
+          </button>
+          <span className="text-xs text-muted">
+            A draft keeps the change without using it.
+          </span>
+        </div>
       </div>
     </div>
   );
