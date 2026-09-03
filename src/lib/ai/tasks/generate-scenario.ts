@@ -179,7 +179,7 @@ export async function generateScenario(
           profile
             ? `<system_profile>\n${JSON.stringify(stripProvenance(profile), null, 2)}\n</system_profile>`
             : "<system_profile>none taught — use generic conventions</system_profile>",
-          `<dilemma>\n${JSON.stringify(dilemma, null, 2)}\n</dilemma>`,
+          `<dilemma>\n${JSON.stringify(forGeneration(dilemma), null, 2)}\n</dilemma>`,
           `<difficulty level="${difficulty}">\n${JSON.stringify(band, null, 2)}\n</difficulty>`,
           `<guidance>${DIFFICULTY_GUIDANCE[difficulty]}</guidance>`,
           revise
@@ -455,6 +455,37 @@ function transponderReply(
     mode_3: isMode3(mode3) ? mode3 : "",
     mode_1: kind === "military" && isMode1(mode1) ? mode1 : "",
   };
+}
+
+/**
+ * The dilemma, without the parts a generation cannot use.
+ *
+ * `source_chat_log` is the whole transcript of the interview the entry was
+ * extracted from — measured at a fifth of everything this call sends on a real
+ * record. It is kept so an entry can be audited against the conversation that
+ * produced it, and it is worth nothing here: the structured entry beside it is
+ * that conversation's conclusion, already agreed. Paying for both, on every
+ * trainee run and every correction, was buying the working out twice.
+ *
+ * The timestamps and the approval flag go for the same reason `stripProvenance`
+ * drops them from the profile: they record how the entry came to exist, not
+ * what it says.
+ */
+function forGeneration(dilemma: DilemmaEntry) {
+  const {
+    source_chat_log,
+    created_at,
+    approved_at,
+    status,
+    system_id,
+    ...substance
+  } = dilemma;
+  void source_chat_log;
+  void created_at;
+  void approved_at;
+  void status;
+  void system_id;
+  return substance;
 }
 
 /** The raw answers and timestamps are provenance, not behaviour. */
