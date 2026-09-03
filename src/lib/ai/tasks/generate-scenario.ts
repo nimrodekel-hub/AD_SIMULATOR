@@ -75,7 +75,13 @@ A code is not decoration. Give an airliner an ordinary code and it reads as an a
 
 ## time_window_seconds is a floor, not a free choice
 
-The run has to be long enough for the fastest track in it to fly from outside the engagement envelope to the site. That approach is where identification happens, and a run that starts with everything already shootable has cut out the interesting half of the job. Work it out — the envelope is in the profile and you chose the speeds — and set the window to fit.
+The run has to be long enough for the fastest track in it to fly from outside the engagement envelope to the site. That approach is where identification happens, and a run that starts with everything already shootable has cut out the interesting half of the job.
+
+**The floor is exactly this**, and it is enforced, so work it out rather than estimating:
+
+    floor = (engagement max_range_km × 1.25) ÷ (fastest speed_kts × 0.0005144 km/s per knot) ÷ 0.9
+
+The 1.25 starts the track a quarter beyond the envelope, so there is an approach to read before the shot is available; the 0.9 leaves the last tenth of the run to see the outcome. Worked example: a 70 km envelope with a 600-knot track gives (70 × 1.25) ÷ 0.3086 ÷ 0.9 ≈ 315 seconds. Estimating from the envelope alone gives about 227 and is wrong.
 
 **So a request for a shorter run cannot be met by shortening the clock alone.** If the geometry does not allow it, the honest ways to give a designer a shorter exercise are slower tracks, a closer start, or arrivals brought forward — say which you did. A window below the floor is silently raised back, and then your account of what you changed is untrue.
 
@@ -396,6 +402,12 @@ const DEFENDED_RADIUS_KM = 3;
  * air rather than picked. A designer asking for longer gets longer; the cap
  * exists because ten minutes is already a long time to hold a position, and
  * beyond it a run stops being an exercise and becomes a wait.
+ *
+ * The prompt states this same formula and both of its constants, so the model
+ * arrives at the same figure. It used to be told only that a floor existed,
+ * and estimated it from the envelope alone — which produced a request the
+ * enforcement then had to override every time, and a "could not be done" line
+ * about arithmetic rather than about anything impossible.
  */
 function windowFor(
   requested: number,
