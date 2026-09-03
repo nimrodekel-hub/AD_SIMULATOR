@@ -148,6 +148,10 @@ export function GuiBuilder({
       setScreenshots(result.screenshots);
       setMissingSlots(result.missing_slots);
       setPending(undefined);
+      // Cleared here rather than on send, so a failed attempt leaves the
+      // request where it was typed. A provider having a bad minute should
+      // cost one more press, not a rewrite of what was already asked for.
+      setMessage("");
 
       // The request is only recorded once something came back for it, so a
       // failed attempt does not leave a change in the thread that was never
@@ -203,7 +207,6 @@ export function GuiBuilder({
     setNotice(undefined);
     setPending(asked || undefined);
     askedRef.current = asked || undefined;
-    setMessage("");
     return start({
       requests: [...revisions.map((entry) => entry.request), asked].filter(
         (entry) => entry.length > 0,
