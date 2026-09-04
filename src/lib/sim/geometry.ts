@@ -66,6 +66,23 @@ export function distance(a: Vec, b: Vec): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+/** Feet to kilometres, so altitude and range can be compared at all. */
+export function feetToKm(feet: number): number {
+  return feet * 0.0003048;
+}
+
+/**
+ * How far above the horizon something sits, seen from the site, in degrees.
+ *
+ * What a fixed array's tilt is measured against: point it at 6° and anything
+ * lower than 6° of elevation is under the beam and not held, however close it
+ * is. A track directly overhead is 90°; one on the horizon is 0°.
+ */
+export function elevationDeg(altitudeFt: number, rangeKm: number): number {
+  if (rangeKm <= 0) return 90;
+  return (Math.atan2(feetToKm(altitudeFt), rangeKm) * 180) / Math.PI;
+}
+
 /**
  * The smallest angle between two bearings, ignoring which way round.
  *
