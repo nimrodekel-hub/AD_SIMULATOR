@@ -22,6 +22,9 @@ import { gapsFor, type Gap } from "@/lib/domain/profile-readiness";
  * Each sentence says what is missing *and what will happen without it*,
  * because "required" on its own is a demand, while "counts as off and no
  * reload control appears" is a reason.
+ *
+ * Why it is shaped this way, and the three states a command can be in:
+ * `docs/missing-figures.md`.
  */
 export function GapNotice({
   gaps,
