@@ -110,12 +110,33 @@
     }
   ],
   "engagement": {
-    "detection_range_km": null,
     "min_range_km": 5,
     "max_range_km": 70,
     "time_of_flight_note": "The system calculates interceptor time of flight and time to intercept automatically for a selected track and displays it alongside the probability of kill; the designer gave no fixed flight-time figures, so scenario timings should be derived from the range bands and target closing speed.",
     "simultaneous_engagements_note": "A hard system limit of two simultaneous engagements — no more than two rockets may be in the air at once. A third engagement cannot begin until one of the two resolves as hit, kill or miss.",
-    "authority_note": "The designer described engagement authority only as the two-simultaneous-engagement system limit. On the evidence given, the console operator issues the fire or cease-fire command directly at the console; no external release authority or condition for changing it was described. This should be confirmed by the designer."
+    "authority_note": "The designer described engagement authority only as the two-simultaneous-engagement system limit. On the evidence given, the console operator issues the fire or cease-fire command directly at the console; no external release authority or condition for changing it was described. This should be confirmed by the designer.",
+    "interceptors": [
+      {
+        "name": "long range",
+        "min_range_km": 5,
+        "max_range_km": 70,
+        "speed_kts": 0
+      },
+      {
+        "name": "medium range",
+        "min_range_km": 5,
+        "max_range_km": 50,
+        "speed_kts": 0
+      },
+      {
+        "name": "short range",
+        "min_range_km": 5,
+        "max_range_km": 20,
+        "speed_kts": 0
+      }
+    ],
+    "max_simultaneous": 2,
+    "magazine_depth": null
   },
   "operator_responsibilities": [
     "Select a track on the situation display and read its full information in the side panel.",
@@ -148,7 +169,7 @@
     "Issue the fire command, respecting the limit of two rockets in the air at once, or issue cease fire.",
     "Observe the fire status and the automatic hit or kill report; a good kill blinks and drops from the display."
   ],
-  "general_notes": "Coverage: the radar does not rotate. It covers a fixed 120-degree sector whose tilt the operator can change. Detection range depends on target class — 150 km for jets, 100 km for helicopters, 50 km for UAVs. Track solutions can only be calculated while the target is inside the radar envelope, and targets cannot be intercepted below the radar tilt, so low-flying tracks may be undetectable or un-engageable until the tilt is adjusted.\n\nEngagement rings: 70 km long range, 50 km medium range, 20 km short range. Note that the long-range interceptor (70 km) exceeds the detection range for helicopters (100 km is adequate) but is longer than the 50 km UAV detection range, so UAV engagements will in practice begin inside 50 km; this follows from the designer's own figures and is not a correction.\n\nAssumptions made where the answers were silent: minimum engagement range was not stated and is recorded as 0 km — the real constraint the designer described is the radar tilt, not a minimum slant range, and this field should be confirmed. Speed and altitude bands for the three track classes were not given and have been generalised conservatively from the class names and the stated detection and engagement ranges.\n\nScreenshot conflicts and cautions: the screenshots show a monochrome green console with hostile/unresolved rows highlighted in red, whereas the designer states own aerial forces are blue and enemy forces are red. The designer's answer is followed; the colour scheme should be confirmed against the live console. The screenshots' track table shows a 'Friendly / Unknown' identification column, which supports the presence of an Unknown state not named in the answers; it has been included as a neutral state and should be confirmed. The screenshots also show a trajectory-analysis panel, an engagement table with altitude, velocity, probability of kill and Ps columns, a diagnostics and logistics page with radar, launcher and communication subsystem status, and F1–F12 function keys. None of these were described in the answers, so no capability or operator responsibility has been derived from them; the extra engagement-panel figures are consistent with the automatic Pk and time-of-flight calculation the designer did describe. Nothing has been removed from this profile on the grounds that a screenshot did not show it — the screenshots capture single moments, not the full inventory of track classes or identification states.\n\nAuthority remains the weakest point in the record: the designer answered the authority question only with the two-rockets-in-the-air limit. Debrief material should not assume any external release authority.",
+  "general_notes": "Coverage: the radar does not rotate. It covers a fixed 120-degree sector whose tilt the operator can change. Detection range depends on target class — 150 km for jets, 100 km for helicopters, 50 km for UAVs. Track solutions can only be calculated while the target is inside the radar envelope, and targets cannot be intercepted below the radar tilt, so low-flying tracks may be undetectable or un-engageable until the tilt is adjusted.\n\nEngagement rings: 70 km long range, 50 km medium range, 20 km short range. Note that the long-range interceptor (70 km) exceeds the detection range for helicopters (100 km is adequate) but is longer than the 50 km UAV detection range, so UAV engagements will in practice begin inside 50 km; this follows from the designer's own figures and is not a correction.\n\nAssumptions made where the answers were silent: minimum engagement range was not stated and is recorded as 0 km — the real constraint the designer described is the radar tilt, not a minimum slant range, and this field should be confirmed. Speed and altitude bands for the three track classes were not given and have been generalised conservatively from the class names and the stated detection and engagement ranges.\n\nScreenshot conflicts and cautions: the screenshots show a monochrome green console with hostile/unresolved rows highlighted in red, whereas the designer states own aerial forces are blue and enemy forces are red. The designer's answer is followed; the colour scheme should be confirmed against the live console. The screenshots' track table shows a 'Friendly / Unknown' identification column, which supports the presence of an Unknown state not named in the answers; it has been included as a neutral state and should be confirmed. The screenshots also show a trajectory-analysis panel, an engagement table with altitude, velocity, probability of kill and Ps columns, a diagnostics and logistics page with radar, launcher and communication subsystem status, and F1–F12 function keys. None of these were described in the answers, so no capability or operator responsibility has been derived from them; the extra engagement-panel figures are consistent with the automatic Pk and time-of-flight calculation the designer did describe. Nothing has been removed from this profile on the grounds that a screenshot did not show it — the screenshots capture single moments, not the full inventory of track classes or identification states.\n\nAuthority remains the weakest point in the record: the designer answered the authority question only with the two-rockets-in-the-air limit. Debrief material should not assume any external release authority.\n\nFigures carried into the fields the simulation reads (this record was written before those fields existed, so they sat in prose here and nothing that runs could see them): azimuth coverage 120°, detection range 150 km, two engagements at once, and the three engagement rings as three interceptor types — long 70 km, medium 50 km, short 20 km, each from the stated 5 km minimum. All four are the designer's own figures, quoted above and in the authority answer. Two things were never stated by anyone and are still empty: how fast each interceptor flies, and how many rounds there are in total. Until they are given, the simulation uses its own defaults for both — 1600 kts and 8 rounds — which are not this system's numbers.",
   "id": "75980758-63a4-42ec-bbd7-0d4e65a0c118",
   "approved": true,
   "source_answers": [
@@ -186,5 +207,12 @@
     }
   ],
   "created_at": "2026-08-29T13:49:43.379Z",
-  "approved_at": "2026-08-29T18:34:23.824Z"
+  "approved_at": "2026-08-29T18:34:23.824Z",
+  "sensor": {
+    "max_range_km": 150,
+    "min_range_km": null,
+    "azimuth_coverage_deg": 120,
+    "altitude_ft": null,
+    "note": "Fixed 120° sector; the array does not rotate, and the operator can change its tilt. Detection range is per target class in the designer's own answers — 150 km jets, 100 km helicopters, 50 km UAVs — and the simulation holds one figure, so 150 km is recorded here and a UAV is therefore detected earlier in a run than it would be in reality. Targets cannot be tracked or intercepted below the radar tilt, which is not modelled either."
+  }
 }
