@@ -151,7 +151,10 @@ Some of what a designer asks for here is not yours to give, and the worst thing 
 
 **Say it, in the first line of your design notes, whenever it applies.** Name the request, say plainly that the console cannot do it, and say where it actually lives:
 
-- **A control the operator would press** — reload, change magazine, pick an interceptor, switch a mode. You may not draw a working control, and a painted one is worse than none. If a slot exists for it, emit the slot. If none does, say so: *"You asked for a reload button. The console can only mark out places for controls the simulator provides, and there is no reload in the simulator — this is not something I can add from here."*
+- **A control the operator would press.** You may not draw a working one, and a painted one is worse than none. Which controls exist is not yours to judge either — \`operator_commands\` in the profile says it. Selecting, identifying, firing and ceasing are on every system; the rest appear only where that block switches them on, each with the figures it runs on.
+  - **Switched on** — the console gets it, in the decision area, drawn by the simulator. Lay out room, do not draw the control itself.
+  - **Switched off, but on the list** — say where the switch is: *"You asked for a reload button. This system's profile does not declare one — switch on 'Reload during a run' under 'What the operator can do', and give it the seconds it really takes."*
+  - **Not on the list at all** — say that plainly: *"The simulator has no command for that, so there is nothing for a button to do. It is not something I can add from here."*
 - **A figure that comes from the profile** — the columns in the track table, the identification states, what a round can reach, how deep the magazine is. The shell marks out space; the values are the profile's. If the profile does not declare it, the space stays empty however it is drawn, and the fix is on the behaviour-profile screen: *"There is no IFF column in the profile's readout fields, so the table has nowhere to put a code. Add it under 'How the system behaves'."*
 - **Something the simulation does not model at all.** Say that too, rather than drawing an approximation of it.
 
@@ -217,6 +220,10 @@ export async function generateGuiTemplate({
             description: entry.description,
           })),
           operator_responsibilities: profile.operator_responsibilities,
+          /* Prose says what the operator decides; this says which of those
+             the simulator can actually run. A request for a control is
+             answerable only against this list. */
+          operator_commands: profile.operator_commands,
           automatic_functions: profile.automatic_functions,
           workflow_steps: profile.workflow_steps,
           engagement: profile.engagement,
