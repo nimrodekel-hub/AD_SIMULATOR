@@ -270,6 +270,8 @@ export function LiveRun({
     <TrackList
       views={views}
       config={config}
+      state={state}
+      round={round}
       selected={selected}
       onSelect={setSelected}
     />
@@ -479,14 +481,58 @@ function Clock({ remaining, window: total }: { remaining: number; window: number
   );
 }
 
+/**
+ * The columns whose values the simulation can actually produce.
+ *
+ * Matched on the label the designer typed, upper-cased, so the catalogue they
+ * ticked from lines up without a second identifier to keep in step. A column
+ * outside this set is still shown — it is their console and they may have
+ * reasons — but with a dash and a tooltip, because a blank cell reads as a
+ * value of nothing rather than as a figure the simulator does not hold.
+ */
+const KNOWN_READOUTS = new Set([
+  "TRK",
+  "ID",
+  "TYPE",
+  "CLASS",
+  "AZ",
+  "BRG",
+  "RNG",
+  "ALT",
+  "SPD",
+  "TTI",
+  "IFF",
+  "MODE 1",
+  "MODE1",
+  "PK",
+  "FIRE STATUS",
+]);
+
+/** Which way a column reads. Numbers right, words left, as a console does. */
+const RIGHT_ALIGNED = new Set([
+  "AZ",
+  "BRG",
+  "RNG",
+  "ALT",
+  "SPD",
+  "TTI",
+  "PK",
+]);
+
 function TrackList({
   views,
   config,
+  state,
+  round,
   selected,
   onSelect,
 }: {
   views: TrackView[];
   config: ReturnType<typeof simConfig>;
+  /** For the columns that describe an engagement rather than a track. */
+  state: SimState;
+  /** The round currently selected, which is what a Pk column is about. */
+  round: string;
   selected: string | null;
   onSelect: (designator: string) => void;
 }) {
@@ -502,13 +548,19 @@ function TrackList({
     <table className="data w-full text-[0.7rem]">
       <thead className="sticky top-0 bg-panel text-muted">
         <tr className="border-b border-line">
-          <th className="px-2 py-1 text-left font-medium">TRK</th>
-          <th className="px-2 py-1 text-right font-medium">RNG</th>
-          <th className="px-2 py-1 text-right font-medium">TTI</th>
-          {config.iff.enabled ? (
-            <th className="px-2 py-1 text-left font-medium">IFF</th>
-          ) : null}
-          <th className="px-2 py-1 text-left font-medium">ID</th>
+          {config.readouts.map((field, index) => (
+            <th
+              key={`${field.label}-${index}`}
+              title={field.description || undefined}
+              className={`px-2 py-1 font-medium ${
+                RIGHT_ALIGNED.has(field.label.toUpperCase())
+                  ? "text-right"
+                  : "text-left"
+              }`}
+            >
+              {field.label}
+            </th>
+          ))}
         </tr>
       </thead>
       <tbody>
@@ -520,28 +572,159 @@ function TrackList({
               view.track.designator === selected ? "bg-panel-raised" : ""
             }`}
           >
-            <td className="px-2 py-1">{view.track.designator}</td>
-            <td className="px-2 py-1 text-right">{view.range_km.toFixed(0)}</td>
-            <td className="px-2 py-1 text-right">
-              {view.tti_s === null ? "—" : `${view.tti_s.toFixed(0)}s`}
-            </td>
-            {config.iff.enabled ? (
-              <td className="px-2 py-1">
-                <Squawk track={view.track} config={config} />
-              </td>
-            ) : null}
-            <td className="px-2 py-1">
-              <span
-                className={`chip ${TONE_CLASS[toneOf(config, view.track.displayed_iff)]}`}
+            {config.readouts.map((field, index) => (
+              <td
+                key={`${field.label}-${index}`}
+                className={`px-2 py-1 ${
+                  RIGHT_ALIGNED.has(field.label.toUpperCase())
+                    ? "text-right"
+                    : ""
+                }`}
               >
-                {view.track.displayed_iff}
-              </span>
-            </td>
+                <Readout
+                  field={field.label}
+                  view={view}
+                  config={config}
+                  state={state}
+                  round={round}
+                />
+              </td>
+            ))}
           </tr>
         ))}
       </tbody>
     </table>
   );
+}
+
+/** One cell: whatever this console calls this column, as it stands now. */
+function Readout({
+  field,
+  view,
+  config,
+  state,
+  round,
+}: {
+  field: string;
+  view: TrackView;
+  config: ReturnType<typeof simConfig>;
+  state: SimState;
+  round: string;
+}) {
+  const track = view.track;
+
+  switch (field.trim().toUpperCase()) {
+    case "TRK":
+      return <>{track.designator}</>;
+
+    case "TYPE":
+    case "CLASS":
+      return <>{track.classification}</>;
+
+    case "AZ":
+    case "BRG":
+      return <>{view.bearing_deg.toFixed(0)}</>;
+
+    case "RNG":
+      return <>{view.range_km.toFixed(0)}</>;
+
+    case "ALT":
+      return <>{track.altitude_ft.toLocaleString()}</>;
+
+    case "SPD":
+      return <>{track.speed_kts}</>;
+
+    case "TTI":
+      return <>{view.tti_s === null ? "—" : `${view.tti_s.toFixed(0)}s`}</>;
+
+    case "ID":
+      return (
+        <span
+          className={`chip ${TONE_CLASS[toneOf(config, track.displayed_iff)]}`}
+        >
+          {track.displayed_iff}
+        </span>
+      );
+
+    /* The whole point of the column: a code, silence, or the fact that
+       nobody has asked yet — never one standing in for another. */
+    case "IFF":
+      return config.iff.enabled ? (
+        <Squawk track={track} config={config} />
+      ) : (
+        <span className="text-muted" title="This system has no interrogator">
+          —
+        </span>
+      );
+
+    case "MODE 1":
+    case "MODE1":
+      if (!config.iff.enabled || !config.iff.mode_1) {
+        return (
+          <span className="text-muted" title="This system does not read Mode 1">
+            —
+          </span>
+        );
+      }
+      if (!track.squawk_known) {
+        return <span className="text-muted" title="Not interrogated">·</span>;
+      }
+      return track.mode_1 ? (
+        <span className="text-ok">{track.mode_1}</span>
+      ) : (
+        <span className="text-warn">—</span>
+      );
+
+    case "PK": {
+      const chosen =
+        config.interceptors.find((r) => r.name === round) ??
+        config.interceptors[0];
+      if (!chosen) return <>—</>;
+      const flight = timeToIntercept(view.at, track.velocity, chosen.speed_kts);
+      if (flight === null) return <span className="text-danger">—</span>;
+      const meetsAt = vecToPolar(
+        positionOf(track, state.t + flight),
+      ).range_km;
+      const pk = probabilityOfKill(meetsAt, chosen);
+      return (
+        <span
+          className={pk > 0.7 ? "text-ok" : pk > 0 ? "text-warn" : "text-danger"}
+        >
+          {(pk * 100).toFixed(0)}
+        </span>
+      );
+    }
+
+    case "FIRE STATUS": {
+      if (track.state === "destroyed") return <span className="text-ok">KILL</span>;
+      if (track.state === "leaked") return <span className="text-danger">LEAK</span>;
+      const inFlight = state.engagements.some(
+        (e) => e.target === track.designator && !e.resolved,
+      );
+      if (inFlight) return <span className="text-warn">IN FLIGHT</span>;
+      const spent = state.engagements.some(
+        (e) => e.target === track.designator,
+      );
+      return spent ? <span className="text-muted">MISS</span> : <>—</>;
+    }
+
+    default:
+      /* Declared by the designer, and nothing in the simulation produces it.
+         Said as a dash with a reason rather than left blank, so it reads as
+         "no value here" instead of as a value. */
+      return (
+        <span
+          className="text-muted"
+          title={
+            KNOWN_READOUTS.has(field.trim().toUpperCase())
+              ? "No value for this yet"
+              : `The simulation holds no figure called “${field}”`
+          }
+        >
+          —
+        </span>
+      );
+  }
 }
 
 /**
