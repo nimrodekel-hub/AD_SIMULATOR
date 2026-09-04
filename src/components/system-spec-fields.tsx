@@ -2,11 +2,13 @@
 
 import { READOUT_CATALOGUE } from "@/lib/domain/readouts";
 import { WELL_KNOWN_MODE_3 } from "@/lib/domain/iff-codes";
+import { OPERATOR_COMMANDS_OFF } from "@/lib/domain/schemas";
 import type {
   EngagementDoctrine,
   IffInterrogation,
   InterceptorType,
   IffState,
+  OperatorCommands,
   SensorCoverage,
   TrackClassification,
   TrackReadoutField,
@@ -32,6 +34,8 @@ export interface SystemSpec {
   track_classifications: TrackClassification[];
   iff_states: IffState[];
   iff_interrogation: IffInterrogation;
+  /** The commands this console offers beyond the universal four. */
+  operator_commands: OperatorCommands;
   track_readout_fields: TrackReadoutField[];
   engagement: EngagementDoctrine;
 }
@@ -81,6 +85,7 @@ export function emptySpec(): SystemSpec {
     track_classifications: [],
     iff_states: [],
     iff_interrogation: { enabled: false, mode_3: true, mode_1: false, note: "" },
+    operator_commands: { ...OPERATOR_COMMANDS_OFF },
     track_readout_fields: [],
     engagement: {
       min_range_km: 0,
@@ -587,6 +592,111 @@ export function SystemSpecFields({
         ) : null}
       </Block>
 
+      {/* ---- The commands beyond the universal four -------------------- */}
+      {/* Asked here as well as on the review screen, because a capability
+          that can only be declared after an extraction is a capability a new
+          system cannot have until it has been through the model once. */}
+      <Block
+        title="What else can the operator do?"
+        hint="Selecting a track, identifying it, firing and ceasing exist on every system and are not asked about. These are the ones that differ — each is a rule the simulation enforces, so it costs what it really costs, and the console can only offer what is switched on here. Leave off anything your system does not have."
+      >
+        <SpecCommand
+          on={spec.operator_commands.retype}
+          label="Correct the track type"
+          why="The system's own typing can be wrong, and putting it right is the operator's call. An exercise only shows a mis-typed track on a system that declares this."
+          onToggle={(retype) =>
+            set("operator_commands", { ...spec.operator_commands, retype })
+          }
+        />
+
+        <SpecCommand
+          on={spec.operator_commands.reload}
+          label="Reload during a run"
+          why="The magazine can be refilled without ending the run. The clock does not stop for it, which is the whole lesson: a reload buys rounds with the seconds the next track is using to close."
+          onToggle={(reload) =>
+            set("operator_commands", { ...spec.operator_commands, reload })
+          }
+        >
+          <Num
+            label="How long a reload takes (s)"
+            hint="Leave it truthful. A reload that costs nothing teaches an operator that reloading is free."
+            value={spec.operator_commands.reload_seconds}
+            onChange={(reload_seconds) =>
+              set("operator_commands", {
+                ...spec.operator_commands,
+                reload_seconds,
+              })
+            }
+          />
+        </SpecCommand>
+
+        <SpecCommand
+          on={spec.operator_commands.launchers}
+          label="Choose which launcher fires"
+          why="More than one launcher, each holding its own rounds. The magazine is divided between them, so this adds a decision without adding rounds — an empty or reloading launcher cannot fire, and one with a round in the air cannot be reloaded."
+          onToggle={(launchers) =>
+            set("operator_commands", { ...spec.operator_commands, launchers })
+          }
+        >
+          <Num
+            label="How many launchers"
+            hint="Two or more, or there is nothing to choose."
+            value={spec.operator_commands.launcher_count}
+            onChange={(launcher_count) =>
+              set("operator_commands", {
+                ...spec.operator_commands,
+                launcher_count,
+              })
+            }
+          />
+        </SpecCommand>
+
+        <SpecCommand
+          on={spec.operator_commands.tilt}
+          label="Adjust the radar tilt"
+          why="A fixed array whose elevation the operator sets. Anything below where it points is not held at all — not on the scope, and not engageable — so raising it to reach something high gives up the low approach."
+          onToggle={(tilt) =>
+            set("operator_commands", { ...spec.operator_commands, tilt })
+          }
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Num
+              label="Lowest tilt (°)"
+              value={spec.operator_commands.tilt_min_deg}
+              onChange={(tilt_min_deg) =>
+                set("operator_commands", {
+                  ...spec.operator_commands,
+                  tilt_min_deg,
+                })
+              }
+            />
+            <Num
+              label="Highest tilt (°)"
+              value={spec.operator_commands.tilt_max_deg}
+              onChange={(tilt_max_deg) =>
+                set("operator_commands", {
+                  ...spec.operator_commands,
+                  tilt_max_deg,
+                })
+              }
+            />
+          </div>
+        </SpecCommand>
+
+        <input
+          className="field"
+          placeholder="A command your system has that is not on this list — say so here…"
+          aria-label="Operator commands note"
+          value={spec.operator_commands.note}
+          onChange={(event) =>
+            set("operator_commands", {
+              ...spec.operator_commands,
+              note: event.target.value,
+            })
+          }
+        />
+      </Block>
+
       {/* ---- Readout columns ------------------------------------------ */}
       <Block
         required
@@ -944,6 +1054,50 @@ function Labelled({
       {hint ? <span className="mb-1.5 block text-xs text-muted">{hint}</span> : null}
       {children}
     </label>
+  );
+}
+
+/**
+ * One capability, with what it costs said before it is switched on.
+ *
+ * The reason sits under the label rather than in a tooltip because it is not
+ * decoration: deciding whether the system can reload is deciding what its
+ * trainees will be taught about scarcity, and "the clock does not stop" is
+ * the part of that needed before the box is ticked. The figures a command
+ * runs on appear only once it is on — asking how long a reload takes on a
+ * system that cannot reload is asking about nothing.
+ */
+function SpecCommand({
+  on,
+  label,
+  why,
+  onToggle,
+  children,
+}: {
+  on: boolean;
+  label: string;
+  why: string;
+  onToggle: (next: boolean) => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="panel p-4">
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={on}
+          onChange={(event) => onToggle(event.target.checked)}
+        />
+        <span>
+          {label}
+          <span className="mt-1 block max-w-2xl text-xs leading-relaxed text-muted">
+            {why}
+          </span>
+        </span>
+      </label>
+      {on && children ? <div className="mt-3 space-y-3">{children}</div> : null}
+    </div>
   );
 }
 
