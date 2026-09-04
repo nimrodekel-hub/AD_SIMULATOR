@@ -93,6 +93,11 @@ export async function POST(
         scenario,
         saved.difficulty_level,
         profile?.approved ? profile : null,
+        // No trainee request here: this is the designer correcting a stored
+        // exercise, and their complaints are the instruction. Carrying a
+        // trainee's original wording alongside them would put two people in
+        // charge of the same run.
+        undefined,
         { previous: saved.exercise_instance, requests },
       );
       await finishReviseJob(exerciseId, {

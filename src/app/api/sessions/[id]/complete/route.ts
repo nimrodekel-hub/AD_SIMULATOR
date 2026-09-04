@@ -73,6 +73,12 @@ export async function POST(
       exercise: session.exercise_instance,
       log: parsed.data.run_log,
       result: parsed.data.run_result,
+      // What they came for. An assessment that never refers to it is an
+      // assessment of a run nobody asked for.
+      requested: {
+        text: session.requested_text,
+        clarifications: session.clarification_rounds,
+      },
     });
     await completeSession(id, debrief);
     return NextResponse.json({ debrief });

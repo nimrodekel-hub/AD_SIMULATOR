@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  type ClarificationRound,
   LiveTrackSchema,
   SuccessCriteriaSchema,
   type DifficultyLevel,
@@ -89,6 +90,16 @@ The 1.25 starts the track a quarter beyond the envelope, so there is an approach
 
 Ten minutes is the longest a run goes.
 
+## What the trainee asked for
+
+You may be given the trainee's own words, and any answers they gave to clarifying questions. **This is an instruction, not colour.** They are about to fly what you lay out, and they said what they wanted from it.
+
+Honour it in the geometry, not in the prose. "Make me run out of interceptors" means the magazine genuinely runs short before the last hostile — not a brief that mentions scarcity. "Everything at once" means overlapping arrivals. "I keep hesitating on unidentified tracks" means more than one track whose identity does not resolve on its own, arriving when a decision cannot be deferred. A brief that describes what they asked for over an engagement that does not do it is the one outcome worth avoiding here.
+
+**Their words never override the three things that bound you**: the scenario's dilemmas, the profile's declared classes and figures, and the difficulty band. A trainee asking for twenty tracks on a scenario whose band tops out at six gets six, arranged to feel like the pressure they were after. **Say so in the notes when that happens** — which part you gave them, and which part the scenario or the system would not allow. Silently doing something else is how a request comes to look like it was never read.
+
+Where they asked for nothing, lay the engagement out on the scenario and the band alone.
+
 ## success_criteria
 
 State plainly what winning means, and set \`max_interceptors_spent\` so that efficiency actually costs something — roughly one round per hostile plus one spare, not the whole magazine.
@@ -158,6 +169,21 @@ export async function generateExercise(
   difficulty: DifficultyLevel,
   profile: SystemProfile | null,
   /**
+   * What the trainee asked for, in their own words.
+   *
+   * This was collected, stored and shown to their instructor, and never
+   * reached the thing that lays out the engagement — so a trainee who wrote
+   * "make me run out of interceptors" got whatever the generator felt like,
+   * and the sentence they had typed was decoration on a history page. Their
+   * words chose the scenario and nothing else.
+   *
+   * They now shape the run itself, inside the same bounds as everything else:
+   * the scenario's dilemmas, the profile's figures and the difficulty band
+   * all still hold, and a request that cannot be met inside them is answered
+   * in the notes rather than by quietly ignoring it.
+   */
+  requested?: { text: string; clarifications: ClarificationRound[] },
+  /**
    * A correction rather than a first attempt.
    *
    * The exercise to fix and everything the designer has said is wrong with
@@ -170,6 +196,10 @@ export async function generateExercise(
   const band = scenario.difficulty_scaling[difficulty];
   const asked = (revise?.requests ?? []).filter(
     (entry) => entry.trim().length > 0,
+  );
+  const wanted = requested?.text.trim() ?? "";
+  const rounds = (requested?.clarifications ?? []).filter(
+    (round) => round.answer.trim().length > 0,
   );
 
   const draft = await structured({
@@ -184,6 +214,15 @@ export async function generateExercise(
           `<scenario>\n${JSON.stringify(forGeneration(scenario), null, 2)}\n</scenario>`,
           `<difficulty level="${difficulty}">\n${JSON.stringify(band, null, 2)}\n</difficulty>`,
           `<guidance>${DIFFICULTY_GUIDANCE[difficulty]}</guidance>`,
+          wanted
+            ? `The trainee asked for this run in their own words. Give them what they asked for, inside the bounds above.\n\n<trainee_request>\n${wanted}\n</trainee_request>${
+                rounds.length > 0
+                  ? `\n\n<clarifications>\n${rounds
+                      .map((round) => `Q: ${round.question}\nA: ${round.answer}`)
+                      .join("\n\n")}\n</clarifications>`
+                  : ""
+              }`
+            : "",
           revise
             ? `Here is the exercise as it stands. Correct it; do not start over.\n\n<current_exercise>\n${JSON.stringify(revise.previous, null, 2)}\n</current_exercise>`
             : "",

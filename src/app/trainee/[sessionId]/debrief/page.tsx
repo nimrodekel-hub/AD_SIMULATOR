@@ -48,6 +48,28 @@ export default async function DebriefPage({
       title={session.exercise_instance.exercise_name}
       subtitle={scenario?.title}
     >
+      {/* ---- What was asked for ------------------------------------- */}
+      {/* Stated before the score, because it is what the score is about:
+          the exercise was laid out to deliver this, and both the trainee and
+          the instructor reading it later are owed the two facts side by
+          side. It used to live only on the instructor's history page. */}
+      {session.requested_text ? (
+        <div className="panel mb-4 border-l-2 border-l-accent p-4">
+          <p className="label !mb-1">What you asked for</p>
+          <p className="text-sm">“{session.requested_text}”</p>
+          {session.clarification_rounds.length > 0 ? (
+            <ul className="mt-2 space-y-1">
+              {session.clarification_rounds.map((round, index) => (
+                <li key={index} className="text-xs leading-relaxed text-muted">
+                  <span className="text-ink">{round.question}</span> —{" "}
+                  {round.answer}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* ---- Result ------------------------------------------------- */}
       <div className="panel flex flex-wrap items-center gap-6 p-6">
         <div>
