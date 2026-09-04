@@ -104,10 +104,13 @@ export function LiveRun({
 
   const [stage, setStage] = useState<Stage>("brief");
   const [state, setState] = useState<SimState>(() =>
-    createSim(exercise.live_tracks),
+    createSim(exercise.live_tracks, config),
   );
   const [selected, setSelected] = useState<string | null>(null);
   const [round, setRound] = useState(config.interceptors[0]?.name ?? "");
+  /* Which launcher the next round comes out of. Meaningless — and never
+     shown — on a system that declares one launcher. */
+  const [launcher, setLauncher] = useState(0);
   /* The scope's range scale. Owned here rather than inside the scope so the
      switch and the picture are the same piece of state, wherever the shell
      happens to put the switch. Opens on the full picture. */
@@ -220,7 +223,7 @@ export function LiveRun({
   const hostsRangeSlot = templateHtml?.includes('data-slot="range"') === true;
 
   const views = state.tracks
-    .map((track) => viewOf(track, state.t, config))
+    .map((track) => viewOf(track, state.t, config, state.tilt_deg))
     .filter((view) => view.visible)
     .sort((a, b) => a.range_km - b.range_km);
 
@@ -281,6 +284,8 @@ export function LiveRun({
     <Resources
       config={config}
       spent={state.spent}
+      rounds={state.launcher_rounds}
+      reloading={state.reloading_until}
       inFlight={inFlight}
       criteria={exercise.success_criteria}
     />
@@ -292,7 +297,9 @@ export function LiveRun({
       config={config}
       state={state}
       round={round}
+      launcher={launcher}
       onRound={setRound}
+      onLauncher={setLauncher}
       onCommand={send}
       busy={stage === "submitting"}
     />
@@ -350,7 +357,7 @@ export function LiveRun({
         {clock}
         <span className="data text-xs text-muted">
           {views.length} HELD · {inFlight} IN FLIGHT ·{" "}
-          {config.magazine - state.spent} ROUNDS
+          {state.launcher_rounds.reduce((sum, x) => sum + x, 0)} ROUNDS
         </span>
         {rangeControl}
         <span className="ml-auto data text-xs text-muted">
@@ -617,9 +624,15 @@ function Readout({
     case "TRK":
       return <>{track.designator}</>;
 
+    /* What the console believes, not what the track is. The two differ only
+       on a system that can be wrong about it and lets the operator say so. */
     case "TYPE":
     case "CLASS":
-      return <>{track.classification}</>;
+      return (
+        <span className={track.typed_by_operator ? "text-accent" : undefined}>
+          {track.displayed_classification}
+        </span>
+      );
 
     case "AZ":
     case "BRG":
@@ -772,15 +785,21 @@ function Squawk({
 function Resources({
   config,
   spent,
+  rounds,
+  reloading,
   inFlight,
   criteria,
 }: {
   config: ReturnType<typeof simConfig>;
   spent: number;
+  /** Rounds still in each launcher. */
+  rounds: number[];
+  /** When each launcher finishes reloading, or null. */
+  reloading: (number | null)[];
   inFlight: number;
   criteria: ExerciseInstance["success_criteria"];
 }) {
-  const left = config.magazine - spent;
+  const left = rounds.reduce((sum, x) => sum + x, 0);
   return (
     <div className="space-y-2 p-3 text-xs">
       <Meter
@@ -789,6 +808,19 @@ function Resources({
         total={config.magazine}
         warn={left <= 1}
       />
+      {/* Which launcher holds what, once there is more than one to choose
+          between — a total of four is a different picture from four on one
+          rail and none on the other. */}
+      {rounds.length > 1 ? (
+        <div className="flex justify-between text-muted">
+          <span>By launcher</span>
+          <span className="data">
+            {rounds
+              .map((n, i) => (reloading[i] !== null ? "RLD" : String(n)))
+              .join(" · ")}
+          </span>
+        </div>
+      ) : null}
       <div className="flex justify-between text-muted">
         <span>In the air</span>
         <span className="data">
@@ -849,7 +881,9 @@ function Controls({
   config,
   state,
   round,
+  launcher,
   onRound,
+  onLauncher,
   onCommand,
   busy,
 }: {
@@ -857,7 +891,9 @@ function Controls({
   config: ReturnType<typeof simConfig>;
   state: SimState;
   round: string;
+  launcher: number;
   onRound: (name: string) => void;
+  onLauncher: (index: number) => void;
   onCommand: (cmd: Command) => void;
   busy: boolean;
 }) {
@@ -865,11 +901,33 @@ function Controls({
     .reverse()
     .find((entry) => entry.kind === "refused");
 
+  /* Reload and tilt are about the system, not about a track, and they are
+     exactly the things wanted when nothing is selected — a magazine emptied
+     on the last engagement is reloaded before the next track is worked, not
+     after. So they render either way, and only what needs a track waits for
+     one. */
+  const system = (
+    <>
+      {config.commands.tilt.enabled ? (
+        <Tilt config={config} state={state} onCommand={onCommand} busy={busy} />
+      ) : null}
+      {config.commands.reload.enabled ? (
+        <Reload config={config} state={state} onCommand={onCommand} busy={busy} />
+      ) : null}
+    </>
+  );
+
   if (!view) {
     return (
-      <p className="text-xs text-muted">
-        Select a track — on the scope or in the list — to work it.
-      </p>
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+        <p className="text-xs text-muted">
+          Select a track — on the scope or in the list — to work it.
+        </p>
+        {system}
+        {lastRefusal ? (
+          <p className="w-full text-[0.7rem] text-danger">{lastRefusal.detail}</p>
+        ) : null}
+      </div>
     );
   }
 
@@ -936,6 +994,40 @@ function Controls({
         </div>
       ) : null}
 
+      {/* ---- What kind of thing it is -------------------------- */}
+      {config.commands.retype ? (
+        <div>
+          <p className="label">Type</p>
+          <div className="flex flex-wrap gap-1">
+            {config.classes.length === 0 ? (
+              <span className="text-[0.7rem] text-muted">
+                No classes declared in the profile.
+              </span>
+            ) : (
+              config.classes.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  className={`btn text-[0.7rem] ${
+                    track.displayed_classification === name ? "btn-primary" : ""
+                  }`}
+                  disabled={busy}
+                  onClick={() =>
+                    onCommand({
+                      kind: "retype",
+                      designator: track.designator,
+                      to: name,
+                    })
+                  }
+                >
+                  {name}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      ) : null}
+
       {/* ---- Identification ------------------------------------ */}
       <div>
         <p className="label">Identification</p>
@@ -987,6 +1079,46 @@ function Controls({
         </div>
       </div>
 
+      {/* ---- Which launcher ------------------------------------ */}
+      {config.commands.launchers > 1 ? (
+        <div>
+          <p className="label">Launcher</p>
+          <div className="flex flex-wrap gap-1">
+            {state.launcher_rounds.map((left, index) => {
+              const reloading = state.reloading_until[index] !== null;
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  className={`btn text-[0.7rem] ${index === launcher ? "btn-primary" : ""}`}
+                  onClick={() => onLauncher(index)}
+                  title={
+                    reloading
+                      ? "Reloading"
+                      : left <= 0
+                        ? "Empty"
+                        : `${left} round(s) ready`
+                  }
+                >
+                  {index + 1}
+                  <span
+                    className={`ml-1 ${
+                      reloading
+                        ? "text-warn"
+                        : left <= 0
+                          ? "text-danger"
+                          : "text-muted"
+                    }`}
+                  >
+                    {reloading ? "RLD" : left}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
       {/* ---- The firing solution ------------------------------- */}
       <div className="data text-[0.7rem]">
         <p className="label">Solution</p>
@@ -1027,6 +1159,7 @@ function Controls({
               kind: "engage",
               designator: track.designator,
               interceptor: chosen.name,
+              launcher,
             })
           }
         >
@@ -1034,9 +1167,127 @@ function Controls({
         </button>
       </div>
 
+      {system}
+
       {lastRefusal ? (
         <p className="w-full text-[0.7rem] text-danger">{lastRefusal.detail}</p>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Refilling a launcher, and what it costs.
+ *
+ * The countdown is the point of the control: an operator watching "18 s" run
+ * down while a track closes is being taught the thing a reload button without
+ * a clock would hide. On a single-launcher system this is one button; the
+ * declared count decides.
+ */
+function Reload({
+  config,
+  state,
+  onCommand,
+  busy,
+}: {
+  config: ReturnType<typeof simConfig>;
+  state: SimState;
+  onCommand: (cmd: Command) => void;
+  busy: boolean;
+}) {
+  return (
+    <div>
+      <p className="label">Reload</p>
+      <div className="flex flex-wrap gap-1">
+        {state.launcher_rounds.map((left, index) => {
+          const until = state.reloading_until[index];
+          const remaining = until === null ? null : Math.max(0, until - state.t);
+          const committed = state.engagements.some(
+            (e) => !e.resolved && e.launcher === index,
+          );
+          return (
+            <button
+              key={index}
+              type="button"
+              className="btn text-[0.7rem]"
+              disabled={busy || remaining !== null}
+              title={
+                committed
+                  ? "A round from this launcher is still in the air"
+                  : `Takes ${config.commands.reload.seconds} s, and the clock does not stop`
+              }
+              onClick={() => onCommand({ kind: "reload", launcher: index })}
+            >
+              {config.commands.launchers > 1 ? `Reload ${index + 1}` : "Reload"}
+              {remaining !== null ? (
+                <span className="ml-1 text-warn">{remaining.toFixed(0)}s</span>
+              ) : (
+                <span className="ml-1 text-muted">{left}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-1 max-w-xs text-[0.7rem] text-muted">
+        {config.commands.reload.seconds} s, and the clock does not stop.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Pointing a fixed array up or down.
+ *
+ * Shown with what it costs rather than as a bare number: raising the tilt to
+ * reach something high drops the low approach off the scope entirely, and a
+ * track that is not held cannot be engaged. The count of what is currently
+ * held is the honest readout of that trade.
+ */
+function Tilt({
+  config,
+  state,
+  onCommand,
+  busy,
+}: {
+  config: ReturnType<typeof simConfig>;
+  state: SimState;
+  onCommand: (cmd: Command) => void;
+  busy: boolean;
+}) {
+  const { min_deg, max_deg } = config.commands.tilt;
+  const step = Math.max(1, Math.round((max_deg - min_deg) / 10));
+
+  return (
+    <div>
+      <p className="label">Radar tilt</p>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          className="btn text-[0.7rem]"
+          disabled={busy || state.tilt_deg <= min_deg}
+          onClick={() =>
+            onCommand({ kind: "tilt", to_deg: state.tilt_deg - step })
+          }
+        >
+          ▼
+        </button>
+        <span className="data w-12 text-center text-[0.7rem]">
+          {state.tilt_deg}°
+        </span>
+        <button
+          type="button"
+          className="btn text-[0.7rem]"
+          disabled={busy || state.tilt_deg >= max_deg}
+          onClick={() =>
+            onCommand({ kind: "tilt", to_deg: state.tilt_deg + step })
+          }
+        >
+          ▲
+        </button>
+      </div>
+      <p className="mt-1 max-w-xs text-[0.7rem] text-muted">
+        {min_deg}°–{max_deg}°. Anything below where it points is not held.
+      </p>
     </div>
   );
 }
@@ -1092,6 +1343,9 @@ function entryClass(kind: string): string {
   if (kind === "leaked" || kind === "refused" || kind === "miss")
     return "text-danger";
   if (kind === "launched" || kind === "resolved") return "text-warn";
+  // Working the console: worth finding afterwards, not worth shouting now.
+  if (kind === "retyped" || kind === "reloaded" || kind === "tilted")
+    return "text-accent";
   // An interrogation is a reading, not an outcome: worth finding in the log
   // afterwards, not worth shouting while the run is on.
   if (kind === "interrogated") return "text-accent";
