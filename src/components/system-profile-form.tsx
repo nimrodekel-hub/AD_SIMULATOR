@@ -14,6 +14,7 @@ import type {
   SystemProfile,
   SystemProfileDraft,
   TrackClassification,
+  TransponderKind,
 } from "@/lib/domain/schemas";
 import { simulationGaps, type Gap } from "@/lib/domain/profile-readiness";
 import { readJson } from "@/lib/http";
@@ -39,6 +40,34 @@ import { readJson } from "@/lib/http";
 type Phase = "answering" | "reviewing";
 
 const TONES: IffState["tone"][] = ["friendly", "neutral", "caution", "hostile"];
+
+/**
+ * What each answer to "does this class carry a transponder" means.
+ *
+ * The same three the questions screen offers, worded the same way, because a
+ * designer correcting a class here and there is answering one question.
+ */
+const TRANSPONDERS: Array<{
+  value: TransponderKind;
+  label: string;
+  hint: string;
+}> = [
+  {
+    value: "none",
+    label: "No reply",
+    hint: "Interrogating it returns silence — which is itself information, and usually the point.",
+  },
+  {
+    value: "civil",
+    label: "Civil (Mode 3 only)",
+    hint: "Four octal digits, as air traffic assigns. An airliner, a light aircraft, a medevac.",
+  },
+  {
+    value: "military",
+    label: "Military (Mode 3 + Mode 1)",
+    hint: "Also replies on Mode 1 — two digits, 0–4 — which a civil transponder cannot.",
+  },
+];
 
 export function SystemProfileForm({
   systemId,
@@ -512,6 +541,49 @@ export function SystemProfileForm({
                   />
                 </Labelled>
               </div>
+
+              {/* What this class answers when it is interrogated. Asked only
+                  once the system is declared to have an interrogator, since
+                  otherwise it is a question about nothing — and it is what
+                  decides whether an IFF column ever shows a code. */}
+              {draft.iff_interrogation.enabled ? (
+                <div className="mt-3">
+                  <span className="label">Transponder</span>
+                  <div className="flex flex-wrap gap-1">
+                    {TRANSPONDERS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        title={option.hint}
+                        className={`btn text-xs ${
+                          (entry.transponder ?? "none") === option.value
+                            ? "btn-primary"
+                            : ""
+                        }`}
+                        onClick={() =>
+                          set(
+                            "track_classifications",
+                            replaceAt(draft.track_classifications, index, {
+                              ...entry,
+                              transponder: option.value,
+                            }),
+                          )
+                        }
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                    {
+                      TRANSPONDERS.find(
+                        (option) =>
+                          option.value === (entry.transponder ?? "none"),
+                      )?.hint
+                    }
+                  </p>
+                </div>
+              ) : null}
             </div>
           ))}
           <AddButton
@@ -616,6 +688,134 @@ export function SystemProfileForm({
             onClick={() => set("iff_states", [...draft.iff_states, emptyIff()])}
           />
         </div>
+      </Section>
+
+      {/* ---- IFF interrogation -------------------------------------- */}
+      {/* Sits between the states and the columns because that is what it
+          decides: whether an IFF column can ever hold a code, and whether
+          the operator gets an interrogate command at all. It was editable
+          only on the questions screen, so a designer looking at an empty
+          IFF column here had nowhere to turn it on. */}
+      <Section
+        title="IFF interrogation"
+        hint="A separate capability from the radar. With this off the console has no interrogate command and an IFF column reads as a dash — an operator on such a system identifies by behaviour alone, which is a different skill and a deliberate one to train."
+      >
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={draft.iff_interrogation.enabled}
+            onChange={(e) =>
+              set("iff_interrogation", {
+                ...draft.iff_interrogation,
+                enabled: e.target.checked,
+              })
+            }
+          />
+          <span>
+            This system has an IFF interrogator.
+            <span className="mt-1 block text-xs leading-relaxed text-muted">
+              Turning it on asks each track class above what it replies, and
+              gives the operator an <strong>Interrogate</strong> command during
+              a run.
+            </span>
+          </span>
+        </label>
+
+        {draft.iff_interrogation.enabled ? (
+          <>
+            <div>
+              <span className="label">Which modes it can read</span>
+              <div className="space-y-2">
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={draft.iff_interrogation.mode_3}
+                    onChange={(e) =>
+                      set("iff_interrogation", {
+                        ...draft.iff_interrogation,
+                        mode_3: e.target.checked,
+                      })
+                    }
+                  />
+                  <span>
+                    <strong className="data">Mode 3/A</strong> — four octal
+                    digits, each 0–7
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={draft.iff_interrogation.mode_1}
+                    onChange={(e) =>
+                      set("iff_interrogation", {
+                        ...draft.iff_interrogation,
+                        mode_1: e.target.checked,
+                      })
+                    }
+                  />
+                  <span>
+                    <strong className="data">Mode 1</strong> — two digits, each
+                    0–4. A military mission code.
+                  </span>
+                </label>
+              </div>
+              {!draft.iff_interrogation.mode_3 &&
+              !draft.iff_interrogation.mode_1 ? (
+                <p className="mt-2 text-xs text-warn">
+                  An interrogator that reads neither mode returns nothing on
+                  every track. Choose at least one, or turn interrogation off.
+                </p>
+              ) : null}
+            </div>
+
+            {/* The column has to exist for the reply to land anywhere. */}
+            {!draft.track_readout_fields.some((field) =>
+              /^iff$/i.test(field.label.trim()),
+            ) ? (
+              <div className="panel border-l-2 border-l-warn p-3">
+                <p className="text-xs leading-relaxed">
+                  <strong>No IFF column is declared below.</strong> The
+                  interrogator will work and the reply will be in the run log,
+                  but the track table has nowhere to show it — the table is
+                  built from the columns you name.
+                </p>
+                <AddButton
+                  label="Add an IFF column"
+                  onClick={() =>
+                    set("track_readout_fields", [
+                      ...draft.track_readout_fields,
+                      {
+                        label: "IFF",
+                        unit: "",
+                        description:
+                          "Transponder reply — the Mode 3 code, or that nothing came back. Blank until interrogated.",
+                      },
+                    ])
+                  }
+                />
+              </div>
+            ) : null}
+
+            <Labelled
+              label="Anything the boxes do not carry"
+              hint="Who may interrogate, when, how long a reply takes."
+            >
+              <input
+                className="field"
+                value={draft.iff_interrogation.note}
+                onChange={(e) =>
+                  set("iff_interrogation", {
+                    ...draft.iff_interrogation,
+                    note: e.target.value,
+                  })
+                }
+              />
+            </Labelled>
+          </>
+        ) : null}
       </Section>
 
       {/* ---- Readout fields ----------------------------------------- */}
