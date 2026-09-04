@@ -85,6 +85,9 @@ export async function POST(request: NextRequest) {
         scenario,
         body.difficulty,
         profile?.approved ? profile : null,
+        // What they asked for, carried through to the thing that lays out the
+        // engagement. It used to stop here, at the record.
+        { text: body.requested_text, clarifications: body.clarifications },
       );
       const session = await createSession({
         traineeId: body.trainee_id,
