@@ -6,6 +6,7 @@ import type {
   SimEvent,
   SuccessCriteria,
   SystemProfile,
+  TrackReadoutField,
 } from "../domain/schemas";
 import { describeReply, meaningOfMode3 } from "../domain/iff-codes";
 import {
@@ -70,6 +71,18 @@ export interface SimConfig {
   max_simultaneous: number;
   /** How many rounds exist for the whole run. */
   magazine: number;
+
+  /**
+   * The columns the console shows for each track, in the designer's order.
+   *
+   * These were declared in the profile and read by nothing that a trainee
+   * ever saw: the console shell was told to lay out space for them, and the
+   * live track table then drew a fixed set of its own into that space. So a
+   * designer could tick IFF, altitude, fire status — and watch none of it
+   * appear, with no way to tell whether the column was ignored or the value
+   * was missing. The table is built from this now.
+   */
+  readouts: TrackReadoutField[];
 
   /** Inside this radius a hostile has arrived, and the run has lost one. */
   defended_radius_km: number;
@@ -176,6 +189,20 @@ const DEFAULT_MAGAZINE = 8;
 const DEFAULT_DEFENDED_RADIUS_KM = 3;
 
 /**
+ * What the track table shows when the profile declares no columns.
+ *
+ * The four a console cannot be read without: which track, how far, how long
+ * until it arrives, and what it is taken to be. A profile that names its own
+ * columns replaces this entirely — including dropping any of these.
+ */
+const DEFAULT_READOUTS: TrackReadoutField[] = [
+  { label: "TRK", unit: "", description: "Track number." },
+  { label: "RNG", unit: "km", description: "Range to the track." },
+  { label: "TTI", unit: "s", description: "Time to impact." },
+  { label: "ID", unit: "", description: "Identification state." },
+];
+
+/**
  * How far the radar sees, for a given profile.
  *
  * Exported because the exercise generator needs the same answer: it places
@@ -240,6 +267,11 @@ export function simConfig(
     interceptors,
     max_simultaneous: engagement?.max_simultaneous ?? DEFAULT_SIMULTANEOUS,
     magazine: engagement?.magazine_depth ?? DEFAULT_MAGAZINE,
+
+    readouts:
+      profile?.track_readout_fields && profile.track_readout_fields.length > 0
+        ? profile.track_readout_fields
+        : DEFAULT_READOUTS,
 
     defended_radius_km: DEFAULT_DEFENDED_RADIUS_KM,
     iff: {
