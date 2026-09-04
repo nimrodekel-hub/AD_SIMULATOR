@@ -117,6 +117,9 @@ export function rehearsalExercise(profile: SystemProfile | null): ExerciseInstan
       speed_kts: Math.round(speed),
       truth_iff: isFriendly ? friendly : hostile,
       initial_iff: isFriendly || resolvesLate ? unknown : hostile,
+      // The rehearsal never mis-types a track: the designer is checking
+      // their figures, not being set a puzzle.
+      initial_classification: "",
       resolves_at_s: resolvesLate ? arriveAt - 30 : isFriendly ? null : null,
       appears_at_s: index === 0 ? 0 : 10 + index * 15,
       mode_3: codes.mode_3,

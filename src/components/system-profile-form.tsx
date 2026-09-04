@@ -340,6 +340,7 @@ export function SystemProfileForm({
               track_classifications: draft.track_classifications,
               iff_states: draft.iff_states,
               iff_interrogation: draft.iff_interrogation,
+              operator_commands: draft.operator_commands,
               track_readout_fields: draft.track_readout_fields,
               engagement: draft.engagement,
             });
@@ -818,6 +819,126 @@ export function SystemProfileForm({
         ) : null}
       </Section>
 
+      {/* ---- What the operator can do ------------------------------- */}
+      {/* Selecting, identifying, firing and ceasing exist on every system and
+          are not asked about. Everything here is a capability some systems
+          have and others do not, and each one the simulator implements as a
+          real rule — so switching it on gives the operator the command, and
+          leaving it off means the console has no such button rather than a
+          button that does nothing. */}
+      <Section
+        title="What the operator can do"
+        hint="Beyond selecting a track, identifying it, firing and ceasing — which every system does. Each of these is a rule the simulation enforces, so it costs what it really costs; the console can only offer what is switched on here."
+      >
+        <Command
+          on={draft.operator_commands.retype}
+          label="Correct the track type"
+          why="The system's own typing can be wrong, and putting it right is the operator's call. Needs at least two track classes to choose between — and an exercise only presents a mis-typed track on a system that declares this."
+          onToggle={(retype) =>
+            set("operator_commands", { ...draft.operator_commands, retype })
+          }
+        />
+
+        <Command
+          on={draft.operator_commands.reload}
+          label="Reload during a run"
+          why="The magazine can be refilled without ending the run. The clock does not stop for it, which is the whole lesson: a reload buys rounds with the seconds the next track is using to close."
+          onToggle={(reload) =>
+            set("operator_commands", { ...draft.operator_commands, reload })
+          }
+        >
+          <Labelled
+            label="How long a reload takes (s)"
+            hint="Leave it truthful. A reload that costs nothing teaches an operator that reloading is free."
+          >
+            <NullableNumber
+              value={draft.operator_commands.reload_seconds}
+              ariaLabel="Reload seconds"
+              onChange={(reload_seconds) =>
+                set("operator_commands", {
+                  ...draft.operator_commands,
+                  reload_seconds,
+                })
+              }
+            />
+          </Labelled>
+        </Command>
+
+        <Command
+          on={draft.operator_commands.launchers}
+          label="Choose which launcher fires"
+          why="More than one launcher, each holding its own rounds. The magazine above is divided between them, so this adds a decision without adding rounds — an empty or reloading launcher cannot fire, and one with a round in the air cannot be reloaded."
+          onToggle={(launchers) =>
+            set("operator_commands", { ...draft.operator_commands, launchers })
+          }
+        >
+          <Labelled label="How many launchers" hint="Two or more, or there is nothing to choose.">
+            <NullableNumber
+              value={draft.operator_commands.launcher_count}
+              ariaLabel="Launcher count"
+              onChange={(launcher_count) =>
+                set("operator_commands", {
+                  ...draft.operator_commands,
+                  launcher_count,
+                })
+              }
+            />
+          </Labelled>
+        </Command>
+
+        <Command
+          on={draft.operator_commands.tilt}
+          label="Adjust the radar tilt"
+          why="A fixed array whose elevation the operator sets. Anything below where it points is not held at all — not on the scope, and not engageable — so raising it to reach something high gives up the low approach."
+          onToggle={(tilt) =>
+            set("operator_commands", { ...draft.operator_commands, tilt })
+          }
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Labelled label="Lowest tilt (°)">
+              <NullableNumber
+                value={draft.operator_commands.tilt_min_deg}
+                ariaLabel="Lowest tilt"
+                onChange={(tilt_min_deg) =>
+                  set("operator_commands", {
+                    ...draft.operator_commands,
+                    tilt_min_deg,
+                  })
+                }
+              />
+            </Labelled>
+            <Labelled label="Highest tilt (°)">
+              <NullableNumber
+                value={draft.operator_commands.tilt_max_deg}
+                ariaLabel="Highest tilt"
+                onChange={(tilt_max_deg) =>
+                  set("operator_commands", {
+                    ...draft.operator_commands,
+                    tilt_max_deg,
+                  })
+                }
+              />
+            </Labelled>
+          </div>
+        </Command>
+
+        <Labelled
+          label="Anything the switches do not carry"
+          hint="A command your system has that is not on this list — say so here. It will not appear in a run, but it is on the record."
+        >
+          <input
+            className="field"
+            value={draft.operator_commands.note}
+            onChange={(e) =>
+              set("operator_commands", {
+                ...draft.operator_commands,
+                note: e.target.value,
+              })
+            }
+          />
+        </Labelled>
+      </Section>
+
       {/* ---- Readout fields ----------------------------------------- */}
       <Section
         title="Track readouts"
@@ -1194,6 +1315,7 @@ function toDraft(profile: SystemProfile): SystemProfileDraft {
     track_classifications: profile.track_classifications,
     iff_states: profile.iff_states,
     iff_interrogation: profile.iff_interrogation,
+    operator_commands: profile.operator_commands,
     track_readout_fields: profile.track_readout_fields,
     sensor: profile.sensor,
     engagement: profile.engagement,
@@ -1216,6 +1338,7 @@ function toSpec(profile: SystemProfile): SystemSpec {
     track_classifications: profile.track_classifications,
     iff_states: profile.iff_states,
     iff_interrogation: profile.iff_interrogation,
+    operator_commands: profile.operator_commands,
     track_readout_fields: profile.track_readout_fields,
     engagement: profile.engagement,
   };
@@ -1269,6 +1392,50 @@ function Section({
       ) : null}
       <div className="mt-4 space-y-4">{children}</div>
     </section>
+  );
+}
+
+/**
+ * One capability, with what it costs said before it is switched on.
+ *
+ * The reason sits under the label rather than in a tooltip because it is not
+ * decoration: a designer deciding whether their system can reload is deciding
+ * what their trainees will be taught about scarcity, and "the clock does not
+ * stop" is the part of that they need before they tick the box, not after.
+ * The figures a command needs appear only once it is on — asking for a reload
+ * time on a system that cannot reload is asking about nothing.
+ */
+function Command({
+  on,
+  label,
+  why,
+  onToggle,
+  children,
+}: {
+  on: boolean;
+  label: string;
+  why: string;
+  onToggle: (next: boolean) => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="panel p-4">
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={on}
+          onChange={(e) => onToggle(e.target.checked)}
+        />
+        <span>
+          {label}
+          <span className="mt-1 block max-w-2xl text-xs leading-relaxed text-muted">
+            {why}
+          </span>
+        </span>
+      </label>
+      {on && children ? <div className="mt-3 space-y-3">{children}</div> : null}
+    </div>
   );
 }
 

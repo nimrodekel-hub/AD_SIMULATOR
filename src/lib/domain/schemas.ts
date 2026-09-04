@@ -234,6 +234,78 @@ export const IFF_INTERROGATION_OFF: IffInterrogation = {
   note: "",
 };
 
+/**
+ * The commands this system's console offers beyond the four every system has.
+ *
+ * Selecting, identifying, firing and ceasing exist everywhere and are not
+ * declared. Everything here is a capability some systems have and others do
+ * not, and each one is a real rule in the engine rather than a button: a
+ * reload that costs no time would teach an operator that reloading is free,
+ * which is the opposite of the lesson.
+ *
+ * **Why this exists at all.** `operator_responsibilities` already asked the
+ * designer what the operator decides — and it is prose, so it could only ever
+ * be *described*. A profile could declare "chooses which launcher to fire
+ * from" and the simulator had no idea; the answer was recorded, shown to the
+ * console builder, and silently unusable. Declaring a capability and being
+ * unable to act on it is the same failure as an empty IFF column: the screen
+ * asks a question it cannot honour.
+ *
+ * Everything defaults to off, so a profile written before this existed loads
+ * with exactly the console it had.
+ */
+export const OperatorCommandsSchema = z.object({
+  /**
+   * The operator may correct the track type the console shows.
+   *
+   * Only worth having where the system's own typing can be wrong — the
+   * exercise decides that per track, with `initial_classification`.
+   */
+  retype: z.boolean().default(false),
+
+  /** The magazine can be refilled during a run. */
+  reload: z.boolean().default(false),
+  /**
+   * How long a reload takes, in seconds. The clock does not stop for it, and
+   * that is the whole point: reloading costs the time the next track is using
+   * to close.
+   */
+  reload_seconds: z.number().nullable().default(null),
+
+  /** More than one launcher, and the operator picks which one fires. */
+  launchers: z.boolean().default(false),
+  /**
+   * How many launchers there are. The magazine is divided between them, so
+   * turning this on adds a decision without adding rounds — a launcher that
+   * is empty, reloading or already committed cannot fire.
+   */
+  launcher_count: z.number().int().nullable().default(null),
+
+  /** A fixed array whose elevation the operator sets during the run. */
+  tilt: z.boolean().default(false),
+  /** The lowest elevation the array can be pointed at, in degrees. */
+  tilt_min_deg: z.number().nullable().default(null),
+  /** The highest. A track below where the array points is not held. */
+  tilt_max_deg: z.number().nullable().default(null),
+
+  /** Anything the switches do not carry. */
+  note: z.string().default(""),
+});
+export type OperatorCommands = z.infer<typeof OperatorCommandsSchema>;
+
+/** Every extra command off: the four universal ones, and nothing else. */
+export const OPERATOR_COMMANDS_OFF: OperatorCommands = {
+  retype: false,
+  reload: false,
+  reload_seconds: null,
+  launchers: false,
+  launcher_count: null,
+  tilt: false,
+  tilt_min_deg: null,
+  tilt_max_deg: null,
+  note: "",
+};
+
 export const TrackReadoutFieldSchema = z.object({
   /** Column header as the real console shows it, e.g. "RNG". */
   label: z.string(),
@@ -332,6 +404,11 @@ export const SystemProfileDraftSchema = z.object({
   track_readout_fields: z.array(TrackReadoutFieldSchema),
   /** Whether the system can interrogate a transponder, and on which modes. */
   iff_interrogation: IffInterrogationSchema.default(IFF_INTERROGATION_OFF),
+  /**
+   * The commands this console offers beyond selecting, identifying, firing
+   * and ceasing. Each one the engine implements and the profile switches on.
+   */
+  operator_commands: OperatorCommandsSchema.default(OPERATOR_COMMANDS_OFF),
   /** What the radar sees, and from where. */
   sensor: SensorCoverageSchema.default({
     max_range_km: null,
@@ -486,8 +563,20 @@ export type ExerciseDilemma = z.infer<typeof ExerciseDilemmaSchema>;
 export const LiveTrackSchema = z.object({
   /** Shown on the display, e.g. "TK-4471". Invented; never a real call sign. */
   designator: z.string(),
-  /** One of the profile's declared track classifications, by name. */
+  /**
+   * What the track really is — one of the profile's declared classifications,
+   * by name. **Never shown directly** where the console can be wrong about it.
+   */
   classification: z.string(),
+  /**
+   * The type the console shows at first, when that is not what the track is.
+   *
+   * Empty means the system has it right from the start, which is the ordinary
+   * case. A different declared class here is a mis-type the operator has to
+   * catch — worth setting only on a system whose profile declares the retype
+   * command, since otherwise nobody can correct it.
+   */
+  initial_classification: z.string().default(""),
 
   /* ---- Where it starts, in polar coordinates about the site ---- */
   /** Bearing from the site when it first appears, 0–360, 0 = north. */
@@ -572,6 +661,7 @@ export const SimEventSchema = z.object({
     "detected",
     "resolved",
     "classified",
+    "retyped",
     "interrogated",
     "launched",
     "refused",
@@ -579,6 +669,8 @@ export const SimEventSchema = z.object({
     "miss",
     "leaked",
     "ceased",
+    "reloaded",
+    "tilted",
     "ended",
   ]),
   /** The track it concerns, where it concerns one. */

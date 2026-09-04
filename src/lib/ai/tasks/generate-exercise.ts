@@ -72,6 +72,8 @@ The trainee will fly this in real time: tracks move at the speeds you give them,
 
 A code is not decoration. Give an airliner an ordinary code and it reads as an airliner; give one \`7700\` (general emergency), \`7600\` (radio failure) or \`7500\` (hijack) and you have built a specific and much harder problem — **do that deliberately, and say so in the brief**, never by accident. Two tracks squawking the same Mode 3 code is also a real and vicious problem, and again only worth doing on purpose.
 
+**A track the system has mis-typed, where the profile allows it.** \`initial_classification\` is the class the console shows at first, and it is dropped unless \`operator_commands.retype\` is on — on a system where nobody can correct it, a wrong label is not a problem to solve, it is just a wrong label. Where it is on, use it sparingly and only where the scenario is about reading behaviour rather than reading the screen: a helicopter shown as a UAV closing at 130 knots is a real moment. Leave it empty otherwise, which is almost always.
+
 **Include at least one track that must not be engaged** — a friendly or a civil transit — unless the scenario is explicitly about something else. An exercise where everything airborne is a valid target trains the wrong reflex.
 
 **appears_at_s staggers entries.** Tracks already up at zero should be a manageable picture; later arrivals are what turns it into a problem.
@@ -285,6 +287,7 @@ function clampToProfile(
       entry,
     ]),
   );
+  const retypeable = profile?.operator_commands?.retype === true;
   const states = (profile?.iff_states ?? []).map((state) => state.name);
   const nameOf = (value: string, fallback: string) =>
     states.find((state) => state.toLowerCase() === value.toLowerCase()) ??
@@ -300,11 +303,24 @@ function clampToProfile(
     seen.add(designator);
 
     const declared = classes.get(track.classification.toLowerCase());
+    const truth = declared?.name ?? track.classification;
+
+    /* A mis-typed track only makes sense where the operator can put it right.
+       On a system without the retype command it would be a wrong label nobody
+       can touch, which teaches the label rather than the judgement — so it is
+       dropped. It also has to be a class this console shows, and has to
+       differ from the truth to mean anything at all. */
+    const shown = classes.get(
+      (track.initial_classification ?? "").trim().toLowerCase(),
+    );
+    const initial_classification =
+      retypeable && shown && shown.name !== truth ? shown.name : "";
 
     return {
       ...track,
       designator,
-      classification: declared?.name ?? track.classification,
+      classification: truth,
+      initial_classification,
 
       spawn_bearing_deg: ((track.spawn_bearing_deg % 360) + 360) % 360,
       // Inside the scope and outside the blind zone, with a little margin so
@@ -590,6 +606,7 @@ function mockExercise(
       speed_kts: declared?.typical_speed_kts.min ?? 420,
       truth_iff: hostile,
       initial_iff: unknown,
+      initial_classification: "",
       resolves_at_s: null,
       appears_at_s: 0,
       notes: "",

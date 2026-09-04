@@ -90,12 +90,12 @@ export function RadarScope({
   const views = useMemo(
     () =>
       state.tracks
-        .map((track) => viewOf(track, state.t, config))
+        .map((track) => viewOf(track, state.t, config, state.tilt_deg))
         .filter((view) => view.visible)
         // Off the scale is off the scope. A track drawn beyond the outer ring
         // would be claiming a range the legend says is not on screen.
         .filter((view) => view.range_km <= reach),
-    [state.tracks, state.t, config, reach],
+    [state.tracks, state.t, state.tilt_deg, config, reach],
   );
 
   const sweep = (state.t * 60) % 360;
