@@ -3,6 +3,26 @@
 import { READOUT_CATALOGUE } from "@/lib/domain/readouts";
 import { WELL_KNOWN_MODE_3 } from "@/lib/domain/iff-codes";
 import { OPERATOR_COMMANDS_OFF } from "@/lib/domain/schemas";
+import { gapsFor, SECTIONS, type Gap } from "@/lib/domain/profile-readiness";
+import { GapNotice, SectionState } from "@/components/gap-notice";
+import {
+  AlertIcon,
+  ArrowUpIcon,
+  CheckIcon,
+  ColumnsIcon,
+  CommandIcon,
+  CrossIcon,
+  IdentifyIcon,
+  LauncherIcon,
+  PlusIcon,
+  RadarIcon,
+  ReloadIcon,
+  RetypeIcon,
+  TargetIcon,
+  TiltIcon,
+  TrackIcon,
+  TransponderIcon,
+} from "@/components/icons";
 import type {
   EngagementDoctrine,
   IffInterrogation,
@@ -119,9 +139,18 @@ function Req() {
 export function SystemSpecFields({
   spec,
   onChange,
+  gaps,
 }: {
   spec: SystemSpec;
   onChange: (next: SystemSpec) => void;
+  /**
+   * Everything the simulation is still missing, computed by the parent from
+   * this same `spec`. Passed in rather than computed here so the count on the
+   * button, the summary at the foot of the page and the red text under each
+   * input are all reading one list — three copies of the rule would be three
+   * chances for the form to demand something the server does not.
+   */
+  gaps: Gap[];
 }) {
   const set = <K extends keyof SystemSpec>(key: K, value: SystemSpec[K]) =>
     onChange({ ...spec, [key]: value });
@@ -140,6 +169,9 @@ export function SystemSpecFields({
     <div className="space-y-10">
       {/* ---- Radar ---------------------------------------------------- */}
       <Block
+        icon={<RadarIcon />}
+        where={SECTIONS.radar}
+        gaps={gaps}
         title="What the radar sees"
         hint="Detection is a different number from engagement, and it is the one that decides how much warning the operator gets. Coverage decides whether they get any warning at all from a given direction — a threat arriving through a blind arc is a different training problem entirely."
       >
@@ -148,6 +180,8 @@ export function SystemSpecFields({
             label="Detection range (km)"
             required
             hint="How far out it sees. Not the engagement range."
+            gaps={gaps}
+            field="sensor.max_range_km"
             value={spec.sensor.max_range_km}
             onChange={(max_range_km) =>
               set("sensor", { ...spec.sensor, max_range_km })
@@ -156,6 +190,8 @@ export function SystemSpecFields({
           <Num
             label="Close-in blind zone (km)"
             hint="Leave empty if there is none."
+            gaps={gaps}
+            field="sensor.min_range_km"
             value={spec.sensor.min_range_km}
             onChange={(min_range_km) =>
               set("sensor", { ...spec.sensor, min_range_km })
@@ -199,6 +235,7 @@ export function SystemSpecFields({
               }
             />
           </div>
+          <GapNotice gaps={gaps} field="sensor.azimuth_coverage_deg" />
         </div>
 
         <NullableRange
@@ -223,6 +260,9 @@ export function SystemSpecFields({
       {/* ---- Track classes -------------------------------------------- */}
       <Block
         required
+        icon={<TrackIcon />}
+        where={SECTIONS.classes}
+        gaps={gaps}
         title="What can appear on the display"
         hint="Exercise generation may only produce tracks of these kinds, inside these bands. A class you leave out is one a trainee will never see."
       >
@@ -270,9 +310,16 @@ export function SystemSpecFields({
                   }
                 />
               </div>
+              <GapNotice
+                gaps={gaps}
+                field={`classes.${index}.name`}
+                className="!mt-0 mb-3"
+              />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Range
                   label="Speed (kts)"
+                  gaps={gaps}
+                  field={`classes.${index}.speed`}
                   value={entry.typical_speed_kts}
                   onChange={(typical_speed_kts) =>
                     set(
@@ -286,6 +333,8 @@ export function SystemSpecFields({
                 />
                 <Range
                   label="Altitude (ft)"
+                  gaps={gaps}
+                  field={`classes.${index}.altitude`}
                   value={entry.typical_altitude_ft}
                   onChange={(typical_altitude_ft) =>
                     set(
@@ -354,6 +403,7 @@ export function SystemSpecFields({
               ) : null}
             </div>
           ))}
+          <GapNotice gaps={gaps} field="classes" className="!mt-0" />
           <Add
             label="Add a track class"
             onClick={() =>
@@ -376,6 +426,9 @@ export function SystemSpecFields({
       {/* ---- Identification states ------------------------------------ */}
       <Block
         required
+        icon={<IdentifyIcon />}
+        where={SECTIONS.states}
+        gaps={gaps}
         title="Identification states"
         hint="Every state the operator sees, and what puts a track into it. The tone decides the colour the console shows it in, so it has to match how urgency actually reads on the display."
       >
@@ -460,6 +513,7 @@ export function SystemSpecFields({
               />
             </div>
           ))}
+          <GapNotice gaps={gaps} field="states" className="!mt-0" />
           <Add
             label="Add an identification state"
             onClick={() =>
@@ -474,6 +528,7 @@ export function SystemSpecFields({
 
       {/* ---- IFF interrogation ---------------------------------------- */}
       <Block
+        icon={<TransponderIcon />}
         title="Can the operator interrogate a transponder?"
         hint="A separate capability from the radar. Plenty of systems see a track without being able to ask it anything, and an operator on such a system identifies by behaviour alone — a different skill, and a deliberate one to train. Leave this off and the console has no interrogate command at all."
       >
@@ -597,11 +652,17 @@ export function SystemSpecFields({
           that can only be declared after an extraction is a capability a new
           system cannot have until it has been through the model once. */}
       <Block
+        icon={<CommandIcon />}
+        where={SECTIONS.commands}
+        gaps={gaps}
         title="What else can the operator do?"
         hint="Selecting a track, identifying it, firing and ceasing exist on every system and are not asked about. These are the ones that differ — each is a rule the simulation enforces, so it costs what it really costs, and the console can only offer what is switched on here. Leave off anything your system does not have."
       >
         <SpecCommand
           on={spec.operator_commands.retype}
+          icon={<RetypeIcon />}
+          gaps={gaps}
+          field="commands.retype"
           label="Correct the track type"
           why="The system's own typing can be wrong, and putting it right is the operator's call. An exercise only shows a mis-typed track on a system that declares this."
           onToggle={(retype) =>
@@ -611,6 +672,9 @@ export function SystemSpecFields({
 
         <SpecCommand
           on={spec.operator_commands.reload}
+          icon={<ReloadIcon />}
+          gaps={gaps}
+          field="commands.reload_seconds"
           label="Reload during a run"
           why="The magazine can be refilled without ending the run. The clock does not stop for it, which is the whole lesson: a reload buys rounds with the seconds the next track is using to close."
           onToggle={(reload) =>
@@ -632,6 +696,9 @@ export function SystemSpecFields({
 
         <SpecCommand
           on={spec.operator_commands.launchers}
+          icon={<LauncherIcon />}
+          gaps={gaps}
+          field="commands.launcher_count"
           label="Choose which launcher fires"
           why="More than one launcher, each holding its own rounds. The magazine is divided between them, so this adds a decision without adding rounds — an empty or reloading launcher cannot fire, and one with a round in the air cannot be reloaded."
           onToggle={(launchers) =>
@@ -653,6 +720,9 @@ export function SystemSpecFields({
 
         <SpecCommand
           on={spec.operator_commands.tilt}
+          icon={<TiltIcon />}
+          gaps={gaps}
+          field="commands.tilt_min_deg"
           label="Adjust the radar tilt"
           why="A fixed array whose elevation the operator sets. Anything below where it points is not held at all — not on the scope, and not engageable — so raising it to reach something high gives up the low approach."
           onToggle={(tilt) =>
@@ -700,6 +770,9 @@ export function SystemSpecFields({
       {/* ---- Readout columns ------------------------------------------ */}
       <Block
         required
+        icon={<ColumnsIcon />}
+        where={SECTIONS.columns}
+        gaps={gaps}
         title="What the operator reads for each track"
         hint="Tick the columns your display shows, then put them in the order it shows them. Add anything of your own that is not offered — these become the table a trainee reads, so a missing column is information they never get."
       >
@@ -794,7 +867,7 @@ export function SystemSpecFields({
                   )
                 }
               >
-                ↑
+                <ArrowUpIcon className="text-sm" />
               </button>
               <Remove
                 label="Remove column"
@@ -807,6 +880,7 @@ export function SystemSpecFields({
               />
             </div>
           ))}
+          <GapNotice gaps={gaps} field="columns" className="!mt-0" />
           <Add
             label="Add a column of your own"
             onClick={() =>
@@ -821,38 +895,47 @@ export function SystemSpecFields({
 
       {/* ---- Engagement envelope -------------------------------------- */}
       <Block
+        icon={<TargetIcon />}
+        where={SECTIONS.envelope}
+        gaps={gaps}
         title="What it can reach"
         hint="Exercise geometry has to sit inside this, or the trade-off it presents is not a real one. The minimum matters as much as the maximum: a threat that gets inside it cannot be engaged at all."
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Labelled label="Minimum intercept range (km)">
-            <input
-              type="number"
-              className="field data"
-              aria-label="Minimum intercept range"
-              value={spec.engagement.min_range_km}
-              onChange={(event) =>
-                set("engagement", {
-                  ...spec.engagement,
-                  min_range_km: Number(event.target.value),
-                })
-              }
-            />
-          </Labelled>
-          <Labelled label="Maximum intercept range (km)" required>
-            <input
-              type="number"
-              className="field data"
-              aria-label="Maximum intercept range"
-              value={spec.engagement.max_range_km}
-              onChange={(event) =>
-                set("engagement", {
-                  ...spec.engagement,
-                  max_range_km: Number(event.target.value),
-                })
-              }
-            />
-          </Labelled>
+          <div>
+            <Labelled label="Minimum intercept range (km)">
+              <input
+                type="number"
+                className="field data"
+                aria-label="Minimum intercept range"
+                value={spec.engagement.min_range_km}
+                onChange={(event) =>
+                  set("engagement", {
+                    ...spec.engagement,
+                    min_range_km: Number(event.target.value),
+                  })
+                }
+              />
+            </Labelled>
+            <GapNotice gaps={gaps} field="engagement.min_range_km" />
+          </div>
+          <div>
+            <Labelled label="Maximum intercept range (km)" required>
+              <input
+                type="number"
+                className="field data"
+                aria-label="Maximum intercept range"
+                value={spec.engagement.max_range_km}
+                onChange={(event) =>
+                  set("engagement", {
+                    ...spec.engagement,
+                    max_range_km: Number(event.target.value),
+                  })
+                }
+              />
+            </Labelled>
+            <GapNotice gaps={gaps} field="engagement.max_range_km" />
+          </div>
         </div>
 
         {/* The two figures the simulation enforces. These used to live inside
@@ -864,6 +947,8 @@ export function SystemSpecFields({
             label="Interceptors in the air at once"
             required
             hint="The hard limit. A third launch is refused until one resolves."
+            gaps={gaps}
+            field="engagement.max_simultaneous"
             value={spec.engagement.max_simultaneous}
             onChange={(max_simultaneous) =>
               set("engagement", { ...spec.engagement, max_simultaneous })
@@ -873,6 +958,8 @@ export function SystemSpecFields({
             label="Rounds available"
             required
             hint="How deep the magazine is for one engagement."
+            gaps={gaps}
+            field="engagement.magazine_depth"
             value={spec.engagement.magazine_depth}
             onChange={(magazine_depth) =>
               set("engagement", { ...spec.engagement, magazine_depth })
@@ -896,44 +983,67 @@ export function SystemSpecFields({
           </p>
           <div className="space-y-2">
             {spec.engagement.interceptors.map((round, index) => (
-              <div key={index} className="flex flex-wrap items-end gap-2">
-                <input
-                  className="field data w-40"
-                  placeholder="long range"
-                  aria-label="Interceptor name"
-                  value={round.name}
-                  onChange={(event) =>
-                    setRound(index, { ...round, name: event.target.value })
-                  }
-                />
-                <RoundNumber
-                  label="min km"
-                  value={round.min_range_km}
-                  onChange={(min_range_km) => setRound(index, { ...round, min_range_km })}
-                />
-                <RoundNumber
-                  label="max km"
-                  value={round.max_range_km}
-                  onChange={(max_range_km) => setRound(index, { ...round, max_range_km })}
-                />
-                <RoundNumber
-                  label="kts"
-                  value={round.speed_kts}
-                  onChange={(speed_kts) => setRound(index, { ...round, speed_kts })}
-                />
-                <Remove
-                  label="Remove interceptor"
-                  onClick={() =>
-                    set("engagement", {
-                      ...spec.engagement,
-                      interceptors: spec.engagement.interceptors.filter(
-                        (_, i) => i !== index,
-                      ),
-                    })
-                  }
+              <div key={index}>
+                <div className="flex flex-wrap items-end gap-2">
+                  <input
+                    className="field data w-40"
+                    placeholder="long range"
+                    aria-label="Interceptor name"
+                    value={round.name}
+                    onChange={(event) =>
+                      setRound(index, { ...round, name: event.target.value })
+                    }
+                  />
+                  <RoundNumber
+                    label="min km"
+                    value={round.min_range_km}
+                    onChange={(min_range_km) =>
+                      setRound(index, { ...round, min_range_km })
+                    }
+                  />
+                  <RoundNumber
+                    label="max km"
+                    wrong={
+                      gapsFor(gaps, `interceptors.${index}.max_range_km`).length > 0
+                    }
+                    value={round.max_range_km}
+                    onChange={(max_range_km) =>
+                      setRound(index, { ...round, max_range_km })
+                    }
+                  />
+                  <RoundNumber
+                    label="kts"
+                    wrong={
+                      gapsFor(gaps, `interceptors.${index}.speed_kts`).length > 0
+                    }
+                    value={round.speed_kts}
+                    onChange={(speed_kts) => setRound(index, { ...round, speed_kts })}
+                  />
+                  <Remove
+                    label="Remove interceptor"
+                    onClick={() =>
+                      set("engagement", {
+                        ...spec.engagement,
+                        interceptors: spec.engagement.interceptors.filter(
+                          (_, i) => i !== index,
+                        ),
+                      })
+                    }
+                  />
+                </div>
+                {/* One notice for the row: three boxes eight characters wide
+                    have nowhere to put three separate warnings. */}
+                <GapNotice
+                  gaps={gaps}
+                  field={[
+                    `interceptors.${index}.name`,
+                    `interceptors.${index}.max_range_km`,
+                    `interceptors.${index}.speed_kts`,
+                  ]}
                 />
               </div>
             ))}
+            <GapNotice gaps={gaps} field="interceptors" className="!mt-0" />
             <Add
               label="Add an interceptor type"
               onClick={() =>
@@ -1011,24 +1121,51 @@ export function SystemSpecFields({
 
 /* ------------------------------------------------------------------ */
 
+/**
+ * One section of the form, with its own heading, icon and state.
+ *
+ * The icon is the second way of naming the section, never the only one — a
+ * dish and an arc mean "radar" to someone who already knew. What it buys is
+ * scanning: seven headings of the same weight down a long page are a wall,
+ * and a tinted glyph gives the eye somewhere to land when coming back to fix
+ * one figure.
+ *
+ * The chip is the part that does work. `where` names the section in
+ * `simulationGaps`, so the heading itself can say whether anything below it
+ * is outstanding — which matters most for the section whose fields only
+ * appear once a checkbox is ticked, and would otherwise hide its own red text.
+ */
 function Block({
   title,
   hint,
   required,
+  icon,
+  where,
+  gaps,
   children,
 }: {
   title: string;
   hint: string;
   required?: boolean;
+  icon: React.ReactNode;
+  /** The matching heading in `simulationGaps`, where the section has one. */
+  where?: string;
+  gaps?: Gap[];
   children: React.ReactNode;
 }) {
   return (
     <section>
-      <h2 className="text-sm font-semibold">
-        {title}
-        {required ? <Req /> : null}
-      </h2>
-      <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">{hint}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="grid size-7 shrink-0 place-items-center rounded bg-accent-dim text-base text-accent">
+          {icon}
+        </span>
+        <h2 className="text-sm font-semibold">
+          {title}
+          {required ? <Req /> : null}
+        </h2>
+        {where && gaps ? <SectionState gaps={gaps} where={where} /> : null}
+      </div>
+      <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted">{hint}</p>
       <div className="mt-4 space-y-4">{children}</div>
     </section>
   );
@@ -1066,22 +1203,39 @@ function Labelled({
  * the part of that needed before the box is ticked. The figures a command
  * runs on appear only once it is on — asking how long a reload takes on a
  * system that cannot reload is asking about nothing.
+ *
+ * Which creates the failure this card is now shaped around. Ticking the box
+ * reveals a figure, an empty figure means the engine treats the command as
+ * absent, and the console then shows no control — so the honest outcome of
+ * ticking a box and stopping there is *nothing happens*, silently. The card
+ * says which of the three states it is in on its own border and in its own
+ * chip: off, live, or on-but-incomplete. Red before it is saved, rather than
+ * a shrug on the console afterwards.
  */
 function SpecCommand({
   on,
   label,
   why,
+  icon,
+  gaps,
+  field,
   onToggle,
   children,
 }: {
   on: boolean;
   label: string;
   why: string;
+  icon: React.ReactNode;
+  gaps: Gap[];
+  /** The figure this command runs on, as `simulationGaps` keys it. */
+  field: string;
   onToggle: (next: boolean) => void;
   children?: React.ReactNode;
 }) {
+  const wrong = on && gapsFor(gaps, field).length > 0;
+
   return (
-    <div className="panel p-4">
+    <div className={`panel p-4 ${wrong ? "!border-l-2 !border-l-danger" : ""}`}>
       <label className="flex items-start gap-2 text-sm">
         <input
           type="checkbox"
@@ -1089,45 +1243,90 @@ function SpecCommand({
           checked={on}
           onChange={(event) => onToggle(event.target.checked)}
         />
-        <span>
-          {label}
-          <span className="mt-1 block max-w-2xl text-xs leading-relaxed text-muted">
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span
+              className={`grid size-6 shrink-0 place-items-center rounded text-sm ${
+                wrong
+                  ? "bg-danger-dim text-danger"
+                  : on
+                    ? "bg-accent-dim text-accent"
+                    : "bg-panel-raised text-muted"
+              }`}
+            >
+              {icon}
+            </span>
+            <span className="font-medium">{label}</span>
+            {wrong ? (
+              <span className="chip status-danger">
+                <AlertIcon />
+                needs a figure
+              </span>
+            ) : on ? (
+              <span className="chip status-ok">
+                <CheckIcon />
+                live
+              </span>
+            ) : (
+              <span className="chip text-muted">off</span>
+            )}
+          </span>
+          <span className="mt-1.5 block max-w-2xl text-xs leading-relaxed text-muted">
             {why}
           </span>
         </span>
       </label>
       {on && children ? <div className="mt-3 space-y-3">{children}</div> : null}
+      {on ? <GapNotice gaps={gaps} field={field} /> : null}
     </div>
   );
 }
 
-/** A number that may legitimately be unknown, and stays empty when it is. */
+/**
+ * A number that may legitimately be unknown, and stays empty when it is.
+ *
+ * It carries its own warning where one is passed, because the alternative is
+ * every call site remembering to put a notice underneath — and the field most
+ * likely to be forgotten is exactly the one that only appears after a
+ * checkbox is ticked.
+ */
 function Num({
   label,
   hint,
   required,
   value,
   onChange,
+  gaps,
+  field,
 }: {
   label: string;
   hint?: string;
   required?: boolean;
   value: number | null;
   onChange: (next: number | null) => void;
+  gaps?: Gap[];
+  /** The key this input answers to in `simulationGaps`. */
+  field?: string;
 }) {
+  const wrong = gaps && field ? gapsFor(gaps, field).length > 0 : false;
+
   return (
-    <Labelled label={label} hint={hint} required={required}>
-      <input
-        type="number"
-        className="field data"
-        aria-label={label}
-        placeholder="—"
-        value={value ?? ""}
-        onChange={(event) =>
-          onChange(event.target.value === "" ? null : Number(event.target.value))
-        }
-      />
-    </Labelled>
+    <div>
+      <Labelled label={label} hint={hint} required={required}>
+        <input
+          type="number"
+          className={`field data ${wrong ? "!border-danger" : ""}`}
+          aria-label={label}
+          aria-invalid={wrong || undefined}
+          placeholder="—"
+          value={value ?? ""}
+          onChange={(event) =>
+            onChange(event.target.value === "" ? null : Number(event.target.value))
+          }
+        />
+      </Labelled>
+      {gaps && field ? <GapNotice gaps={gaps} field={field} /> : null}
+    </div>
   );
 }
 
@@ -1136,10 +1335,20 @@ function RoundNumber({
   label,
   value,
   onChange,
+  wrong,
 }: {
   label: string;
   value: number;
   onChange: (next: number) => void;
+  /**
+   * This is the figure the row's warning is about.
+   *
+   * The sentence under the row names the round and says what is missing, but
+   * three boxes eight characters wide all look equally plausible, and the one
+   * that reads `0` is not obviously the wrong one. Reddening the box turns a
+   * sentence to be read into a place to look.
+   */
+  wrong?: boolean;
 }) {
   return (
     <label className="block">
@@ -1148,8 +1357,9 @@ function RoundNumber({
       </span>
       <input
         type="number"
-        className="field data w-24"
+        className={`field data w-24 ${wrong ? "!border-danger" : ""}`}
         aria-label={label}
+        aria-invalid={wrong || undefined}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
       />
@@ -1161,10 +1371,14 @@ function Range({
   label,
   value,
   onChange,
+  gaps,
+  field,
 }: {
   label: string;
   value: { min: number; max: number };
   onChange: (next: { min: number; max: number }) => void;
+  gaps?: Gap[];
+  field?: string;
 }) {
   return (
     <div>
@@ -1190,6 +1404,7 @@ function Range({
           }
         />
       </div>
+      {gaps && field ? <GapNotice gaps={gaps} field={field} /> : null}
     </div>
   );
 }
@@ -1213,7 +1428,8 @@ function NullableRange({
           className="btn text-xs"
           onClick={() => onChange({ min: 0, max: 0 })}
         >
-          + Give a band
+          <PlusIcon className="text-sm" />
+          Give a band
         </button>
       </div>
     );
@@ -1251,7 +1467,8 @@ function NullableRange({
 function Add({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button type="button" className="btn text-xs" onClick={onClick}>
-      + {label}
+      <PlusIcon className="text-sm" />
+      {label}
     </button>
   );
 }
@@ -1265,7 +1482,7 @@ function Remove({ label, onClick }: { label: string; onClick: () => void }) {
       onClick={onClick}
       className="px-2 py-1 text-muted transition-colors hover:text-danger"
     >
-      ✕
+      <CrossIcon className="text-sm" />
     </button>
   );
 }
