@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ScreenShell } from "@/components/screen-shell";
 import { getSystemBundle, listScreenshots } from "@/lib/store/kb";
+import { CheckIcon, PlayIcon } from "@/components/icons";
 
 /**
  * One system's setup sequence, then its knowledge base.
@@ -54,7 +55,8 @@ export default async function SystemSetupPage({
             sequence below. */}
         {profile ? (
           <Link href={`${base}/test`} className="btn btn-primary ml-auto">
-            ▶ Test the system
+            <PlayIcon className="text-sm" />
+            Test the system
           </Link>
         ) : null}
       </div>
@@ -258,7 +260,13 @@ function SetupStep({
             done ? "status-ok" : "bg-panel-raised text-muted"
           }`}
         >
-          {done ? "✓" : action && !blocked ? "▶" : number}
+          {done ? (
+            <CheckIcon />
+          ) : action && !blocked ? (
+            <PlayIcon className="text-[0.6rem]" />
+          ) : (
+            number
+          )}
         </span>
 
         <div className="min-w-0 flex-1">

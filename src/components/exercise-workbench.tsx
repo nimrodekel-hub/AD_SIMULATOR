@@ -10,6 +10,7 @@ import type {
   ExerciseInstance,
 } from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
+import { PlayIcon } from "@/components/icons";
 import { type JobView, formatWait, useBackgroundJob } from "@/lib/use-job";
 
 /**
@@ -300,7 +301,7 @@ export function ExerciseWorkbench({
               geometry, and being told so is the difference between a limit
               and a change that quietly did not happen. */}
           {(proposed.adjustments ?? []).length > 0 ? (
-            <div className="panel mb-4 border-l-2 border-l-warn p-3">
+            <div className="panel mb-4 !border-l-2 !border-l-warn p-3">
               <p className="label !mb-1">
                 What the system would not allow, and why
               </p>
@@ -334,7 +335,8 @@ export function ExerciseWorkbench({
             href={`/designer/systems/${saved.system_id}/test`}
             className="btn"
           >
-            ▶ Test the system with live targets
+            <PlayIcon className="text-sm" />
+            Test the system with live targets
           </Link>
           <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted">
             The test flies its own built-in engagement rather than this one, so
