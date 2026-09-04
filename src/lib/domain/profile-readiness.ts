@@ -1,6 +1,7 @@
 import type {
   EngagementDoctrine,
   IffState,
+  OperatorCommands,
   SensorCoverage,
   TrackClassification,
   TrackReadoutField,
@@ -45,6 +46,7 @@ export interface SimulationSpec {
   track_classifications: TrackClassification[];
   iff_states: IffState[];
   track_readout_fields: TrackReadoutField[];
+  operator_commands: OperatorCommands;
 }
 
 const RADAR = "What the radar sees";
@@ -52,6 +54,7 @@ const CLASSES = "What can appear on the display";
 const STATES = "Identification states";
 const COLUMNS = "What the operator reads for each track";
 const ENVELOPE = "What it can reach";
+const COMMANDS = "What the operator can do";
 
 const positive = (value: number | null | undefined): value is number =>
   typeof value === "number" && Number.isFinite(value) && value > 0;
@@ -173,6 +176,32 @@ export function simulationGaps(spec: SimulationSpec): Gap[] {
   }
   if (!positive(engagement.magazine_depth)) {
     say(ENVELOPE, "“Rounds available” is empty. Without a magazine, spending rounds costs nothing and efficiency is not trained.");
+  }
+
+  /* ---- The commands beyond the universal four --------------------- */
+  /* A command switched on without the figure it runs on is the same fault
+     this whole file exists for, one level down: the console would offer a
+     reload that takes no time, or a launcher list of one. The engine treats
+     such a command as absent rather than guessing, so the button simply does
+     not appear — and a designer who ticked the box and got nothing deserves
+     to be told why here rather than left to wonder. */
+  const commands = spec.operator_commands;
+
+  if (commands.reload && !positive(commands.reload_seconds)) {
+    say(COMMANDS, "Reload is switched on with no time against it. A reload that costs nothing teaches an operator that reloading is free, which is the opposite of the lesson — give it the seconds it really takes.");
+  }
+  if (commands.launchers && (commands.launcher_count ?? 0) < 2) {
+    say(COMMANDS, "Choosing a launcher is switched on with fewer than two launchers. With one there is nothing to choose, and the control is not shown.");
+  }
+  if (commands.tilt) {
+    if (commands.tilt_min_deg === null || commands.tilt_max_deg === null) {
+      say(COMMANDS, "Radar tilt is switched on without its limits. The operator has to be told how far up and down the array goes, and nothing below where it points is held.");
+    } else if (commands.tilt_min_deg >= commands.tilt_max_deg) {
+      say(COMMANDS, `The tilt limits run backwards: ${commands.tilt_min_deg}° is not below ${commands.tilt_max_deg}°.`);
+    }
+  }
+  if (commands.retype && spec.track_classifications.length < 2) {
+    say(COMMANDS, "Correcting the track type is switched on with fewer than two track classes. There is nothing to change it to.");
   }
 
   return gaps;
