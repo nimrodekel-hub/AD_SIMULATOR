@@ -1,6 +1,7 @@
 import "server-only";
 import {
   DebriefSchema,
+  type ClarificationRound,
   type Debrief,
   type ScenarioEntry,
   type RunResult,
@@ -40,6 +41,14 @@ Where what they did matches a documented common error, name that error and expla
 
 The tally — leakers, kills, fratricide, rounds spent, reaction time — was counted by the simulation. **Never contradict it, recompute it, or soften it.** Your job is to explain how those numbers came about and what to do differently.
 
+## What they came for
+
+You may be given what the trainee asked for, in their own words, and any clarifications they gave. The exercise was laid out to deliver it, so **open by answering it**: they asked to practise something, and the run either put them in that position or did not.
+
+One or two sentences, no more, and only where it is true — a trainee who asked to run short of interceptors and then spent two on the first track has been handed the thing they wanted and has still to learn it, and saying so is the most useful sentence in the debrief. Never praise a run for matching a request; the request decided what was set, not whether it went well.
+
+Where no request is given, say nothing about one.
+
 ## What actually matters, in order
 
 1. **Anything friendly engaged.** This fails the run outright, whatever else went well, and the debrief opens with it.
@@ -72,8 +81,22 @@ export async function generateDebrief(input: {
   exercise: ExerciseInstance;
   log: SimEvent[];
   result: RunResult;
+  /**
+   * What the trainee asked for, in their own words.
+   *
+   * The one thing the assessment was never told. A trainee who asked to
+   * practise running out of interceptors, and then did, was debriefed as
+   * though they had wandered in — and their instructor, reading it beside
+   * the request on the history page, had no way to tell whether the run had
+   * anything to do with what was wanted.
+   */
+  requested?: { text: string; clarifications: ClarificationRound[] };
 }): Promise<Debrief> {
-  const { scenario, exercise, log, result } = input;
+  const { scenario, exercise, log, result, requested } = input;
+  const wanted = requested?.text.trim() ?? "";
+  const rounds = (requested?.clarifications ?? []).filter(
+    (round) => round.answer.trim().length > 0,
+  );
 
   /* What the expert said about this scenario, flattened once so the model is
      not asked to correlate two lists by index — the old shape paired each
@@ -92,6 +115,15 @@ export async function generateDebrief(input: {
       {
         role: "user",
         content: [
+          wanted
+            ? `<what_they_asked_for>\n${wanted}\n</what_they_asked_for>${
+                rounds.length > 0
+                  ? `\n\n<clarifications>\n${rounds
+                      .map((round) => `Q: ${round.question}\nA: ${round.answer}`)
+                      .join("\n\n")}\n</clarifications>`
+                  : ""
+              }`
+            : "",
           `<evaluation_criteria>\n${JSON.stringify(scenario.evaluation_criteria, null, 2)}\n</evaluation_criteria>`,
           `<expert_doctrine>\n${JSON.stringify(doctrine, null, 2)}\n</expert_doctrine>`,
           `<success_criteria>\n${JSON.stringify(exercise.success_criteria, null, 2)}\n</success_criteria>`,
@@ -109,7 +141,9 @@ export async function generateDebrief(input: {
           `<run_log>\n${log.map((entry) => `T+${String(Math.floor(entry.t)).padStart(3, "0")} [${entry.kind}] ${entry.detail}`).join("\n")}\n</run_log>`,
           `<counted_result>\n${JSON.stringify(result, null, 2)}\n</counted_result>`,
           "Produce the debrief.",
-        ].join("\n\n"),
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
       },
     ],
     schema: DebriefSchema,
