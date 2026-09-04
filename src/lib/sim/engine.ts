@@ -11,6 +11,7 @@ import type {
 import { describeReply, meaningOfMode3 } from "../domain/iff-codes";
 import {
   add,
+  elevationDeg,
   polarToVec,
   scale,
   timeToImpact,
@@ -84,6 +85,15 @@ export interface SimConfig {
    */
   readouts: TrackReadoutField[];
 
+  /**
+   * The track classes the console can show, in the designer's order.
+   *
+   * Only read where the operator may retype a track: they are the choices
+   * offered, and offering a class the profile never declared would be the
+   * console inventing one.
+   */
+  classes: string[];
+
   /** Inside this radius a hostile has arrived, and the run has lost one. */
   defended_radius_km: number;
   /** Identification state name (lower-cased) to the tone the designer gave it. */
@@ -97,6 +107,26 @@ export interface SimConfig {
    * deliberate one to train.
    */
   iff: { enabled: boolean; mode_3: boolean; mode_1: boolean };
+
+  /**
+   * The commands this console offers beyond the four every system has.
+   *
+   * Selecting, identifying, firing and ceasing are universal and not
+   * declared. The rest are capabilities a profile switches on, and each is a
+   * rule here rather than a button in the console: the console can only draw
+   * what this says exists, so a system that cannot reload has no reload —
+   * not a button that quietly does nothing.
+   */
+  commands: {
+    /** The operator may correct the type the console shows for a track. */
+    retype: boolean;
+    /** Refilling a launcher, and what it costs in seconds of the run. */
+    reload: { enabled: boolean; seconds: number };
+    /** How many launchers there are. One when the command is not declared. */
+    launchers: number;
+    /** A fixed array whose elevation the operator sets during the run. */
+    tilt: { enabled: boolean; min_deg: number; max_deg: number };
+  };
 }
 
 /** The state a track is in, which is not the same as how it is identified. */
@@ -109,7 +139,19 @@ export type TrackState =
 
 export interface RuntimeTrack {
   designator: string;
+  /** What it really is. Scoring and the debrief read this. */
   classification: string;
+  /**
+   * The type the console currently shows, which the operator may have set.
+   *
+   * Separate from the truth for the same reason `displayed_iff` is: a system
+   * that can be wrong about what it is looking at, and an operator who can
+   * correct it, is a different exercise from one where the label is handed
+   * down. On a system without the retype command the two never diverge.
+   */
+  displayed_classification: string;
+  /** True once a person changed it, so nothing overrides them afterwards. */
+  typed_by_operator: boolean;
   altitude_ft: number;
   speed_kts: number;
   heading_deg: number;
@@ -153,6 +195,8 @@ export interface Engagement {
   id: number;
   target: string;
   interceptor: string;
+  /** Which launcher it came out of. Always 0 on a single-launcher system. */
+  launcher: number;
   launched_s: number;
   /** When the round arrives. */
   impact_s: number;
@@ -169,8 +213,20 @@ export interface SimState {
   tracks: RuntimeTrack[];
   engagements: Engagement[];
   events: SimEvent[];
-  /** Rounds fired so far. */
+  /**
+   * Rounds fired so far, for the whole run.
+   *
+   * The tally the score reads. On a system that can reload this can exceed
+   * the magazine, and should: firing twelve rounds from an eight-round
+   * magazine is exactly what the reload cost bought.
+   */
   spent: number;
+  /** Rounds still in each launcher. One entry when there is one launcher. */
+  launcher_rounds: number[];
+  /** When each launcher finishes reloading, or null if it is not. */
+  reloading_until: (number | null)[];
+  /** Where a fixed array is pointed, in degrees of elevation. */
+  tilt_deg: number;
   over: boolean;
   /** Counter for engagement ids, so React keys stay stable. */
   nextEngagementId: number;
@@ -273,11 +329,44 @@ export function simConfig(
         ? profile.track_readout_fields
         : DEFAULT_READOUTS,
 
+    classes: (profile?.track_classifications ?? [])
+      .map((entry) => entry.name.trim())
+      .filter((name) => name.length > 0),
+
     defended_radius_km: DEFAULT_DEFENDED_RADIUS_KM,
     iff: {
       enabled: profile?.iff_interrogation?.enabled === true,
       mode_3: profile?.iff_interrogation?.mode_3 !== false,
       mode_1: profile?.iff_interrogation?.mode_1 === true,
+    },
+
+    /* Every extra command is off unless the profile declares it, and a
+       command declared without the figure it runs on is treated as off
+       rather than as a guess — the profile screen asks for the figure and
+       refuses approval until it is there, so this only catches the profiles
+       approved before it did. */
+    commands: {
+      retype: profile?.operator_commands?.retype === true,
+      reload: {
+        enabled:
+          profile?.operator_commands?.reload === true &&
+          (profile.operator_commands.reload_seconds ?? 0) > 0,
+        seconds: profile?.operator_commands?.reload_seconds ?? 0,
+      },
+      launchers:
+        profile?.operator_commands?.launchers === true
+          ? Math.max(1, Math.round(profile.operator_commands.launcher_count ?? 1))
+          : 1,
+      tilt: {
+        enabled:
+          profile?.operator_commands?.tilt === true &&
+          profile.operator_commands.tilt_min_deg !== null &&
+          profile.operator_commands.tilt_max_deg !== null &&
+          profile.operator_commands.tilt_min_deg <
+            profile.operator_commands.tilt_max_deg,
+        min_deg: profile?.operator_commands?.tilt_min_deg ?? 0,
+        max_deg: profile?.operator_commands?.tilt_max_deg ?? 0,
+      },
     },
     tones: Object.fromEntries(
       (profile?.iff_states ?? []).map((state) => [
@@ -297,12 +386,32 @@ export function toneOf(config: SimConfig, iff: string): IffState["tone"] {
 /* Starting a run                                                      */
 /* ------------------------------------------------------------------ */
 
-export function createSim(tracks: LiveTrack[]): SimState {
+/**
+ * How the magazine is shared out between launchers.
+ *
+ * The total is what the profile declares and does not change: turning
+ * launcher choice on adds a decision, it does not add rounds. The remainder
+ * goes to the earlier launchers, so seven rounds across two launchers is four
+ * and three rather than three and three with one lost.
+ */
+export function splitMagazine(total: number, launchers: number): number[] {
+  const count = Math.max(1, launchers);
+  const each = Math.floor(total / count);
+  const spare = total % count;
+  return Array.from({ length: count }, (_, i) => each + (i < spare ? 1 : 0));
+}
+
+export function createSim(tracks: LiveTrack[], config: SimConfig): SimState {
   return {
     t: 0,
     tracks: tracks.map((track) => ({
       designator: track.designator,
       classification: track.classification,
+      // What the console shows, which is the truth unless the exercise
+      // deliberately made the system wrong about this one.
+      displayed_classification:
+        track.initial_classification?.trim() || track.classification,
+      typed_by_operator: false,
       altitude_ft: track.altitude_ft,
       speed_kts: track.speed_kts,
       heading_deg: track.heading_deg,
@@ -327,6 +436,15 @@ export function createSim(tracks: LiveTrack[]): SimState {
     engagements: [],
     events: [],
     spent: 0,
+    launcher_rounds: splitMagazine(config.magazine, config.commands.launchers),
+    reloading_until: Array.from(
+      { length: Math.max(1, config.commands.launchers) },
+      () => null,
+    ),
+    // A tilting array starts at its lowest setting, which is what an operator
+    // holding a surveillance watch would leave it at: the widest coverage of
+    // the approach, and the setting that misses nothing high by much.
+    tilt_deg: config.commands.tilt.enabled ? config.commands.tilt.min_deg : 0,
     over: false,
     nextEngagementId: 1,
   };
@@ -364,6 +482,15 @@ export function viewOf(
   track: RuntimeTrack,
   t: number,
   config: SimConfig,
+  /**
+   * Where the array is pointed right now, from `SimState.tilt_deg`.
+   *
+   * Required rather than optional on purpose. Visibility is decided here and
+   * nowhere else so the scope, the track list and the engagement rules can
+   * never disagree — and an argument that could be forgotten is exactly how
+   * they would start to. Systems without a tilting array ignore it.
+   */
+  tiltDeg: number,
 ): TrackView {
   const at = positionOf(track, t);
   const { bearing_deg, range_km } = vecToPolar(at);
@@ -377,13 +504,21 @@ export function viewOf(
     (track.altitude_ft >= config.altitude_ft.min &&
       track.altitude_ft <= config.altitude_ft.max);
 
+  /* A fixed array holds nothing under where it is pointed. That is the whole
+     cost of the tilt decision: raising it to catch something high drops the
+     low approach off the scope, and a track that is not held cannot be
+     engaged either — the engagement rules read this same flag. */
+  const aboveTilt =
+    !config.commands.tilt.enabled ||
+    elevationDeg(track.altitude_ft, range_km) >= tiltDeg;
+
   return {
     track,
     at,
     bearing_deg,
     range_km,
     tti_s: timeToImpact(at, track.velocity, config.defended_radius_km),
-    visible: airborne && inRange && inArc && inBand,
+    visible: airborne && inRange && inArc && inBand && aboveTilt,
   };
 }
 
@@ -437,11 +572,25 @@ export function probabilityOfKill(
 /* Commands                                                            */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Everything the operator can ask the system to do.
+ *
+ * The first four exist on every system. The rest are declared in the profile
+ * and refused here when they are not — the console does not offer them, and
+ * the engine says no rather than trusting that, because the rule belongs with
+ * the rules and a stale tab is not an excuse.
+ */
 export type Command =
   | { kind: "classify"; designator: string; to: string }
   | { kind: "interrogate"; designator: string }
-  | { kind: "engage"; designator: string; interceptor: string }
-  | { kind: "cease"; designator: string };
+  | { kind: "engage"; designator: string; interceptor: string; launcher?: number }
+  | { kind: "cease"; designator: string }
+  /** Correct the type the console shows for a track. */
+  | { kind: "retype"; designator: string; to: string }
+  /** Refill one launcher, at the cost of the time it takes. */
+  | { kind: "reload"; launcher: number }
+  /** Point a fixed array at a different elevation. */
+  | { kind: "tilt"; to_deg: number };
 
 /** Why a command was refused, phrased for the operator rather than the log. */
 export interface Refusal {
@@ -470,10 +619,51 @@ export function command(
   config: SimConfig,
   random: () => number,
 ): SimState {
+  /* ---- The commands that are about the system, not a track ------- */
+  if (cmd.kind === "reload") return reload(state, cmd.launcher, config);
+  if (cmd.kind === "tilt") return tilt(state, cmd.to_deg, config);
+
   const track = state.tracks.find((x) => x.designator === cmd.designator);
   if (!track) return state;
 
-  const view = viewOf(track, state.t, config);
+  const view = viewOf(track, state.t, config, state.tilt_deg);
+
+  if (cmd.kind === "retype") {
+    if (track.state !== "airborne") return state;
+    if (!config.commands.retype) {
+      return {
+        ...state,
+        events: [
+          ...state.events,
+          event(
+            state,
+            "refused",
+            track.designator,
+            "On this system the operator does not set the track type.",
+          ),
+        ],
+      };
+    }
+    if (cmd.to === track.displayed_classification) return state;
+
+    return {
+      ...state,
+      tracks: replace(state.tracks, track.designator, {
+        ...track,
+        displayed_classification: cmd.to,
+        typed_by_operator: true,
+      }),
+      events: [
+        ...state.events,
+        event(
+          state,
+          "retyped",
+          track.designator,
+          `Operator retyped ${track.designator} from ${track.displayed_classification} to ${cmd.to}.`,
+        ),
+      ],
+    };
+  }
 
   if (cmd.kind === "classify") {
     if (track.state !== "airborne") return state;
@@ -576,7 +766,18 @@ export function command(
     config.interceptors.find((r) => r.name === cmd.interceptor) ??
     config.interceptors[0];
 
-  const refusal = refuseEngagement(state, track, view, round, config);
+  /* Which launcher this comes out of. One launcher unless the profile
+     declares more, and out of range means the first — a console that cannot
+     choose still has to fire from somewhere. */
+  const launcher =
+    config.commands.launchers > 1 &&
+    typeof cmd.launcher === "number" &&
+    cmd.launcher >= 0 &&
+    cmd.launcher < config.commands.launchers
+      ? cmd.launcher
+      : 0;
+
+  const refusal = refuseEngagement(state, track, view, round, config, launcher);
   if (refusal) {
     return {
       ...state,
@@ -614,6 +815,9 @@ export function command(
   return {
     ...state,
     spent: state.spent + 1,
+    launcher_rounds: state.launcher_rounds.map((left, index) =>
+      index === launcher ? left - 1 : left,
+    ),
     nextEngagementId: state.nextEngagementId + 1,
     engagements: [
       ...state.engagements,
@@ -621,6 +825,7 @@ export function command(
         id: state.nextEngagementId,
         target: track.designator,
         interceptor: round.name,
+        launcher,
         launched_s: state.t,
         impact_s: state.t + flight,
         will_hit: random() < pk,
@@ -634,10 +839,119 @@ export function command(
         state,
         "launched",
         track.designator,
-        `${round.name} launched at ${track.designator} (${view.range_km.toFixed(0)} km, intercept in ${flight.toFixed(0)} s, Pk ${(pk * 100).toFixed(0)}%).`,
+        `${round.name} launched at ${track.designator}${
+          config.commands.launchers > 1 ? ` from launcher ${launcher + 1}` : ""
+        } (${view.range_km.toFixed(0)} km, intercept in ${flight.toFixed(0)} s, Pk ${(pk * 100).toFixed(0)}%).`,
       ),
     ],
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* The commands a profile has to declare before they exist             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Refilling one launcher, at the cost of the time it takes.
+ *
+ * The clock does not stop, and that is the entire lesson: a reload is not a
+ * button that undoes scarcity, it is a decision to spend seconds that the
+ * next track is using to close. A launcher with a round in the air cannot be
+ * reloaded — the rail is committed until the round resolves.
+ */
+function reload(state: SimState, launcher: number, config: SimConfig): SimState {
+  const say = (detail: string): SimState => ({
+    ...state,
+    events: [...state.events, event(state, "refused", "", detail)],
+  });
+
+  if (!config.commands.reload.enabled) {
+    return say("This system cannot be reloaded during a run.");
+  }
+  if (launcher < 0 || launcher >= state.launcher_rounds.length) return state;
+
+  const named =
+    config.commands.launchers > 1 ? `Launcher ${launcher + 1}` : "The launcher";
+
+  if (state.reloading_until[launcher] !== null) {
+    return say(`${named} is already reloading.`);
+  }
+
+  const full = splitMagazine(config.magazine, config.commands.launchers)[launcher];
+  if (state.launcher_rounds[launcher] >= full) {
+    return say(`${named} is already full.`);
+  }
+  if (
+    state.engagements.some((e) => !e.resolved && e.launcher === launcher)
+  ) {
+    return say(`${named} has a round in the air and cannot be reloaded yet.`);
+  }
+
+  const done = state.t + config.commands.reload.seconds;
+  return {
+    ...state,
+    reloading_until: state.reloading_until.map((until, index) =>
+      index === launcher ? done : until,
+    ),
+    events: [
+      ...state.events,
+      event(
+        state,
+        "reloaded",
+        "",
+        `${named} reloading — ${config.commands.reload.seconds} s, and the clock does not stop.`,
+      ),
+    ],
+  };
+}
+
+/**
+ * Pointing a fixed array somewhere else in elevation.
+ *
+ * Instant, because slewing an array is quick next to everything else in a
+ * run — and costly anyway, because whatever is now under the beam drops off
+ * the scope and cannot be engaged while it is there.
+ */
+function tilt(state: SimState, toDeg: number, config: SimConfig): SimState {
+  if (!config.commands.tilt.enabled) {
+    return {
+      ...state,
+      events: [
+        ...state.events,
+        event(state, "refused", "", "This radar's elevation is not adjustable."),
+      ],
+    };
+  }
+
+  const next = clamp(
+    Math.round(toDeg),
+    config.commands.tilt.min_deg,
+    config.commands.tilt.max_deg,
+  );
+  if (next === state.tilt_deg) return state;
+
+  return {
+    ...state,
+    tilt_deg: next,
+    events: [
+      ...state.events,
+      event(
+        state,
+        "tilted",
+        "",
+        `Radar tilt set to ${next}°${
+          next > state.tilt_deg
+            ? " — anything lower is now under the beam."
+            : " — lower cover restored."
+        }`,
+      ),
+    ],
+  };
+}
+
+function clamp(value: number, low: number, high: number): number {
+  if (!Number.isFinite(value)) return low;
+  return Math.min(high, Math.max(low, value));
 }
 
 /** Every reason the system would not take the shot, in the order it checks. */
@@ -647,15 +961,30 @@ function refuseEngagement(
   view: TrackView,
   round: InterceptorSpec,
   config: SimConfig,
+  launcher: number,
 ): Refusal | null {
+  const named =
+    config.commands.launchers > 1 ? `launcher ${launcher + 1}` : "the launcher";
+
   if (track.state !== "airborne") {
     return { reason: `${track.designator} is no longer a live track.` };
   }
   if (!view.visible) {
-    return { reason: `${track.designator} is not held on radar.` };
+    return {
+      reason: config.commands.tilt.enabled
+        ? `${track.designator} is not held on radar — check the tilt.`
+        : `${track.designator} is not held on radar.`,
+    };
   }
-  if (state.spent >= config.magazine) {
-    return { reason: "no rounds remaining." };
+  if (state.reloading_until[launcher] !== null) {
+    return { reason: `${named} is reloading.` };
+  }
+  if ((state.launcher_rounds[launcher] ?? 0) <= 0) {
+    return {
+      reason: config.commands.reload.enabled
+        ? `no rounds left on ${named} — reload it.`
+        : `no rounds remaining on ${named}.`,
+    };
   }
 
   const inFlight = state.engagements.filter((e) => !e.resolved).length;
@@ -713,10 +1042,26 @@ export function step(state: SimState, dt: number, config: SimConfig): SimState {
     return track;
   });
 
+  /* ---- Reloads finishing ---------------------------------------- */
+  const full = splitMagazine(config.magazine, config.commands.launchers);
+  const launcher_rounds = [...state.launcher_rounds];
+  const reloading_until = state.reloading_until.map((until, index) => {
+    if (until === null || t < until) return until;
+    launcher_rounds[index] = full[index];
+    at(
+      "reloaded",
+      "",
+      config.commands.launchers > 1
+        ? `Launcher ${index + 1} reloaded — ${full[index]} rounds.`
+        : `Reloaded — ${full[index]} rounds.`,
+    );
+    return null;
+  });
+
   /* ---- Detection and self-resolution ---------------------------- */
   tracks = tracks.map((track) => {
     if (track.state !== "airborne") return track;
-    const view = viewOf(track, t, config);
+    const view = viewOf(track, t, config, state.tilt_deg);
     let next = track;
 
     if (view.visible && track.first_seen_s === null) {
@@ -779,7 +1124,7 @@ export function step(state: SimState, dt: number, config: SimConfig): SimState {
   /* ---- Arrivals and departures ---------------------------------- */
   tracks = tracks.map((track) => {
     if (track.state !== "airborne") return track;
-    const view = viewOf(track, t, config);
+    const view = viewOf(track, t, config, state.tilt_deg);
 
     if (view.range_km <= config.defended_radius_km) {
       const hostile = toneOf(config, track.truth_iff) === "hostile";
@@ -806,6 +1151,8 @@ export function step(state: SimState, dt: number, config: SimConfig): SimState {
     t,
     tracks,
     engagements,
+    launcher_rounds,
+    reloading_until,
     events: events.length > 0 ? [...state.events, ...events] : state.events,
   };
 }
