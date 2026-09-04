@@ -184,13 +184,15 @@ export function TrainingRequest({
       trainee_id: traineeId,
       system_id: systemId,
       scenario_id: phase.scenario.id,
-      // The record of why this run happened. A list pick has no request of its
-      // own, and leaving it blank would make the debrief and the instructor's
-      // history read as though nobody asked for anything.
+      /* What the trainee actually asked for, in their words, whichever way
+         they got here. Picking from the list used to overwrite this with
+         "Chose X from the list", which threw away anything they had written
+         — and since these words now shape the exercise itself, throwing them
+         away was throwing away the run they asked for. Only when they have
+         written nothing does the record fall back to naming the drill, so a
+         debrief never reads as though nobody asked for anything. */
       requested_text:
-        phase.source === "list"
-          ? `Chose “${phase.scenario.title}” from the list.`
-          : request,
+        request.trim() || `Chose “${phase.scenario.title}” from the list.`,
       clarifications,
       difficulty: phase.difficulty,
     });
@@ -227,12 +229,31 @@ export function TrainingRequest({
       <div className="panel mt-4">
         <div className="panel-header">Training request</div>
         <div className="p-4">
+          {/* Never locked except while something is actually in flight.
+              It used to be disabled the moment the screen left the "asking"
+              phase, which meant that picking a drill from the list below —
+              the easiest thing on the page — silently deadened the box above
+              it with nothing to say why. What is written here now travels
+              into the exercise itself, so taking it away was taking away the
+              run the trainee asked for. */}
           <textarea
             className="field min-h-28 resize-y"
             placeholder="What do you want to practise? Say it however you would say it out loud."
             value={request}
-            disabled={phase.kind !== "asking" || busy}
-            onChange={(event) => setRequest(event.target.value)}
+            disabled={busy || building}
+            onChange={(event) => {
+              setRequest(event.target.value);
+              /* Answering a clarifying question and then rewriting the
+                 request are two different things. The rewrite wins: the
+                 rounds were about the old wording. A screen that has just
+                 reported nothing to match against comes back the same way,
+                 rather than being a state with no way out of it. */
+              if (phase.kind === "clarifying" || phase.kind === "no_scenarios") {
+                setClarifications([]);
+                setAnswer("");
+                setPhase({ kind: "asking" });
+              }
+            }}
           />
 
           {phase.kind === "asking" ? (
@@ -258,7 +279,17 @@ export function TrainingRequest({
                 {busy ? "Matching…" : "Find my training"}
               </button>
             </>
-          ) : null}
+          ) : (
+            <p className="mt-3 text-xs leading-relaxed text-muted">
+              {phase.kind === "matched"
+                ? `Still yours to change. Whatever stands here when you begin is what the exercise is laid out to give you, inside ${
+                    phase.source === "list"
+                      ? "the drill you picked"
+                      : "the drill it matched"
+                  }.`
+                : "Rewrite this at any point to start again."}
+            </p>
+          )}
         </div>
       </div>
 
