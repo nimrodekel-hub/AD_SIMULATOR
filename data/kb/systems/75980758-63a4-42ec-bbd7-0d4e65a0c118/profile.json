@@ -12,7 +12,8 @@
         "min": 1000,
         "max": 40000
       },
-      "behaviour_note": "Closes quickly, so the window between detection at 150 km and the 70 km long-range engagement ring is short; may manoeuvre in heading and altitude, which changes the displayed kill envelope."
+      "behaviour_note": "Closes quickly, so the window between detection at 150 km and the 70 km long-range engagement ring is short; may manoeuvre in heading and altitude, which changes the displayed kill envelope.",
+      "transponder": "none"
     },
     {
       "name": "Helicopter",
@@ -25,7 +26,8 @@
         "min": 100,
         "max": 10000
       },
-      "behaviour_note": "Often flies low, so it may sit under the radar tilt and be undetectable or un-engageable until it climbs or the operator adjusts the tilt."
+      "behaviour_note": "Often flies low, so it may sit under the radar tilt and be undetectable or un-engageable until it climbs or the operator adjusts the tilt.",
+      "transponder": "none"
     },
     {
       "name": "UAV",
@@ -38,7 +40,22 @@
         "min": 500,
         "max": 25000
       },
-      "behaviour_note": "Detected only inside 50 km, which places it close to or inside the medium- and short-range engagement rings from first detection; steady flight profiles are typical."
+      "behaviour_note": "Detected only inside 50 km, which places it close to or inside the medium- and short-range engagement rings from first detection; steady flight profiles are typical.",
+      "transponder": "none"
+    },
+    {
+      "name": "Civil",
+      "description": "Civilan air traffic",
+      "typical_speed_kts": {
+        "min": 350,
+        "max": 420
+      },
+      "typical_altitude_ft": {
+        "min": 25000,
+        "max": 35000
+      },
+      "behaviour_note": "Detect very far (200 km) Fly in strait lines in any directions not only toward the battery",
+      "transponder": "none"
     }
   ],
   "iff_states": [
@@ -107,8 +124,37 @@
       "label": "PK",
       "unit": "%",
       "description": "Calculated probability of kill for the selected track and proposed interceptor."
+    },
+    {
+      "label": "IFF",
+      "unit": "",
+      "description": "Transponder reply — the Mode 3 code, or that nothing came back. Blank until interrogated."
     }
   ],
+  "iff_interrogation": {
+    "enabled": true,
+    "mode_3": true,
+    "mode_1": true,
+    "note": "every airplane operate IFF can be read. military olso operate mode 1. IFF can be read for 200 km."
+  },
+  "operator_commands": {
+    "retype": false,
+    "reload": false,
+    "reload_seconds": null,
+    "launchers": false,
+    "launcher_count": null,
+    "tilt": false,
+    "tilt_min_deg": null,
+    "tilt_max_deg": null,
+    "note": ""
+  },
+  "sensor": {
+    "max_range_km": 150,
+    "min_range_km": null,
+    "azimuth_coverage_deg": 120,
+    "altitude_ft": null,
+    "note": "Fixed 120° sector; the array does not rotate, and the operator can change its tilt. Detection range is per target class in the designer's own answers — 150 km jets, 100 km helicopters, 50 km UAVs — and the simulation holds one figure, so 150 km is recorded here and a UAV is therefore detected earlier in a run than it would be in reality. Targets cannot be tracked or intercepted below the radar tilt, which is not modelled either."
+  },
   "engagement": {
     "min_range_km": 5,
     "max_range_km": 70,
@@ -120,19 +166,22 @@
         "name": "long range",
         "min_range_km": 5,
         "max_range_km": 70,
-        "speed_kts": 0
+        "speed_kts": 1000,
+        "magazine_max": 1
       },
       {
         "name": "medium range",
         "min_range_km": 5,
         "max_range_km": 50,
-        "speed_kts": 0
+        "speed_kts": 800,
+        "magazine_max": 2
       },
       {
         "name": "short range",
         "min_range_km": 5,
         "max_range_km": 20,
-        "speed_kts": 0
+        "speed_kts": 600,
+        "magazine_max": 2
       }
     ],
     "max_simultaneous": 2,
@@ -178,41 +227,14 @@
       "answer": "Our air defence system defense against air breathing enemy targets such as jets, helicopters, uav."
     },
     {
-      "question": "What kinds of tracks appear on the display, and what tells them apart?",
-      "answer": "Altitude of the targets, speed, call sign for our forces and track number for enemies, type of target "
-    },
-    {
-      "question": "What identification states exist, and what puts a track into each one?",
-      "answer": "Our aerial forces - blue. Enemy forces - red.\nDefeated targets - blink and disappear.\nRocket launches, to what target.\nType of rocket launched.\n"
-    },
-    {
-      "question": "What does the operator read for each track?",
-      "answer": "Track number, speed , altitude , type. Enemy or friend. Fire status(ready to shoot, rocket launched, miss…)"
-    },
-    {
       "question": "What can the operator actually do, and in what order?",
       "answer": "Select a track, see the target full information on the screen side, can change the type (jet, uav..). Can change the classification (enemy, friend, our forces). Can change the command (seas fire, fire). Can pick the right rocked type to shoot. Can choose from what launcher to shoot. \nGet information after selecting of the time to intercept and the probability of kill.\nCan calculate the track of target only inside the radar envelope "
     },
     {
       "question": "What does the system do on its own, without the operator?",
       "answer": "Keep tracking the targets, shows the targets information, calculate the pk and the time of flight for the rockets, recommend the relevant type of rocket and relevant launcher. Stop tracking if it is a good kill. Report hit or kill. Shows the killing envelope on the specific target (calculating by altitude and heading of the target "
-    },
-    {
-      "question": "How far can it see, how far can it shoot, and how many at once?",
-      "answer": ""
-    },
-    {
-      "question": "Who may authorise an engagement, and when does that change?",
-      "answer": "Only two engagements on the same time (2 rockets on air)- system limitations. \n"
     }
   ],
   "created_at": "2026-08-29T13:49:43.379Z",
-  "approved_at": "2026-08-29T18:34:23.824Z",
-  "sensor": {
-    "max_range_km": 150,
-    "min_range_km": null,
-    "azimuth_coverage_deg": 120,
-    "altitude_ft": null,
-    "note": "Fixed 120° sector; the array does not rotate, and the operator can change its tilt. Detection range is per target class in the designer's own answers — 150 km jets, 100 km helicopters, 50 km UAVs — and the simulation holds one figure, so 150 km is recorded here and a UAV is therefore detected earlier in a run than it would be in reality. Targets cannot be tracked or intercepted below the radar tilt, which is not modelled either."
-  }
+  "approved_at": "2026-09-06T18:15:56.952Z"
 }
