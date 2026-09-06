@@ -5,6 +5,7 @@ import { ScreenShell } from "@/components/screen-shell";
 import { getScenario, getSystem, getSystemProfile } from "@/lib/store/kb";
 import { asReported, readReviseJob } from "@/lib/store/exercise-revise-job";
 import { getSavedExercise } from "@/lib/store/exercises";
+import { hostileCount, magazineCeiling } from "@/lib/sim/engine";
 
 /**
  * One exercise, and the means to correct it.
@@ -60,6 +61,8 @@ export default async function ExercisePage({
         saved={saved}
         canRevise={scenario !== null}
         profileApproved={profile?.approved === true}
+        stock={magazineCeiling(profile)}
+        hostiles={hostileCount(profile, saved.exercise_instance.live_tracks)}
         initialJob={asReported(job)}
       />
     </ScreenShell>
