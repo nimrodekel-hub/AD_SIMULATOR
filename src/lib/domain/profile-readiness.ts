@@ -209,13 +209,26 @@ export function simulationGaps(spec: SimulationSpec): Gap[] {
     if (!positive(round.speed_kts)) {
       say(ENVELOPE, `interceptors.${index}.speed_kts`, `“${name}” has no speed. Speed is the time of flight — how much earlier than impact the decision has to be made.`);
     }
+    /* Stock is per round, and it is what makes choosing one a decision. With
+       no figure the run has none of this round at all, so the operator can
+       see it on the console and never fire it. */
+    if (!positive(round.magazine_max)) {
+      say(ENVELOPE, `interceptors.${index}.magazine_max`, `“${name}” has no magazine. Each round carries its own stock — without a number this system holds none of them, and an exercise cannot issue any.`);
+    }
   });
 
   if (!positive(engagement.max_simultaneous)) {
     say(ENVELOPE, "engagement.max_simultaneous", "“Interceptors in the air at once” is empty. It is the limit that makes a third launch a refusal instead of a shrug.");
   }
-  if (!positive(engagement.magazine_depth)) {
-    say(ENVELOPE, "engagement.magazine_depth", "“Rounds available” is empty. Without a magazine, spending rounds costs nothing and efficiency is not trained.");
+  /* The old single pool is not asked for any more — stock is per round. A
+     profile that still has only the pool keeps running on it, and is told so
+     here rather than left to wonder where its rounds came from. */
+  if (
+    engagement.interceptors.length > 0 &&
+    engagement.interceptors.every((round) => !positive(round.magazine_max)) &&
+    positive(engagement.magazine_depth)
+  ) {
+    say(ENVELOPE, "interceptors", `This profile still carries one pool of ${engagement.magazine_depth} rounds from before each round had its own. The run shares that total out across the ${engagement.interceptors.length} rounds declared; give each one its own magazine to say what the system really holds.`);
   }
 
   /* ---- The commands beyond the universal four --------------------- */
