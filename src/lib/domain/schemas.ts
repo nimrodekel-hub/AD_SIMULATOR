@@ -358,6 +358,21 @@ export const InterceptorTypeSchema = z.object({
   max_range_km: z.number(),
   /** Average speed over the flight, in knots. Sets the time of flight. */
   speed_kts: z.number(),
+  /**
+   * The most of this round the system can carry, as a matter of hardware.
+   *
+   * Stock is per round, not one pool. A battery does not hold "eight
+   * interceptors" — it holds four long-range and four short-range, and the
+   * operator who spends both long-range rounds early cannot reach the next
+   * high mover however many short-range rounds are left. A single counter
+   * made choosing a round free, which is the opposite of the decision the
+   * several rounds exist to create.
+   *
+   * This is the ceiling the system has, asked once in the profile. How many
+   * a given run actually starts with is the exercise's to say, and never more
+   * than this.
+   */
+  magazine_max: z.number().int().nullable().default(null),
 });
 export type InterceptorType = z.infer<typeof InterceptorTypeSchema>;
 
@@ -384,7 +399,16 @@ export const EngagementDoctrineSchema = z.object({
   interceptors: z.array(InterceptorTypeSchema).default([]),
   /** Interceptors that may be in the air at the same time. */
   max_simultaneous: z.number().int().nullable().default(null),
-  /** Rounds available for the whole run. */
+  /**
+   * The old single pool, kept only so records written before rounds had
+   * their own magazines still load and still run.
+   *
+   * Stock is declared per interceptor now (`InterceptorType.magazine_max`).
+   * Where a record has none of those and does have this, the engine shares
+   * this total out across the declared rounds rather than inventing a
+   * figure — documented in `docs/interceptor-stock.md`. Nothing asks for it
+   * any more, and a profile that still relies on it is told so.
+   */
   magazine_depth: z.number().int().nullable().default(null),
 });
 export type EngagementDoctrine = z.infer<typeof EngagementDoctrineSchema>;
@@ -687,6 +711,16 @@ export const RunResultSchema = z.object({
   friendly_engaged: z.number().int(),
   unknown_engaged: z.number().int(),
   interceptors_spent: z.number().int(),
+  /**
+   * Rounds spent, per round type. Keyed by `InterceptorType.name`.
+   *
+   * The total above cannot answer the question a debrief most wants to ask of
+   * a system with several rounds: not "did they spend too many" but "did they
+   * spend the wrong ones". Four rounds against four hostiles is efficient
+   * until it turns out all four were the long-range round and the last track
+   * came in high. Empty on runs recorded before rounds had their own stock.
+   */
+  spent_by: z.record(z.string(), z.number().int()).default({}),
   /** Seconds from a hostile being resolvable to the operator engaging it. */
   mean_reaction_s: z.number().nullable(),
   met_criteria: z.boolean(),
@@ -715,6 +749,32 @@ export const ExerciseInstanceSchema = z.object({
    * direction, and where it faces is part of the problem being set.
    */
   radar_boresight_deg: z.number().default(0),
+
+  /**
+   * How many of each round the trainee starts this run with.
+   *
+   * Separate from the profile's `magazine_max` because they answer different
+   * questions. The profile says what the system *can* carry — hardware, asked
+   * once. This says what it *is* carrying today, which is a training choice
+   * and the sharpest one available: four hostiles and three long-range rounds
+   * is a different exercise from the same four with a full load, using the
+   * same scenario and the same system.
+   *
+   * Empty means a full load of everything the profile declares. Names match
+   * the profile's rounds; anything else is dropped, and anything above the
+   * declared maximum is clamped, because a run cannot issue rounds the
+   * system cannot hold.
+   */
+  interceptor_loadout: z
+    .array(
+      z.object({
+        /** Matches `InterceptorType.name`. */
+        name: z.string(),
+        rounds: z.number().int(),
+      }),
+    )
+    .default([]),
+
   success_criteria: SuccessCriteriaSchema.default({
     max_leakers: 0,
     max_interceptors_spent: 99,

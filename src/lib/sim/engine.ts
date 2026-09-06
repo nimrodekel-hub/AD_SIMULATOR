@@ -1,5 +1,6 @@
 import type {
   IffState,
+  InterceptorType,
   LiveTrack,
   RunResult,
   ExerciseInstance,
@@ -52,6 +53,22 @@ export interface InterceptorSpec {
   min_range_km: number;
   max_range_km: number;
   speed_kts: number;
+  /**
+   * The most of this round the system can hold. Hardware, from the profile.
+   *
+   * Only a ceiling — it is what a reload fills back up to and what a run's
+   * loadout is clamped against, never the number in the air picture.
+   */
+  magazine_max: number;
+  /**
+   * How many this run starts with, which is the number that matters.
+   *
+   * Stock is per round because that is what makes choosing one a decision.
+   * With a single pool, spending a long-range round cost exactly what
+   * spending a short-range round cost, and the several rounds the profile
+   * declares were three names for the same ammunition.
+   */
+  loaded: number;
 }
 
 export interface SimConfig {
@@ -70,7 +87,14 @@ export interface SimConfig {
   interceptors: InterceptorSpec[];
   /** How many may be in the air at once. */
   max_simultaneous: number;
-  /** How many rounds exist for the whole run. */
+  /**
+   * Every round this run starts with, of every type, added up.
+   *
+   * Derived from the per-round loadouts rather than declared: it is what the
+   * overall meter reads and what the efficiency criterion is clamped against,
+   * and having it be a separate figure would let the total disagree with the
+   * counters that make it up.
+   */
   magazine: number;
 
   /**
@@ -221,8 +245,22 @@ export interface SimState {
    * magazine is exactly what the reload cost bought.
    */
   spent: number;
-  /** Rounds still in each launcher. One entry when there is one launcher. */
-  launcher_rounds: number[];
+  /**
+   * What has been fired, per round.
+   *
+   * The tally the console shows beside each interceptor and the debrief reads
+   * to say which round ran out. `spent` stays the total of these.
+   */
+  spent_by: Record<string, number>;
+  /**
+   * What is left, per round and then per launcher.
+   *
+   * Two dimensions because both decisions are real where a profile declares
+   * both: which round to spend, and which rail to spend it from. A launcher
+   * holds a share of every round, so `rounds["long range"][1]` is the
+   * long-range stock on launcher 2. One launcher means one entry each.
+   */
+  rounds: Record<string, number[]>;
   /** When each launcher finishes reloading, or null if it is not. */
   reloading_until: (number | null)[];
   /** Where a fixed array is pointed, in degrees of elevation. */
@@ -276,6 +314,68 @@ export function detectionRangeKm(profile: SystemProfile | null): number {
 }
 
 /**
+ * The most of each round the system can hold, in the order it declares them.
+ *
+ * Its own function because two different callers need the same answer and must
+ * not disagree about it: the engine, working out what a run starts with, and
+ * whoever writes an exercise, who may not issue more of a round than the
+ * system can carry. A profile that predates per-round stock has one pool and
+ * no per-round figures; there the old total is shared across the declared
+ * rounds rather than invented, and the profile screen says so.
+ */
+export function magazineCeiling(
+  profile: SystemProfile | null,
+): { name: string; rounds: number }[] {
+  return declaredRounds(profile).map((round) => ({
+    name: round.name,
+    rounds: round.magazine_max,
+  }));
+}
+
+/** Every declared round with its ceiling resolved. Shared by both callers. */
+function declaredRounds(profile: SystemProfile | null): (InterceptorType & {
+  magazine_max: number;
+})[] {
+  const engagement = profile?.engagement;
+  const maxIntercept = engagement?.max_range_km || 70;
+  const minIntercept = engagement?.min_range_km ?? 0;
+
+  const declared: InterceptorType[] =
+    engagement?.interceptors && engagement.interceptors.length > 0
+      ? engagement.interceptors
+      : [
+          {
+            name: "interceptor",
+            min_range_km: minIntercept,
+            max_range_km: maxIntercept,
+            speed_kts: DEFAULT_INTERCEPTOR_SPEED_KTS,
+            magazine_max: null,
+          },
+        ];
+
+  /* How much of each round the system can hold.
+     Declared per round now. A record written before that shared one pool, so
+     where none of the rounds carry a maximum and the old total does, it is
+     shared out across them rather than invented — the same split a magazine
+     takes across launchers, for the same reason: the remainder goes
+     somewhere rather than being lost. The profile screen tells a designer
+     still relying on this that it is a fallback. */
+  const stated = declared.map((round) => round.magazine_max ?? 0);
+  const anyStated = stated.some((value) => value > 0);
+  const legacy = splitMagazine(
+    engagement?.magazine_depth && engagement.magazine_depth > 0
+      ? engagement.magazine_depth
+      : DEFAULT_MAGAZINE,
+    declared.length,
+  );
+
+  return declared.map((round, index) => ({
+    ...round,
+    magazine_max: anyStated ? stated[index] : legacy[index],
+  }));
+}
+
+/**
  * Turns an approved profile into the numbers the engine runs on.
  *
  * Every fallback here is a compromise, and each is chosen so that a profile
@@ -293,25 +393,32 @@ export function simConfig(
   const engagement = profile?.engagement;
   const sensor = profile?.sensor;
 
-  const maxIntercept = engagement?.max_range_km || 70;
-  const minIntercept = engagement?.min_range_km ?? 0;
+  const declared = declaredRounds(profile);
 
-  const interceptors: InterceptorSpec[] =
-    engagement?.interceptors && engagement.interceptors.length > 0
-      ? engagement.interceptors.map((round) => ({
-          name: round.name,
-          min_range_km: round.min_range_km,
-          max_range_km: round.max_range_km,
-          speed_kts: round.speed_kts || DEFAULT_INTERCEPTOR_SPEED_KTS,
-        }))
-      : [
-          {
-            name: "interceptor",
-            min_range_km: minIntercept,
-            max_range_km: maxIntercept,
-            speed_kts: DEFAULT_INTERCEPTOR_SPEED_KTS,
-          },
-        ];
+  /* What this run actually issues, which is the exercise's call and never
+     more than the system can hold. Silence means a full load. */
+  const asked = new Map(
+    (exercise.interceptor_loadout ?? []).map((entry) => [
+      entry.name.trim().toLowerCase(),
+      entry.rounds,
+    ]),
+  );
+
+  const interceptors: InterceptorSpec[] = declared.map((round) => {
+    const magazine_max = round.magazine_max;
+    const wanted = asked.get(round.name.trim().toLowerCase());
+    return {
+      name: round.name,
+      min_range_km: round.min_range_km,
+      max_range_km: round.max_range_km,
+      speed_kts: round.speed_kts || DEFAULT_INTERCEPTOR_SPEED_KTS,
+      magazine_max,
+      loaded:
+        typeof wanted === "number"
+          ? Math.max(0, Math.min(magazine_max, Math.round(wanted)))
+          : magazine_max,
+    };
+  });
 
   return {
     detection_range_km: detectionRangeKm(profile),
@@ -322,7 +429,7 @@ export function simConfig(
 
     interceptors,
     max_simultaneous: engagement?.max_simultaneous ?? DEFAULT_SIMULTANEOUS,
-    magazine: engagement?.magazine_depth ?? DEFAULT_MAGAZINE,
+    magazine: interceptors.reduce((total, round) => total + round.loaded, 0),
 
     readouts:
       profile?.track_readout_fields && profile.track_readout_fields.length > 0
@@ -401,6 +508,62 @@ export function splitMagazine(total: number, launchers: number): number[] {
   return Array.from({ length: count }, (_, i) => each + (i < spare ? 1 : 0));
 }
 
+/**
+ * How many of an exercise's tracks are really hostile.
+ *
+ * The figure a loadout is judged against: six rounds is generous against two
+ * threats and thin against five, and neither number means anything alone.
+ * Truth rather than what the console shows at first — a track that resolves
+ * hostile at T+90 still has to be shot.
+ *
+ * Read off the profile's own IFF states, because "hostile" is a word each
+ * system chooses for itself. With no profile the word itself is the best
+ * available guess.
+ */
+export function hostileCount(
+  profile: SystemProfile | null,
+  tracks: LiveTrack[],
+): number {
+  const hostile = new Set(
+    (profile?.iff_states ?? [])
+      .filter((state) => state.tone === "hostile")
+      .map((state) => state.name.trim().toLowerCase()),
+  );
+  return tracks.filter((track) => {
+    const truth = track.truth_iff.trim().toLowerCase();
+    return hostile.size > 0 ? hostile.has(truth) : truth.includes("hostile");
+  }).length;
+}
+
+/**
+ * Everything left of one round, across every launcher.
+ *
+ * Exported because the console shows it beside the round's own button, and a
+ * second definition of "how many are left" is exactly how a counter comes to
+ * disagree with the thing it is counting.
+ */
+export function remainingOf(state: SimState, round: string): number {
+  return (state.rounds[round] ?? []).reduce((total, left) => total + left, 0);
+}
+
+/** Everything left on one launcher, across every round it holds. */
+export function onLauncher(state: SimState, launcher: number): number {
+  return Object.values(state.rounds).reduce(
+    (total, perLauncher) => total + (perLauncher[launcher] ?? 0),
+    0,
+  );
+}
+
+/** What one launcher holds when full, per round — what a reload fills to. */
+function fullOnLauncher(config: SimConfig, launcher: number): Record<string, number> {
+  return Object.fromEntries(
+    config.interceptors.map((round) => [
+      round.name,
+      splitMagazine(round.loaded, config.commands.launchers)[launcher] ?? 0,
+    ]),
+  );
+}
+
 export function createSim(tracks: LiveTrack[], config: SimConfig): SimState {
   return {
     t: 0,
@@ -436,7 +599,15 @@ export function createSim(tracks: LiveTrack[], config: SimConfig): SimState {
     engagements: [],
     events: [],
     spent: 0,
-    launcher_rounds: splitMagazine(config.magazine, config.commands.launchers),
+    spent_by: Object.fromEntries(
+      config.interceptors.map((round) => [round.name, 0]),
+    ),
+    rounds: Object.fromEntries(
+      config.interceptors.map((round) => [
+        round.name,
+        splitMagazine(round.loaded, config.commands.launchers),
+      ]),
+    ),
     reloading_until: Array.from(
       { length: Math.max(1, config.commands.launchers) },
       () => null,
@@ -815,9 +986,16 @@ export function command(
   return {
     ...state,
     spent: state.spent + 1,
-    launcher_rounds: state.launcher_rounds.map((left, index) =>
-      index === launcher ? left - 1 : left,
-    ),
+    spent_by: {
+      ...state.spent_by,
+      [round.name]: (state.spent_by[round.name] ?? 0) + 1,
+    },
+    rounds: {
+      ...state.rounds,
+      [round.name]: (state.rounds[round.name] ?? []).map((left, index) =>
+        index === launcher ? left - 1 : left,
+      ),
+    },
     nextEngagementId: state.nextEngagementId + 1,
     engagements: [
       ...state.engagements,
@@ -868,7 +1046,7 @@ function reload(state: SimState, launcher: number, config: SimConfig): SimState 
   if (!config.commands.reload.enabled) {
     return say("This system cannot be reloaded during a run.");
   }
-  if (launcher < 0 || launcher >= state.launcher_rounds.length) return state;
+  if (launcher < 0 || launcher >= config.commands.launchers) return state;
 
   const named =
     config.commands.launchers > 1 ? `Launcher ${launcher + 1}` : "The launcher";
@@ -877,8 +1055,13 @@ function reload(state: SimState, launcher: number, config: SimConfig): SimState 
     return say(`${named} is already reloading.`);
   }
 
-  const full = splitMagazine(config.magazine, config.commands.launchers)[launcher];
-  if (state.launcher_rounds[launcher] >= full) {
+  /* A rail holds a share of every round, so reloading fills all of them and
+     is refused only when there is nothing at all to top up. */
+  const full = fullOnLauncher(config, launcher);
+  const short = config.interceptors.some(
+    (round) => (state.rounds[round.name]?.[launcher] ?? 0) < full[round.name],
+  );
+  if (!short) {
     return say(`${named} is already full.`);
   }
   if (
@@ -979,11 +1162,17 @@ function refuseEngagement(
   if (state.reloading_until[launcher] !== null) {
     return { reason: `${named} is reloading.` };
   }
-  if ((state.launcher_rounds[launcher] ?? 0) <= 0) {
+  /* Per round, not per launcher: the whole point of several rounds is that
+     running out of one is a different situation from running out. Saying
+     which one ran out is what makes the refusal teach anything. */
+  if ((state.rounds[round.name]?.[launcher] ?? 0) <= 0) {
+    const elsewhere = remainingOf(state, round.name) > 0;
     return {
-      reason: config.commands.reload.enabled
-        ? `no rounds left on ${named} — reload it.`
-        : `no rounds remaining on ${named}.`,
+      reason: elsewhere
+        ? `no ${round.name} rounds on ${named} — there are some on another launcher.`
+        : config.commands.reload.enabled
+          ? `no ${round.name} rounds left — reload, or choose another round.`
+          : `no ${round.name} rounds left — choose another round.`,
     };
   }
 
@@ -1043,17 +1232,27 @@ export function step(state: SimState, dt: number, config: SimConfig): SimState {
   });
 
   /* ---- Reloads finishing ---------------------------------------- */
-  const full = splitMagazine(config.magazine, config.commands.launchers);
-  const launcher_rounds = [...state.launcher_rounds];
+  const rounds: Record<string, number[]> = Object.fromEntries(
+    Object.entries(state.rounds).map(([name, perLauncher]) => [
+      name,
+      [...perLauncher],
+    ]),
+  );
   const reloading_until = state.reloading_until.map((until, index) => {
     if (until === null || t < until) return until;
-    launcher_rounds[index] = full[index];
+    const full = fullOnLauncher(config, index);
+    let filled = 0;
+    for (const round of config.interceptors) {
+      const to = full[round.name] ?? 0;
+      filled += Math.max(0, to - (rounds[round.name]?.[index] ?? 0));
+      if (rounds[round.name]) rounds[round.name][index] = to;
+    }
     at(
       "reloaded",
       "",
       config.commands.launchers > 1
-        ? `Launcher ${index + 1} reloaded — ${full[index]} rounds.`
-        : `Reloaded — ${full[index]} rounds.`,
+        ? `Launcher ${index + 1} reloaded — ${filled} round(s) back on the rail.`
+        : `Reloaded — ${filled} round(s) back on the rail.`,
     );
     return null;
   });
@@ -1151,7 +1350,7 @@ export function step(state: SimState, dt: number, config: SimConfig): SimState {
     t,
     tracks,
     engagements,
-    launcher_rounds,
+    rounds,
     reloading_until,
     events: events.length > 0 ? [...state.events, ...events] : state.events,
   };
@@ -1229,6 +1428,7 @@ export function summarise(
     friendly_engaged: friendlyEngaged,
     unknown_engaged: unknownEngaged,
     interceptors_spent: state.spent,
+    spent_by: { ...state.spent_by },
     mean_reaction_s:
       reactions.length > 0
         ? Math.round(

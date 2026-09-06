@@ -27,7 +27,12 @@ import {
   type TrackView,
 } from "@/lib/sim/engine";
 import { seededRandom, timeToIntercept, vecToPolar } from "@/lib/sim/geometry";
-import { positionOf, probabilityOfKill } from "@/lib/sim/engine";
+import {
+  onLauncher as roundsOnLauncher,
+  positionOf,
+  probabilityOfKill,
+  remainingOf,
+} from "@/lib/sim/engine";
 
 /**
  * Screen 3: flying the engagement.
@@ -283,8 +288,7 @@ export function LiveRun({
   const resources = (
     <Resources
       config={config}
-      spent={state.spent}
-      rounds={state.launcher_rounds}
+      state={state}
       reloading={state.reloading_until}
       inFlight={inFlight}
       criteria={exercise.success_criteria}
@@ -357,7 +361,11 @@ export function LiveRun({
         {clock}
         <span className="data text-xs text-muted">
           {views.length} HELD · {inFlight} IN FLIGHT ·{" "}
-          {state.launcher_rounds.reduce((sum, x) => sum + x, 0)} ROUNDS
+          {config.interceptors.reduce(
+            (sum, round) => sum + remainingOf(state, round.name),
+            0,
+          )}{" "}
+          ROUNDS
         </span>
         {rangeControl}
         <span className="ml-auto data text-xs text-muted">
@@ -784,40 +792,62 @@ function Squawk({
 
 function Resources({
   config,
-  spent,
-  rounds,
+  state,
   reloading,
   inFlight,
   criteria,
 }: {
   config: ReturnType<typeof simConfig>;
-  spent: number;
-  /** Rounds still in each launcher. */
-  rounds: number[];
+  state: SimState;
   /** When each launcher finishes reloading, or null. */
   reloading: (number | null)[];
   inFlight: number;
   criteria: ExerciseInstance["success_criteria"];
 }) {
-  const left = rounds.reduce((sum, x) => sum + x, 0);
+  const spent = state.spent;
+  const left = config.interceptors.reduce(
+    (sum, round) => sum + remainingOf(state, round.name),
+    0,
+  );
+
   return (
     <div className="space-y-2 p-3 text-xs">
-      <Meter
-        label="Rounds"
-        value={left}
-        total={config.magazine}
-        warn={left <= 1}
-      />
+      {/* A meter per round, because that is what the operator actually
+          spends. One pooled counter said four rounds left and hid the fact
+          that none of them could reach the high mover — which made choosing
+          a round look free and taught nothing. */}
+      {config.interceptors.map((round) => {
+        const remaining = remainingOf(state, round.name);
+        return (
+          <Meter
+            key={round.name}
+            label={round.name}
+            value={remaining}
+            total={round.loaded}
+            warn={remaining === 0}
+          />
+        );
+      })}
+
+      {config.interceptors.length > 1 ? (
+        <div className="flex justify-between text-muted">
+          <span>All rounds</span>
+          <span className={`data ${left === 0 ? "text-danger" : ""}`}>
+            {left} / {config.magazine}
+          </span>
+        </div>
+      ) : null}
+
       {/* Which launcher holds what, once there is more than one to choose
           between — a total of four is a different picture from four on one
           rail and none on the other. */}
-      {rounds.length > 1 ? (
+      {config.commands.launchers > 1 ? (
         <div className="flex justify-between text-muted">
           <span>By launcher</span>
           <span className="data">
-            {rounds
-              .map((n, i) => (reloading[i] !== null ? "RLD" : String(n)))
-              .join(" · ")}
+            {Array.from({ length: config.commands.launchers }, (_, i) =>
+              reloading[i] !== null ? "RLD" : String(roundsOnLauncher(state, i)),
+            ).join(" · ")}
           </span>
         </div>
       ) : null}
@@ -1063,19 +1093,35 @@ function Controls({
       <div>
         <p className="label">Interceptor</p>
         <div className="flex flex-wrap gap-1">
-          {config.interceptors.map((option) => (
-            <button
-              key={option.name}
-              type="button"
-              className={`btn text-[0.7rem] ${option.name === chosen.name ? "btn-primary" : ""}`}
-              onClick={() => onRound(option.name)}
-            >
-              {option.name}
-              <span className="ml-1 text-muted">
-                {option.min_range_km}–{option.max_range_km}
-              </span>
-            </button>
-          ))}
+          {/* Each round carries its own count on its own button. Choosing a
+              round is only a decision if what it costs is visible at the
+              moment of choosing — a pooled total two panels away is not. */}
+          {config.interceptors.map((option) => {
+            const left = remainingOf(state, option.name);
+            return (
+              <button
+                key={option.name}
+                type="button"
+                className={`btn text-[0.7rem] ${option.name === chosen.name ? "btn-primary" : ""}`}
+                onClick={() => onRound(option.name)}
+                title={
+                  left === 0
+                    ? `No ${option.name} rounds left`
+                    : `${left} of ${option.loaded} left · reaches ${option.min_range_km}–${option.max_range_km} km`
+                }
+              >
+                {option.name}
+                <span
+                  className={`ml-1 ${left === 0 ? "text-danger" : "text-ok"}`}
+                >
+                  {left}
+                </span>
+                <span className="ml-1 text-muted">
+                  {option.min_range_km}–{option.max_range_km}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -1084,7 +1130,8 @@ function Controls({
         <div>
           <p className="label">Launcher</p>
           <div className="flex flex-wrap gap-1">
-            {state.launcher_rounds.map((left, index) => {
+            {Array.from({ length: config.commands.launchers }, (_, index) => {
+              const left = roundsOnLauncher(state, index);
               const reloading = state.reloading_until[index] !== null;
               return (
                 <button
@@ -1199,7 +1246,8 @@ function Reload({
     <div>
       <p className="label">Reload</p>
       <div className="flex flex-wrap gap-1">
-        {state.launcher_rounds.map((left, index) => {
+        {Array.from({ length: config.commands.launchers }, (_, index) => {
+          const left = roundsOnLauncher(state, index);
           const until = state.reloading_until[index];
           const remaining = until === null ? null : Math.max(0, until - state.t);
           const committed = state.engagements.some(

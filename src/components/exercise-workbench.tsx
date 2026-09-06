@@ -10,7 +10,7 @@ import type {
   ExerciseInstance,
 } from "@/lib/domain/schemas";
 import { readJson } from "@/lib/http";
-import { PlayIcon } from "@/components/icons";
+import { AlertIcon, LauncherIcon, PlayIcon } from "@/components/icons";
 import { type JobView, formatWait, useBackgroundJob } from "@/lib/use-job";
 
 /**
@@ -50,12 +50,18 @@ export function ExerciseWorkbench({
   saved,
   canRevise,
   profileApproved,
+  stock,
+  hostiles,
   initialJob,
 }: {
   saved: SavedExercise;
   /** False when the scenario is gone: nothing to lay the exercise out from. */
   canRevise: boolean;
   profileApproved: boolean;
+  /** The most of each round the system can hold. The ceiling on the loadout. */
+  stock: { name: string; rounds: number }[];
+  /** Hostile tracks in this exercise — what the loadout is judged against. */
+  hostiles: number;
   initialJob: JobView<JobResult>;
 }) {
   const router = useRouter();
@@ -183,6 +189,22 @@ export function ExerciseWorkbench({
 
         <ExerciseView exercise={showing} />
       </section>
+
+      {/* ---- What the trainee is issued ------------------------------ */}
+      <LoadoutEditor
+        key={`${saved.id}:${JSON.stringify(showing.interceptor_loadout)}`}
+        exercise={showing}
+        stock={stock}
+        hostiles={hostiles}
+        /* A pending correction owns the whole exercise, including its
+           loadout. Editing one field of a version that has not been accepted
+           would save a mixture of the two, which is the one thing this screen
+           has always refused to do. */
+        editable={proposed === null && !busy}
+        exerciseId={saved.id}
+        systemId={saved.system_id}
+        revisions={revisions}
+      />
 
       {/* ---- The record --------------------------------------------- */}
       {revisions.length > 0 ? (
@@ -447,4 +469,254 @@ function Stat({ label, value }: { label: string; value: string }) {
       <dd className="text-lg tabular-nums">{value}</dd>
     </div>
   );
+}
+
+/* ------------------------------------------------------------------ */
+
+/**
+ * How many of each round this run issues — and what that is against the
+ * tracks the trainee will actually face.
+ *
+ * The sharpest dial on the screen, and the only one a designer can turn
+ * without asking the model for a new layout. The same five tracks against a
+ * full magazine and against three rounds are two different exercises: one
+ * teaches identification, the other teaches what to spend a round on. So the
+ * figure is editable here rather than buried in the generated exercise, and
+ * every change is shown as a **ratio to the hostile tracks**, because "six
+ * rounds" means nothing on its own and "one and a half per hostile" means
+ * exactly one thing.
+ *
+ * Two ceilings hold. A run can never issue more of a round than the system
+ * declares it can hold — that is hardware, and it is clamped here and again in
+ * the engine. And a round the profile does not declare cannot be issued at
+ * all, which is why the rows come from the profile rather than from whatever
+ * the stored exercise happens to name.
+ */
+function LoadoutEditor({
+  exercise,
+  stock,
+  hostiles,
+  editable,
+  exerciseId,
+  systemId,
+  revisions,
+}: {
+  exercise: ExerciseInstance;
+  stock: { name: string; rounds: number }[];
+  hostiles: number;
+  editable: boolean;
+  exerciseId: string;
+  systemId: string;
+  revisions: Revision[];
+}) {
+  const router = useRouter();
+
+  /* Silence in the stored exercise means a full load, which is what the
+     engine does with it too — so it is shown as the full figure rather than
+     as an empty box a designer would have to guess at. */
+  const asked = new Map(
+    exercise.interceptor_loadout.map((entry) => [
+      entry.name.trim().toLowerCase(),
+      entry.rounds,
+    ]),
+  );
+  const [rounds, setRounds] = useState<Record<string, number>>(() =>
+    Object.fromEntries(
+      stock.map((round) => {
+        const wanted = asked.get(round.name.trim().toLowerCase());
+        return [
+          round.name,
+          typeof wanted === "number"
+            ? Math.max(0, Math.min(round.rounds, wanted))
+            : round.rounds,
+        ];
+      }),
+    ),
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<string>();
+
+  const issued = stock.reduce(
+    (total, round) => total + (rounds[round.name] ?? 0),
+    0,
+  );
+  const held = stock.reduce((total, round) => total + round.rounds, 0);
+  const changed = stock.some(
+    (round) =>
+      (rounds[round.name] ?? 0) !==
+      (asked.get(round.name.trim().toLowerCase()) ?? round.rounds),
+  );
+  const per = hostiles > 0 ? issued / hostiles : null;
+
+  async function save() {
+    setSaving(true);
+    setError(undefined);
+    setNotice(undefined);
+    try {
+      const response = await fetch(`/api/exercises/${exerciseId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_id: systemId,
+          exercise_instance: {
+            ...exercise,
+            interceptor_loadout: stock.map((round) => ({
+              name: round.name,
+              rounds: Math.max(0, Math.min(round.rounds, rounds[round.name] ?? 0)),
+            })),
+            success_criteria: {
+              ...exercise.success_criteria,
+              /* Spending more than was issued is not a target a trainee can
+                 miss, so it never stands above the load. */
+              max_interceptors_spent: Math.max(
+                1,
+                Math.min(exercise.success_criteria.max_interceptors_spent, issued),
+              ),
+            },
+          },
+          revisions,
+        }),
+      });
+      const payload = await readJson<{ error?: string }>(response);
+      if (!response.ok) throw new Error(payload.error ?? "Could not save it.");
+      setNotice("Saved. This is what the trainee will be holding.");
+      router.refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not save it.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section>
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <LauncherIcon className="text-base text-accent" />
+          What the trainee is issued
+        </h2>
+      </div>
+      <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
+        Stock is per round, and it is a training choice rather than a property
+        of the system. The system&apos;s own maximum is set once in its profile
+        and cannot be exceeded here.
+      </p>
+
+      {stock.length === 0 ? (
+        <p className="chip status-danger !normal-case mt-3">
+          <AlertIcon className="mr-1 inline text-sm" />
+          This system declares no interceptors, so there is nothing to issue.
+          Add them to the system profile first.
+        </p>
+      ) : (
+        <>
+          <div className="mt-3 space-y-2">
+            {stock.map((round) => {
+              const value = rounds[round.name] ?? 0;
+              return (
+                <div
+                  key={round.name}
+                  className="panel flex flex-wrap items-center gap-x-4 gap-y-2 p-3"
+                >
+                  <span className="min-w-32 flex-1 text-sm">{round.name}</span>
+                  <label className="flex items-center gap-2 text-xs text-muted">
+                    <span>rounds issued</span>
+                    <input
+                      type="number"
+                      className="field w-20 text-right"
+                      min={0}
+                      max={round.rounds}
+                      value={value}
+                      disabled={!editable}
+                      onChange={(event) =>
+                        setRounds({
+                          ...rounds,
+                          [round.name]: Math.max(
+                            0,
+                            Math.min(
+                              round.rounds,
+                              Math.round(Number(event.target.value) || 0),
+                            ),
+                          ),
+                        })
+                      }
+                    />
+                  </label>
+                  <span className="data text-xs text-muted">
+                    of {round.rounds} the system holds
+                  </span>
+                  {round.rounds === 0 ? (
+                    <span className="chip status-danger">no stock declared</span>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* The figure that actually means something. */}
+          <div className="panel mt-3 p-3">
+            <p className="text-sm">
+              <span className="data">{issued}</span> round
+              {issued === 1 ? "" : "s"} against{" "}
+              <span className="data">{hostiles}</span> hostile track
+              {hostiles === 1 ? "" : "s"}
+              {per !== null ? (
+                <>
+                  {" "}
+                  — <span className="data">{per.toFixed(2)}</span> per hostile.
+                </>
+              ) : (
+                "."
+              )}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-muted">
+              {readingOf(per)} The system could hold {held} in all.
+            </p>
+          </div>
+
+          {editable ? (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="btn"
+                onClick={save}
+                disabled={!changed || saving}
+              >
+                {saving ? "Saving…" : "Save what is issued"}
+              </button>
+              {!changed ? (
+                <span className="text-xs text-muted">
+                  Nothing changed yet.
+                </span>
+              ) : null}
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-muted">
+              A correction is waiting to be read, so this cannot be changed
+              until it is accepted or the page is reloaded.
+            </p>
+          )}
+
+          {error ? (
+            <p className="chip status-danger !normal-case mt-3">{error}</p>
+          ) : null}
+          {notice ? <p className="chip !normal-case mt-3">{notice}</p> : null}
+        </>
+      )}
+    </section>
+  );
+}
+
+/** What a rounds-per-hostile figure actually means, in one sentence. */
+function readingOf(per: number | null): string {
+  if (per === null)
+    return "No hostile track is in this exercise, so stock decides nothing here.";
+  if (per < 1)
+    return "Fewer rounds than hostiles: which round to spend, and on what, is the exercise. Say so in the brief — an operator knows their own stock.";
+  if (per < 1.3)
+    return "About one round per hostile. Every miss costs, and a round spent on an unknown that turns out friendly costs twice.";
+  if (per < 2)
+    return "Enough to answer a miss, not enough to be careless.";
+  return "Comfortable. Stock will not decide anything here — the lesson is identification or timing.";
 }

@@ -139,6 +139,12 @@ export async function generateDebrief(input: {
             2,
           )}\n</what_was_flown>`,
           `<run_log>\n${log.map((entry) => `T+${String(Math.floor(entry.t)).padStart(3, "0")} [${entry.kind}] ${entry.detail}`).join("\n")}\n</run_log>`,
+          /* What they were holding when the clock started. Without it
+             `spent_by` cannot be read: three long-range rounds spent is
+             thrift out of eight and the whole rail out of three. */
+          exercise.interceptor_loadout.length > 0
+            ? `<rounds_issued>\n${JSON.stringify(exercise.interceptor_loadout, null, 2)}\n</rounds_issued>`
+            : "",
           `<counted_result>\n${JSON.stringify(result, null, 2)}\n</counted_result>`,
           "Produce the debrief.",
         ]

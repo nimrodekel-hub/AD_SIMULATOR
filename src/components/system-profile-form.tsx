@@ -22,6 +22,7 @@ import {
   simulationGaps,
   type Gap,
 } from "@/lib/domain/profile-readiness";
+import { IFF_COLUMN, IffReadoutNotice } from "@/components/iff-notice";
 import { GapNotice, SectionState } from "@/components/gap-notice";
 import {
   AlertIcon,
@@ -30,7 +31,6 @@ import {
   CommandIcon,
   CrossIcon,
   IdentifyIcon,
-  InfoIcon,
   LauncherIcon,
   NotesIcon,
   PlusIcon,
@@ -341,6 +341,38 @@ export function SystemProfileForm({
     set("engagement", {
       ...draft.engagement,
       interceptors: replaceAt(draft.engagement.interceptors, index, next),
+    });
+
+  /* ---- IFF, which is three switches rather than one -------------- */
+  /* A code only reaches a trainee when the system declares an interrogator,
+     the table declares a column to put the reply in, and at least one track
+     class actually answers. Each is asked in a different section, so all
+     three are gathered here and reported together. */
+  const hasIffColumn = draft.track_readout_fields.some((field) =>
+    /^iff$/i.test(field.label.trim()),
+  );
+  const replyingClasses = draft.track_classifications.filter(
+    (entry) => (entry.transponder ?? "none") !== "none",
+  ).length;
+  const addIffColumn = () => {
+    if (hasIffColumn) return;
+    set("track_readout_fields", [...draft.track_readout_fields, IFF_COLUMN]);
+  };
+  const interrogatorOn = {
+    ...draft.iff_interrogation,
+    enabled: true,
+    // An interrogator that reads no mode returns nothing on every track, so
+    // turning one on from here turns on the mode almost every one has.
+    mode_3: draft.iff_interrogation.mode_3 || !draft.iff_interrogation.mode_1,
+  };
+  const enableInterrogator = () => set("iff_interrogation", interrogatorOn);
+  const fixIffBoth = () =>
+    setDraft({
+      ...draft,
+      iff_interrogation: interrogatorOn,
+      track_readout_fields: hasIffColumn
+        ? draft.track_readout_fields
+        : [...draft.track_readout_fields, IFF_COLUMN],
     });
 
   return (
@@ -826,36 +858,16 @@ export function SystemProfileForm({
               ) : null}
             </div>
 
-            {/* The column has to exist for the reply to land anywhere. */}
-            {!draft.track_readout_fields.some((field) =>
-              /^iff$/i.test(field.label.trim()),
-            ) ? (
-              <div className="panel !border-l-2 !border-l-warn p-3">
-                <p className="flex items-start gap-2 text-xs leading-relaxed">
-                  <InfoIcon className="mt-[0.15rem] shrink-0 text-sm text-warn" />
-                  <span>
-                    <strong>No IFF column is declared below.</strong> The
-                    interrogator will work and the reply will be in the run
-                    log, but the track table has nowhere to show it — the
-                    table is built from the columns you name.
-                  </span>
-                </p>
-                <AddButton
-                  label="Add an IFF column"
-                  onClick={() =>
-                    set("track_readout_fields", [
-                      ...draft.track_readout_fields,
-                      {
-                        label: "IFF",
-                        unit: "",
-                        description:
-                          "Transponder reply — the Mode 3 code, or that nothing came back. Blank until interrogated.",
-                      },
-                    ])
-                  }
-                />
-              </div>
-            ) : null}
+            {/* The three switches that have to agree before a code reaches
+                a trainee — said in full, and fixable from here. */}
+            <IffReadoutNotice
+              hasColumn={hasIffColumn}
+              interrogatorOn={draft.iff_interrogation.enabled}
+              replyingClasses={replyingClasses}
+              onAddColumn={addIffColumn}
+              onEnableInterrogator={enableInterrogator}
+              onFixBoth={fixIffBoth}
+            />
 
             <Labelled
               label="Anything the boxes do not carry"
@@ -1076,6 +1088,16 @@ export function SystemProfileForm({
             </div>
           ))}
           <GapNotice gaps={gaps} field="columns" className="!mt-0" />
+          {/* Where the complaint lands: a designer looking for IFF looks at
+              the columns, so the reason it is not there is said here. */}
+          <IffReadoutNotice
+            hasColumn={hasIffColumn}
+            interrogatorOn={draft.iff_interrogation.enabled}
+            replyingClasses={replyingClasses}
+            onAddColumn={addIffColumn}
+            onEnableInterrogator={enableInterrogator}
+            onFixBoth={fixIffBoth}
+          />
           <AddButton
             label="Add readout"
             onClick={() =>
@@ -1145,19 +1167,19 @@ export function SystemProfileForm({
               }
             />
           </Labelled>
+          {/* Added up from the rounds below rather than typed. A single
+              pool made choosing a round free; stock is per round now, and
+              this is only their sum. */}
           <Labelled
-            label="Rounds available"
-            hint="How deep the magazine is for one engagement."
+            label="Rounds the system holds altogether"
+            hint="Added up from the magazines below. Not typed here."
           >
-            <NullableNumber
-              gaps={gaps}
-              field="engagement.magazine_depth"
-              value={draft.engagement.magazine_depth}
-              ariaLabel="Rounds available"
-              onChange={(magazine_depth) =>
-                set("engagement", { ...draft.engagement, magazine_depth })
-              }
-            />
+            <p className="data field !border-dashed text-muted">
+              {draft.engagement.interceptors.reduce(
+                (total, round) => total + (round.magazine_max ?? 0),
+                0,
+              ) || "—"}
+            </p>
           </Labelled>
         </div>
 
@@ -1167,6 +1189,13 @@ export function SystemProfileForm({
             One entry per round the operator can choose between. A system with
             a single round needs one line. Speed sets the time of flight, which
             is how much earlier than impact the decision has to be made.
+          </p>
+          <p className="mb-2 max-w-2xl text-xs leading-relaxed text-muted">
+            <strong>“Max held” is the most of that round this system can
+            carry</strong> — hardware, not today&apos;s load. Each round keeps
+            its own stock and its own counter during a run; how many a
+            particular exercise issues is set when the exercise is planned,
+            and never more than this.
           </p>
           <div className="space-y-2">
             {draft.engagement.interceptors.map((round, index) => (
@@ -1208,6 +1237,17 @@ export function SystemProfileForm({
                       setRound(index, { ...round, speed_kts })
                     }
                   />
+                  <RoundField
+                    label="max held"
+                    wrong={
+                      gapsFor(gaps, `interceptors.${index}.magazine_max`)
+                        .length > 0
+                    }
+                    value={round.magazine_max ?? 0}
+                    onChange={(magazine_max) =>
+                      setRound(index, { ...round, magazine_max })
+                    }
+                  />
                   <RemoveButton
                     label={`Remove ${round.name || "interceptor"}`}
                     onClick={() =>
@@ -1227,6 +1267,7 @@ export function SystemProfileForm({
                     `interceptors.${index}.name`,
                     `interceptors.${index}.max_range_km`,
                     `interceptors.${index}.speed_kts`,
+                    `interceptors.${index}.magazine_max`,
                   ]}
                 />
               </div>
@@ -1244,6 +1285,7 @@ export function SystemProfileForm({
                       min_range_km: draft.engagement.min_range_km,
                       max_range_km: draft.engagement.max_range_km,
                       speed_kts: 1600,
+                      magazine_max: null,
                     },
                   ],
                 })

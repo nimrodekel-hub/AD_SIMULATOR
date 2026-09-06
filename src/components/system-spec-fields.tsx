@@ -5,6 +5,7 @@ import { WELL_KNOWN_MODE_3 } from "@/lib/domain/iff-codes";
 import { OPERATOR_COMMANDS_OFF } from "@/lib/domain/schemas";
 import { gapsFor, SECTIONS, type Gap } from "@/lib/domain/profile-readiness";
 import { GapNotice, SectionState } from "@/components/gap-notice";
+import { IFF_COLUMN, IffReadoutNotice } from "@/components/iff-notice";
 import {
   AlertIcon,
   ArrowUpIcon,
@@ -163,6 +164,48 @@ export function SystemSpecFields({
 
   const chosenLabels = new Set(
     spec.track_readout_fields.map((field) => field.label.toUpperCase()),
+  );
+
+  /* IFF is three switches in three different sections — an interrogator, a
+     column to show the reply in, and a class that actually answers — and a
+     code only reaches a trainee when all three agree. Gathered here so the
+     form can say which one is missing instead of leaving a blank column. */
+  const hasIffColumn = spec.track_readout_fields.some((field) =>
+    /^iff$/i.test(field.label.trim()),
+  );
+  const replyingClasses = spec.track_classifications.filter(
+    (entry) => (entry.transponder ?? "none") !== "none",
+  ).length;
+  const interrogatorOn = {
+    ...spec.iff_interrogation,
+    enabled: true,
+    mode_3: spec.iff_interrogation.mode_3 || !spec.iff_interrogation.mode_1,
+  };
+  const iffNotice = (
+    <IffReadoutNotice
+      hasColumn={hasIffColumn}
+      interrogatorOn={spec.iff_interrogation.enabled}
+      replyingClasses={replyingClasses}
+      onAddColumn={() =>
+        hasIffColumn
+          ? undefined
+          : set("track_readout_fields", [
+              ...spec.track_readout_fields,
+              IFF_COLUMN,
+            ])
+      }
+      onEnableInterrogator={() => set("iff_interrogation", interrogatorOn)}
+      /* One edit rather than two, or the second overwrites the first. */
+      onFixBoth={() =>
+        onChange({
+          ...spec,
+          iff_interrogation: interrogatorOn,
+          track_readout_fields: hasIffColumn
+            ? spec.track_readout_fields
+            : [...spec.track_readout_fields, IFF_COLUMN],
+        })
+      }
+    />
   );
 
   return (
@@ -645,6 +688,11 @@ export function SystemSpecFields({
             ) : null}
           </>
         ) : null}
+
+        {/* Said here too: this is where a designer decides the system can
+            interrogate, and where they should learn it takes two more
+            declarations before a trainee ever sees a code. */}
+        <div className="mt-4">{iffNotice}</div>
       </Block>
 
       {/* ---- The commands beyond the universal four -------------------- */}
@@ -805,6 +853,8 @@ export function SystemSpecFields({
           })}
         </div>
 
+        {iffNotice}
+
         <div className="space-y-2">
           {spec.track_readout_fields.map((entry, index) => (
             <div key={index} className="flex flex-wrap items-center gap-2">
@@ -954,17 +1004,23 @@ export function SystemSpecFields({
               set("engagement", { ...spec.engagement, max_simultaneous })
             }
           />
-          <Num
-            label="Rounds available"
-            required
-            hint="How deep the magazine is for one engagement."
-            gaps={gaps}
-            field="engagement.magazine_depth"
-            value={spec.engagement.magazine_depth}
-            onChange={(magazine_depth) =>
-              set("engagement", { ...spec.engagement, magazine_depth })
-            }
-          />
+          {/* What the system holds altogether, added up rather than asked
+              for. It used to be a box of its own, and a single pool made
+              choosing a round free: spending the long-range round cost
+              exactly what spending the short-range round cost. Stock is per
+              round below; this is only the sum, so the two can never
+              disagree. */}
+          <Labelled
+            label="Rounds the system holds altogether"
+            hint="Added up from the magazines below. Not typed here."
+          >
+            <p className="data field !border-dashed text-muted">
+              {spec.engagement.interceptors.reduce(
+                (total, round) => total + (round.magazine_max ?? 0),
+                0,
+              ) || "—"}
+            </p>
+          </Labelled>
         </div>
 
         {/* ---- The rounds themselves ------------------------------- */}
@@ -980,6 +1036,14 @@ export function SystemSpecFields({
             in is a round that is not there for the next threat. Speed sets the
             time of flight, which is how much earlier than impact the operator
             has to commit.
+          </p>
+          <p className="mb-2 text-xs leading-relaxed text-muted">
+            <strong>“Max held” is the most of that round this system can
+            carry</strong> — the hardware limit, not today&apos;s load. Each
+            round has its own stock and its own counter on the console, so
+            running out of long-range rounds is a different situation from
+            running out. How many a particular exercise issues is set when the
+            exercise is planned, and never more than this.
           </p>
           <div className="space-y-2">
             {spec.engagement.interceptors.map((round, index) => (
@@ -1019,6 +1083,17 @@ export function SystemSpecFields({
                     value={round.speed_kts}
                     onChange={(speed_kts) => setRound(index, { ...round, speed_kts })}
                   />
+                  <RoundNumber
+                    label="max held"
+                    wrong={
+                      gapsFor(gaps, `interceptors.${index}.magazine_max`)
+                        .length > 0
+                    }
+                    value={round.magazine_max ?? 0}
+                    onChange={(magazine_max) =>
+                      setRound(index, { ...round, magazine_max })
+                    }
+                  />
                   <Remove
                     label="Remove interceptor"
                     onClick={() =>
@@ -1039,6 +1114,7 @@ export function SystemSpecFields({
                     `interceptors.${index}.name`,
                     `interceptors.${index}.max_range_km`,
                     `interceptors.${index}.speed_kts`,
+                    `interceptors.${index}.magazine_max`,
                   ]}
                 />
               </div>
@@ -1056,6 +1132,7 @@ export function SystemSpecFields({
                       min_range_km: spec.engagement.min_range_km,
                       max_range_km: spec.engagement.max_range_km,
                       speed_kts: 1600,
+                      magazine_max: null,
                     },
                   ],
                 })

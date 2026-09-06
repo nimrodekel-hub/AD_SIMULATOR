@@ -12,7 +12,7 @@ import {
 } from "../../domain/schemas";
 import { isMode1, isMode3 } from "../../domain/iff-codes";
 import { structured } from "../client";
-import { detectionRangeKm } from "../../sim/engine";
+import { detectionRangeKm, magazineCeiling } from "../../sim/engine";
 import { knotsToKmPerSecond } from "../../sim/geometry";
 import { z } from "zod";
 
@@ -102,6 +102,20 @@ Honour it in the geometry, not in the prose. "Make me run out of interceptors" m
 
 Where they asked for nothing, lay the engagement out on the scenario and the band alone.
 
+## interceptor_loadout
+
+How many of each round the trainee starts this run holding. **This is the sharpest dial you have** — the same tracks against a full magazine and against three rounds are two different exercises — so set it deliberately rather than leaving it full.
+
+Set it against the number of hostile tracks, not against the system's capacity. A rough scale, to be moved by the band and by what the trainee asked for:
+
+- **Comfortable**: two rounds per hostile track. Nothing is decided by stock; the lesson is identification or timing.
+- **Realistic**: about one and a quarter rounds per hostile. A miss costs, and a round spent on an unknown that turns out friendly costs twice.
+- **Scarce**: fewer rounds than hostiles. Now which round to spend, and on what, is the exercise — and the brief should let them know they are short.
+
+Name each round exactly as the profile declares it, and never ask for more than that round's \`magazine_max\`. Where the system declares several rounds, the split between them is itself the decision: leaving a long-range round short while the short-range rail is full forces a trainee to commit early or not at all. **Say in the brief what they are holding** — an operator always knows their own stock.
+
+Leave the list empty only when a full load is genuinely what the exercise wants.
+
 ## success_criteria
 
 State plainly what winning means, and set \`max_interceptors_spent\` so that efficiency actually costs something — roughly one round per hostile plus one spare, not the whole magazine.
@@ -134,6 +148,10 @@ const ExerciseDraftSchema = z.object({
   time_window_seconds: z.number(),
   radar_boresight_deg: z.number(),
   live_tracks: z.array(LiveTrackSchema),
+  /** How many of each declared round this run issues. Clamped in code. */
+  interceptor_loadout: z
+    .array(z.object({ name: z.string(), rounds: z.number().int() }))
+    .default([]),
   success_criteria: SuccessCriteriaSchema,
   resources: z.array(
     z.object({
@@ -370,6 +388,51 @@ function clampToProfile(
     );
   }
 
+  /* What the run issues, per round.
+
+     The model chose these against the number of hostile tracks, which is the
+     point of asking it — but a run cannot hand out rounds the system does not
+     hold, and a name it invented belongs to nothing. So: clamp to the
+     declared ceiling, drop what does not match a declared round, and fill in
+     a full load for any round it did not mention. A silent list means a full
+     load of everything, which is what an unspoken loadout has always meant. */
+  const ceiling = magazineCeiling(profile);
+  const askedFor = new Map(
+    draft.interceptor_loadout.map((entry) => [
+      entry.name.trim().toLowerCase(),
+      Math.round(entry.rounds),
+    ]),
+  );
+  const interceptor_loadout = ceiling.map((round) => {
+    const wanted = askedFor.get(round.name.trim().toLowerCase());
+    if (typeof wanted !== "number") return { name: round.name, rounds: round.rounds };
+    const rounds = clamp(wanted, 0, round.rounds);
+    if (rounds !== wanted) {
+      adjustments.push(
+        `The run issues ${rounds} × “${round.name}” rather than the ${wanted} asked for. ` +
+          (wanted > round.rounds
+            ? `The system holds at most ${round.rounds} of that round.`
+            : "A round count cannot be negative."),
+      );
+    }
+    return { name: round.name, rounds };
+  });
+  for (const entry of draft.interceptor_loadout) {
+    const known = ceiling.some(
+      (round) =>
+        round.name.trim().toLowerCase() === entry.name.trim().toLowerCase(),
+    );
+    if (!known) {
+      adjustments.push(
+        `“${entry.name}” is not a round this system declares, so nothing of it is issued. The rounds it has are ${ceiling.map((round) => `“${round.name}”`).join(", ")}.`,
+      );
+    }
+  }
+  const issued = interceptor_loadout.reduce(
+    (total, round) => total + round.rounds,
+    0,
+  );
+
   const exercise: ExerciseInstance = {
     exercise_name: draft.exercise_name,
     situation_brief: draft.situation_brief,
@@ -379,12 +442,14 @@ function clampToProfile(
     success_criteria: {
       ...draft.success_criteria,
       max_leakers: Math.max(0, draft.success_criteria.max_leakers),
+      /* Spending more than was issued is not a criterion, it is impossible. */
       max_interceptors_spent: clamp(
         draft.success_criteria.max_interceptors_spent,
         1,
-        profile?.engagement.magazine_depth ?? 99,
+        Math.max(1, issued),
       ),
     },
+    interceptor_loadout,
     resources: draft.resources,
     tracks: [],
     dilemmas: [],
@@ -644,6 +709,13 @@ function mockExercise(
         notes: "Low and closing.",
       },
     ],
+    /* Two hostiles and three of each round: enough that a miss can be
+       answered, few enough that the per-round counters visibly move. Clamped
+       again downstream, so a system that holds fewer gets fewer. */
+    interceptor_loadout: magazineCeiling(profile).map((round) => ({
+      name: round.name,
+      rounds: Math.min(3, round.rounds),
+    })),
     success_criteria: {
       max_leakers: 0,
       max_interceptors_spent: 4,
