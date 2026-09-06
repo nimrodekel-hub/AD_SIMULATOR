@@ -99,6 +99,8 @@ Leave them completely empty. Live content is injected at runtime.
 
 - \`<div data-slot="range"></div>\` — **optional.** Where the reference console shows a range-scale or zoom control for the radar picture, put this there and the real one is rendered into it. Omit it and the operator gets a compact one over the corner of the picture instead.
 
+**What lands in it is buttons and nothing else** — a stepper, the scale figures, and the unit. Any caption the reference shows beside them, \`RANGE\` or \`SCALE\` or whatever this console calls it, is yours to draw as chrome, exactly as you draw the heading above the track list. Give the slot the rest of the strip **on one line**: what goes in does not wrap, so a strip too narrow or too short for it clips buttons the operator then cannot reach.
+
 ## Never draw a control that has no slot
 
 **A control you paint but do not wire is worse than one you leave out.** This is not a style rule — it happened: a console came back with a zoom stepper and a row of range-scale buttons copied faithfully from the screenshots, as plain markup with nothing behind them. They looked exactly right, they were the first thing the operator pressed, and pressing them did nothing. A missing control is honest; a dead one teaches that the system does not respond.

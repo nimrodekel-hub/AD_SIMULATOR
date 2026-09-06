@@ -237,7 +237,18 @@ export function LiveRun({
 
   const inFlight = state.engagements.filter((e) => !e.resolved).length;
 
-  const rangeControl = (
+  /* Three places, three sets of chrome around it. Into the shell's own range
+     bar, which already draws the caption and reserves the height; into our own
+     header, which does neither; or over the corner of the picture, below. */
+  const rangeInShell = (
+    <RangeControl
+      scales={scales}
+      value={rangeKm}
+      onChange={setRangeKm}
+      variant="slot"
+    />
+  );
+  const rangeInHeader = (
     <RangeControl scales={scales} value={rangeKm} onChange={setRangeKm} />
   );
 
@@ -263,7 +274,7 @@ export function LiveRun({
             scales={scales}
             value={rangeKm}
             onChange={setRangeKm}
-            compact
+            variant="overlay"
           />
         </div>
       )}
@@ -329,7 +340,7 @@ export function LiveRun({
                 </div>
               </div>
             ),
-            range: rangeControl,
+            range: rangeInShell,
             tracks: (
               <div className="h-full min-h-0 overflow-y-auto">{trackList}</div>
             ),
@@ -367,7 +378,7 @@ export function LiveRun({
           )}{" "}
           ROUNDS
         </span>
-        {rangeControl}
+        {rangeInHeader}
         <span className="ml-auto data text-xs text-muted">
           {exercise.exercise_name}
         </span>
