@@ -1,6 +1,6 @@
 import type { ExerciseInstance, SystemProfile } from "../domain/schemas";
 import { codesFor } from "../domain/iff-codes";
-import { detectionRangeKm } from "./engine";
+import { detectionRangeKm, magazineCeiling } from "./engine";
 import { knotsToKmPerSecond, seededRandom } from "./geometry";
 
 /**
@@ -137,6 +137,11 @@ export function rehearsalExercise(profile: SystemProfile | null): ExerciseInstan
     0,
   );
 
+  /* A full load of every round the profile declares. The system test is about
+     whether the figures work, not about scarcity: a designer who runs out of
+     rounds halfway learns nothing about their detection range. */
+  const loadout = magazineCeiling(profile);
+
   return {
     exercise_name: "System test",
     situation_brief: [
@@ -157,9 +162,13 @@ export function rehearsalExercise(profile: SystemProfile | null): ExerciseInstan
     time_window_seconds: Math.min(600, Math.max(300, last + 240)),
     radar_boresight_deg: boresight,
     live_tracks: tracks,
+    interceptor_loadout: loadout,
     success_criteria: {
       max_leakers: 0,
-      max_interceptors_spent: profile?.engagement.magazine_depth ?? 8,
+      max_interceptors_spent: loadout.reduce(
+        (total, round) => total + round.rounds,
+        0,
+      ),
       statement:
         "Nothing is judged here. Fire, hold, or let them through — the system is what is being tested.",
     },
