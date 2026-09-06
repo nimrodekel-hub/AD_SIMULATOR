@@ -4,6 +4,7 @@ import { ScreenShell } from "@/components/screen-shell";
 import { SystemProfileForm } from "@/components/system-profile-form";
 import { SYSTEM_QUESTIONS } from "@/lib/ai/tasks/learn-system";
 import { getSystem, getSystemProfile } from "@/lib/store/kb";
+import { PlayIcon } from "@/components/icons";
 
 /**
  * Setup step one: teaching the app how this system behaves.
@@ -49,7 +50,8 @@ export default async function SystemProfilePage({
             href={`/designer/systems/${systemId}/test`}
             className="btn ml-auto"
           >
-            ▶ Test these figures
+            <PlayIcon className="text-sm" />
+            Test these figures
           </Link>
         ) : null}
       </div>

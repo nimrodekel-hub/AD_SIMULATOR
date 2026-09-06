@@ -16,7 +16,33 @@ import type {
   TrackClassification,
   TransponderKind,
 } from "@/lib/domain/schemas";
-import { simulationGaps, type Gap } from "@/lib/domain/profile-readiness";
+import {
+  gapsFor,
+  SECTIONS,
+  simulationGaps,
+  type Gap,
+} from "@/lib/domain/profile-readiness";
+import { GapNotice, SectionState } from "@/components/gap-notice";
+import {
+  AlertIcon,
+  CheckIcon,
+  ColumnsIcon,
+  CommandIcon,
+  CrossIcon,
+  IdentifyIcon,
+  InfoIcon,
+  LauncherIcon,
+  NotesIcon,
+  PlusIcon,
+  RadarIcon,
+  ReloadIcon,
+  RetypeIcon,
+  RolesIcon,
+  TargetIcon,
+  TiltIcon,
+  TrackIcon,
+  TransponderIcon,
+} from "@/components/icons";
 import { readJson } from "@/lib/http";
 
 /**
@@ -211,7 +237,7 @@ export function SystemProfileForm({
         </div>
 
         {/* ---- The measured half: entered, never interpreted ---------- */}
-        <SystemSpecFields spec={spec} onChange={setSpec} />
+        <SystemSpecFields spec={spec} onChange={setSpec} gaps={gaps} />
 
         {/* ---- The described half: still open questions --------------- */}
         <div className="border-t border-line pt-8">
@@ -352,6 +378,7 @@ export function SystemProfileForm({
       </div>
 
       <Section
+        icon={<NotesIcon />}
         title="Identity"
         hint={`What ${systemName} is and what it is for.`}
       >
@@ -366,12 +393,17 @@ export function SystemProfileForm({
 
       {/* ---- Sensor coverage ---------------------------------------- */}
       <Section
-        title="What the radar sees"
+        icon={<RadarIcon />}
+        where={SECTIONS.radar}
+        gaps={gaps}
+        title={SECTIONS.radar}
         hint="Detection range decides how much warning the operator gets; the arc decides whether they get any from a given direction. Both are yours — nothing reads them but the exercise generator."
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Labelled label="Detection range (km)">
             <NullableNumber
+              gaps={gaps}
+              field="sensor.max_range_km"
               value={draft.sensor.max_range_km}
               ariaLabel="Detection range"
               onChange={(max_range_km) =>
@@ -381,6 +413,8 @@ export function SystemProfileForm({
           </Labelled>
           <Labelled label="Close-in blind zone (km)">
             <NullableNumber
+              gaps={gaps}
+              field="sensor.min_range_km"
               value={draft.sensor.min_range_km}
               ariaLabel="Close-in blind zone"
               onChange={(min_range_km) =>
@@ -390,6 +424,8 @@ export function SystemProfileForm({
           </Labelled>
           <Labelled label="Azimuth coverage (°)" hint="360 for a rotating radar.">
             <NullableNumber
+              gaps={gaps}
+              field="sensor.azimuth_coverage_deg"
               value={draft.sensor.azimuth_coverage_deg}
               ariaLabel="Azimuth coverage"
               onChange={(azimuth_coverage_deg) =>
@@ -448,7 +484,10 @@ export function SystemProfileForm({
 
       {/* ---- Track classifications ---------------------------------- */}
       <Section
-        title="Track classifications"
+        icon={<TrackIcon />}
+        where={SECTIONS.classes}
+        gaps={gaps}
+        title={SECTIONS.classes}
         hint="Exercise generation may only produce tracks of these kinds, within these bands."
       >
         <div className="space-y-3">
@@ -479,6 +518,11 @@ export function SystemProfileForm({
                   }
                 />
               </div>
+              <GapNotice
+                gaps={gaps}
+                field={`classes.${index}.name`}
+                className="!mt-0 mb-3"
+              />
 
               <Labelled label="Description">
                 <input
@@ -499,6 +543,8 @@ export function SystemProfileForm({
               <div className="mt-3 grid gap-4 sm:grid-cols-2">
                 <RangeField
                   label="Speed (kts)"
+                  gaps={gaps}
+                  field={`classes.${index}.speed`}
                   value={entry.typical_speed_kts}
                   onChange={(typical_speed_kts) =>
                     set(
@@ -512,6 +558,8 @@ export function SystemProfileForm({
                 />
                 <RangeField
                   label="Altitude (ft)"
+                  gaps={gaps}
+                  field={`classes.${index}.altitude`}
                   value={entry.typical_altitude_ft}
                   onChange={(typical_altitude_ft) =>
                     set(
@@ -587,6 +635,7 @@ export function SystemProfileForm({
               ) : null}
             </div>
           ))}
+          <GapNotice gaps={gaps} field="classes" className="!mt-0" />
           <AddButton
             label="Add classification"
             onClick={() =>
@@ -601,7 +650,10 @@ export function SystemProfileForm({
 
       {/* ---- Identification states ---------------------------------- */}
       <Section
-        title="Identification states"
+        icon={<IdentifyIcon />}
+        where={SECTIONS.states}
+        gaps={gaps}
+        title={SECTIONS.states}
         hint="The only states a generated track may be in. The tone decides the colour the console shows it in."
       >
         <div className="space-y-2">
@@ -684,6 +736,7 @@ export function SystemProfileForm({
               </Labelled>
             </div>
           ))}
+          <GapNotice gaps={gaps} field="states" className="!mt-0" />
           <AddButton
             label="Add state"
             onClick={() => set("iff_states", [...draft.iff_states, emptyIff()])}
@@ -698,6 +751,7 @@ export function SystemProfileForm({
           only on the questions screen, so a designer looking at an empty
           IFF column here had nowhere to turn it on. */}
       <Section
+        icon={<TransponderIcon />}
         title="IFF interrogation"
         hint="A separate capability from the radar. With this off the console has no interrogate command and an IFF column reads as a dash — an operator on such a system identifies by behaviour alone, which is a different skill and a deliberate one to train."
       >
@@ -776,12 +830,15 @@ export function SystemProfileForm({
             {!draft.track_readout_fields.some((field) =>
               /^iff$/i.test(field.label.trim()),
             ) ? (
-              <div className="panel border-l-2 border-l-warn p-3">
-                <p className="text-xs leading-relaxed">
-                  <strong>No IFF column is declared below.</strong> The
-                  interrogator will work and the reply will be in the run log,
-                  but the track table has nowhere to show it — the table is
-                  built from the columns you name.
+              <div className="panel !border-l-2 !border-l-warn p-3">
+                <p className="flex items-start gap-2 text-xs leading-relaxed">
+                  <InfoIcon className="mt-[0.15rem] shrink-0 text-sm text-warn" />
+                  <span>
+                    <strong>No IFF column is declared below.</strong> The
+                    interrogator will work and the reply will be in the run
+                    log, but the track table has nowhere to show it — the
+                    table is built from the columns you name.
+                  </span>
                 </p>
                 <AddButton
                   label="Add an IFF column"
@@ -827,11 +884,17 @@ export function SystemProfileForm({
           leaving it off means the console has no such button rather than a
           button that does nothing. */}
       <Section
-        title="What the operator can do"
+        icon={<CommandIcon />}
+        where={SECTIONS.commands}
+        gaps={gaps}
+        title={SECTIONS.commands}
         hint="Beyond selecting a track, identifying it, firing and ceasing — which every system does. Each of these is a rule the simulation enforces, so it costs what it really costs; the console can only offer what is switched on here."
       >
         <Command
           on={draft.operator_commands.retype}
+          icon={<RetypeIcon />}
+          gaps={gaps}
+          field="commands.retype"
           label="Correct the track type"
           why="The system's own typing can be wrong, and putting it right is the operator's call. Needs at least two track classes to choose between — and an exercise only presents a mis-typed track on a system that declares this."
           onToggle={(retype) =>
@@ -841,6 +904,9 @@ export function SystemProfileForm({
 
         <Command
           on={draft.operator_commands.reload}
+          icon={<ReloadIcon />}
+          gaps={gaps}
+          field="commands.reload_seconds"
           label="Reload during a run"
           why="The magazine can be refilled without ending the run. The clock does not stop for it, which is the whole lesson: a reload buys rounds with the seconds the next track is using to close."
           onToggle={(reload) =>
@@ -866,6 +932,9 @@ export function SystemProfileForm({
 
         <Command
           on={draft.operator_commands.launchers}
+          icon={<LauncherIcon />}
+          gaps={gaps}
+          field="commands.launcher_count"
           label="Choose which launcher fires"
           why="More than one launcher, each holding its own rounds. The magazine above is divided between them, so this adds a decision without adding rounds — an empty or reloading launcher cannot fire, and one with a round in the air cannot be reloaded."
           onToggle={(launchers) =>
@@ -888,6 +957,9 @@ export function SystemProfileForm({
 
         <Command
           on={draft.operator_commands.tilt}
+          icon={<TiltIcon />}
+          gaps={gaps}
+          field="commands.tilt_min_deg"
           label="Adjust the radar tilt"
           why="A fixed array whose elevation the operator sets. Anything below where it points is not held at all — not on the scope, and not engageable — so raising it to reach something high gives up the low approach."
           onToggle={(tilt) =>
@@ -941,7 +1013,10 @@ export function SystemProfileForm({
 
       {/* ---- Readout fields ----------------------------------------- */}
       <Section
-        title="Track readouts"
+        icon={<ColumnsIcon />}
+        where={SECTIONS.columns}
+        gaps={gaps}
+        title={SECTIONS.columns}
         hint="The console's columns, in display order. These become the table the trainee reads."
       >
         <div className="space-y-2">
@@ -1000,6 +1075,7 @@ export function SystemProfileForm({
               />
             </div>
           ))}
+          <GapNotice gaps={gaps} field="columns" className="!mt-0" />
           <AddButton
             label="Add readout"
             onClick={() =>
@@ -1014,28 +1090,39 @@ export function SystemProfileForm({
 
       {/* ---- Engagement --------------------------------------------- */}
       <Section
-        title="Engagement constraints"
+        icon={<TargetIcon />}
+        where={SECTIONS.envelope}
+        gaps={gaps}
+        title={SECTIONS.envelope}
         hint="Exercise geometry has to sit inside these, or the trade-off it presents is not a real one."
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Labelled label="Minimum range (km)">
-            <NumberInput
-              value={draft.engagement.min_range_km}
-              ariaLabel="Minimum range"
-              onChange={(min_range_km) =>
-                set("engagement", { ...draft.engagement, min_range_km })
-              }
-            />
-          </Labelled>
-          <Labelled label="Maximum range (km)">
-            <NumberInput
-              value={draft.engagement.max_range_km}
-              ariaLabel="Maximum range"
-              onChange={(max_range_km) =>
-                set("engagement", { ...draft.engagement, max_range_km })
-              }
-            />
-          </Labelled>
+          <div>
+            <Labelled label="Minimum range (km)">
+              <NumberInput
+                wide
+                value={draft.engagement.min_range_km}
+                ariaLabel="Minimum range"
+                onChange={(min_range_km) =>
+                  set("engagement", { ...draft.engagement, min_range_km })
+                }
+              />
+            </Labelled>
+            <GapNotice gaps={gaps} field="engagement.min_range_km" />
+          </div>
+          <div>
+            <Labelled label="Maximum range (km)">
+              <NumberInput
+                wide
+                value={draft.engagement.max_range_km}
+                ariaLabel="Maximum range"
+                onChange={(max_range_km) =>
+                  set("engagement", { ...draft.engagement, max_range_km })
+                }
+              />
+            </Labelled>
+            <GapNotice gaps={gaps} field="engagement.max_range_km" />
+          </div>
         </div>
 
         {/* The three figures the simulation actually enforces.
@@ -1049,6 +1136,8 @@ export function SystemProfileForm({
             hint="The hard limit. A further launch is refused until one resolves."
           >
             <NullableNumber
+              gaps={gaps}
+              field="engagement.max_simultaneous"
               value={draft.engagement.max_simultaneous}
               ariaLabel="Interceptors in the air at once"
               onChange={(max_simultaneous) =>
@@ -1061,6 +1150,8 @@ export function SystemProfileForm({
             hint="How deep the magazine is for one engagement."
           >
             <NullableNumber
+              gaps={gaps}
+              field="engagement.magazine_depth"
               value={draft.engagement.magazine_depth}
               ariaLabel="Rounds available"
               onChange={(magazine_depth) =>
@@ -1079,51 +1170,68 @@ export function SystemProfileForm({
           </p>
           <div className="space-y-2">
             {draft.engagement.interceptors.map((round, index) => (
-              <div key={index} className="flex flex-wrap items-end gap-2">
-                <input
-                  className="field data w-40"
-                  placeholder="long range"
-                  aria-label="Interceptor name"
-                  value={round.name}
-                  onChange={(e) =>
-                    setRound(index, { ...round, name: e.target.value })
-                  }
-                />
-                <RoundField
-                  label="min km"
-                  value={round.min_range_km}
-                  onChange={(min_range_km) =>
-                    setRound(index, { ...round, min_range_km })
-                  }
-                />
-                <RoundField
-                  label="max km"
-                  value={round.max_range_km}
-                  onChange={(max_range_km) =>
-                    setRound(index, { ...round, max_range_km })
-                  }
-                />
-                <RoundField
-                  label="kts"
-                  value={round.speed_kts}
-                  onChange={(speed_kts) =>
-                    setRound(index, { ...round, speed_kts })
-                  }
-                />
-                <RemoveButton
-                  label={`Remove ${round.name || "interceptor"}`}
-                  onClick={() =>
-                    set("engagement", {
-                      ...draft.engagement,
-                      interceptors: removeAt(
-                        draft.engagement.interceptors,
-                        index,
-                      ),
-                    })
-                  }
+              <div key={index}>
+                <div className="flex flex-wrap items-end gap-2">
+                  <input
+                    className="field data w-40"
+                    placeholder="long range"
+                    aria-label="Interceptor name"
+                    value={round.name}
+                    onChange={(e) =>
+                      setRound(index, { ...round, name: e.target.value })
+                    }
+                  />
+                  <RoundField
+                    label="min km"
+                    value={round.min_range_km}
+                    onChange={(min_range_km) =>
+                      setRound(index, { ...round, min_range_km })
+                    }
+                  />
+                  <RoundField
+                    label="max km"
+                    wrong={
+                      gapsFor(gaps, `interceptors.${index}.max_range_km`).length > 0
+                    }
+                    value={round.max_range_km}
+                    onChange={(max_range_km) =>
+                      setRound(index, { ...round, max_range_km })
+                    }
+                  />
+                  <RoundField
+                    label="kts"
+                    wrong={
+                      gapsFor(gaps, `interceptors.${index}.speed_kts`).length > 0
+                    }
+                    value={round.speed_kts}
+                    onChange={(speed_kts) =>
+                      setRound(index, { ...round, speed_kts })
+                    }
+                  />
+                  <RemoveButton
+                    label={`Remove ${round.name || "interceptor"}`}
+                    onClick={() =>
+                      set("engagement", {
+                        ...draft.engagement,
+                        interceptors: removeAt(
+                          draft.engagement.interceptors,
+                          index,
+                        ),
+                      })
+                    }
+                  />
+                </div>
+                <GapNotice
+                  gaps={gaps}
+                  field={[
+                    `interceptors.${index}.name`,
+                    `interceptors.${index}.max_range_km`,
+                    `interceptors.${index}.speed_kts`,
+                  ]}
                 />
               </div>
             ))}
+            <GapNotice gaps={gaps} field="interceptors" className="!mt-0" />
             <AddButton
               label="Add an interceptor type"
               onClick={() =>
@@ -1184,6 +1292,7 @@ export function SystemProfileForm({
 
       {/* ---- Roles ---------------------------------------------------- */}
       <Section
+        icon={<RolesIcon />}
         title="Who does what"
         hint="An exercise must never ask a trainee to do something the system does by itself."
       >
@@ -1212,7 +1321,11 @@ export function SystemProfileForm({
         </Labelled>
       </Section>
 
-      <Section title="General notes" hint="Everything that did not fit a field above.">
+      <Section
+        icon={<NotesIcon />}
+        title="General notes"
+        hint="Everything that did not fit a field above."
+      >
         <textarea
           className="field min-h-32"
           value={draft.general_notes}
@@ -1223,6 +1336,9 @@ export function SystemProfileForm({
       {error ? <p className="chip status-danger !normal-case">{error}</p> : null}
       {notice ? <p className="chip status-ok !normal-case">{notice}</p> : null}
 
+      {gaps.length === 0 ? (
+        <NothingMissing approved={existing?.approved === true} />
+      ) : null}
       <MissingData
         gaps={gaps}
         lead={
@@ -1283,28 +1399,59 @@ function MissingData({ gaps, lead }: { gaps: Gap[]; lead: string }) {
   }, {});
 
   return (
-    <div className="panel border-l-2 border-l-danger p-4" role="alert">
-      <p className="text-sm">
-        <strong>
-          {gaps.length} thing{gaps.length === 1 ? "" : "s"} still to complete.
-        </strong>{" "}
-        {lead}
+    <div className="panel !border-l-2 !border-l-danger p-4" role="alert">
+      <p className="flex items-start gap-2 text-sm">
+        <AlertIcon className="mt-[0.2rem] shrink-0 text-base text-danger" />
+        <span>
+          <strong>
+            {gaps.length} thing{gaps.length === 1 ? "" : "s"} still to complete.
+          </strong>{" "}
+          {lead}
+        </span>
       </p>
 
       <div className="mt-4 space-y-3">
         {Object.entries(sections).map(([where, items]) => (
           <div key={where}>
-            <p className="label !mb-1">{where}</p>
-            <ul className="space-y-1">
+            <p className="label !mb-1.5">{where}</p>
+            <ul className="space-y-1.5">
               {items.map((item, index) => (
-                <li key={index} className="text-xs leading-relaxed text-muted">
-                  — {item}
+                <li
+                  key={index}
+                  className="flex items-start gap-1.5 text-xs leading-relaxed text-muted"
+                >
+                  <AlertIcon className="mt-[0.15rem] shrink-0 text-danger" />
+                  <span>{item}</span>
                 </li>
               ))}
             </ul>
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * The other half of the same sentence: nothing is missing.
+ *
+ * A form that only ever speaks up to complain leaves its quiet state
+ * ambiguous — a designer who has just filled in four figures cannot tell
+ * whether the warning is gone or whether they have simply not scrolled to it.
+ * Saying so costs one line and removes the doubt.
+ */
+function NothingMissing({ approved }: { approved: boolean }) {
+  return (
+    <div className="panel !border-l-2 !border-l-ok p-4">
+      <p className="flex items-start gap-2 text-sm">
+        <CheckIcon className="mt-[0.2rem] shrink-0 text-base text-ok" />
+        <span>
+          <strong>The simulation has every figure it runs on.</strong>{" "}
+          {approved
+            ? "Exercises and the console are being built from these numbers."
+            : "This can be approved, and then exercises and the console are built from it."}
+        </span>
+      </p>
     </div>
   );
 }
@@ -1375,20 +1522,43 @@ function emptyIff(): IffState {
 
 /* ---- Small building blocks --------------------------------------- */
 
+/**
+ * One section of the profile, with its heading, icon and state.
+ *
+ * `where` is the same string `simulationGaps` reports against, and passing it
+ * does two things: it puts a count on the heading, and it keeps the heading
+ * honest. The summary at the foot of this page names the section to scroll
+ * to, and for three sections it used to name one that did not exist here —
+ * "What can appear on the display" against a heading reading "Track
+ * classifications". Taking both from `SECTIONS` means the words in the
+ * summary are the words on the page.
+ */
 function Section({
   title,
   hint,
+  icon,
+  where,
+  gaps,
   children,
 }: {
   title: string;
   hint?: string;
+  icon: React.ReactNode;
+  where?: string;
+  gaps?: Gap[];
   children: React.ReactNode;
 }) {
   return (
     <section>
-      <h2 className="text-sm font-semibold">{title}</h2>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="grid size-7 shrink-0 place-items-center rounded bg-accent-dim text-base text-accent">
+          {icon}
+        </span>
+        <h2 className="text-sm font-semibold">{title}</h2>
+        {where && gaps ? <SectionState gaps={gaps} where={where} /> : null}
+      </div>
       {hint ? (
-        <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">{hint}</p>
+        <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted">{hint}</p>
       ) : null}
       <div className="mt-4 space-y-4">{children}</div>
     </section>
@@ -1409,17 +1579,26 @@ function Command({
   on,
   label,
   why,
+  icon,
+  gaps,
+  field,
   onToggle,
   children,
 }: {
   on: boolean;
   label: string;
   why: string;
+  icon: React.ReactNode;
+  gaps: Gap[];
+  /** The figure this command runs on, as `simulationGaps` keys it. */
+  field: string;
   onToggle: (next: boolean) => void;
   children?: React.ReactNode;
 }) {
+  const wrong = on && gapsFor(gaps, field).length > 0;
+
   return (
-    <div className="panel p-4">
+    <div className={`panel p-4 ${wrong ? "!border-l-2 !border-l-danger" : ""}`}>
       <label className="flex items-start gap-2 text-sm">
         <input
           type="checkbox"
@@ -1427,14 +1606,45 @@ function Command({
           checked={on}
           onChange={(e) => onToggle(e.target.checked)}
         />
-        <span>
-          {label}
-          <span className="mt-1 block max-w-2xl text-xs leading-relaxed text-muted">
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span
+              className={`grid size-6 shrink-0 place-items-center rounded text-sm ${
+                wrong
+                  ? "bg-danger-dim text-danger"
+                  : on
+                    ? "bg-accent-dim text-accent"
+                    : "bg-panel-raised text-muted"
+              }`}
+            >
+              {icon}
+            </span>
+            <span className="font-medium">{label}</span>
+            {/* Three states, not two. A command that is on but missing its
+                figure behaves exactly like one that is off — the console
+                grows no control — and the only place that difference can be
+                seen before a trainee flies it is here. */}
+            {wrong ? (
+              <span className="chip status-danger">
+                <AlertIcon />
+                needs a figure
+              </span>
+            ) : on ? (
+              <span className="chip status-ok">
+                <CheckIcon />
+                live
+              </span>
+            ) : (
+              <span className="chip text-muted">off</span>
+            )}
+          </span>
+          <span className="mt-1.5 block max-w-2xl text-xs leading-relaxed text-muted">
             {why}
           </span>
         </span>
       </label>
       {on && children ? <div className="mt-3 space-y-3">{children}</div> : null}
+      {on ? <GapNotice gaps={gaps} field={field} /> : null}
     </div>
   );
 }
@@ -1461,10 +1671,14 @@ function RangeField({
   label,
   value,
   onChange,
+  gaps,
+  field,
 }: {
   label: string;
   value: { min: number; max: number };
   onChange: (next: { min: number; max: number }) => void;
+  gaps?: Gap[];
+  field?: string;
 }) {
   return (
     <div>
@@ -1482,6 +1696,7 @@ function RangeField({
           onChange={(max) => onChange({ ...value, max })}
         />
       </div>
+      {gaps && field ? <GapNotice gaps={gaps} field={field} /> : null}
     </div>
   );
 }
@@ -1490,16 +1705,19 @@ function NumberInput({
   value,
   ariaLabel,
   onChange,
+  wide,
 }: {
   value: number;
   ariaLabel: string;
   onChange: (next: number) => void;
+  /** Fills its column instead of sitting at band width. */
+  wide?: boolean;
 }) {
   return (
     <input
       type="number"
       aria-label={ariaLabel}
-      className="field data w-28"
+      className={`field data ${wide ? "" : "w-28"}`}
       value={Number.isFinite(value) ? value : 0}
       onChange={(e) => onChange(Number(e.target.value))}
     />
@@ -1511,10 +1729,20 @@ function RoundField({
   label,
   value,
   onChange,
+  wrong,
 }: {
   label: string;
   value: number;
   onChange: (next: number) => void;
+  /**
+   * This is the figure the row's warning is about.
+   *
+   * The sentence under the row names the round and says what is missing, but
+   * three boxes eight characters wide all look equally plausible, and the one
+   * that reads `0` is not obviously the wrong one. Reddening the box turns a
+   * sentence to be read into a place to look.
+   */
+  wrong?: boolean;
 }) {
   return (
     <label className="block">
@@ -1523,8 +1751,9 @@ function RoundField({
       </span>
       <input
         type="number"
-        className="field data w-24"
+        className={`field data w-24 ${wrong ? "!border-danger" : ""}`}
         aria-label={label}
+        aria-invalid={wrong || undefined}
         value={Number.isFinite(value) ? value : 0}
         onChange={(e) => onChange(Number(e.target.value))}
       />
@@ -1543,27 +1772,39 @@ function NullableNumber({
   value,
   ariaLabel,
   onChange,
+  gaps,
+  field,
 }: {
   value: number | null;
   ariaLabel: string;
   onChange: (next: number | null) => void;
+  gaps?: Gap[];
+  /** The key this input answers to in `simulationGaps`. */
+  field?: string;
 }) {
+  const wrong = gaps && field ? gapsFor(gaps, field).length > 0 : false;
+
   return (
-    <input
-      type="number"
-      aria-label={ariaLabel}
-      className="field data"
-      placeholder="—"
-      value={value ?? ""}
-      onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
-    />
+    <>
+      <input
+        type="number"
+        aria-label={ariaLabel}
+        aria-invalid={wrong || undefined}
+        className={`field data ${wrong ? "!border-danger" : ""}`}
+        placeholder="—"
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
+      />
+      {gaps && field ? <GapNotice gaps={gaps} field={field} /> : null}
+    </>
   );
 }
 
 function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button type="button" className="btn text-xs" onClick={onClick}>
-      + {label}
+      <PlusIcon className="text-sm" />
+      {label}
     </button>
   );
 }
@@ -1583,7 +1824,7 @@ function RemoveButton({
       onClick={onClick}
       className="px-2 py-1 text-muted transition-colors hover:text-danger"
     >
-      ✕
+      <CrossIcon className="text-sm" />
     </button>
   );
 }

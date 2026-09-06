@@ -35,8 +35,28 @@ import type {
 export interface Gap {
   /** The section heading it sits under, so it can be found. */
   where: string;
+  /**
+   * Which input it belongs to, so the form can say it *at* the input.
+   *
+   * Required rather than optional, deliberately: a summary at the foot of a
+   * long form tells a designer that four things are wrong and leaves them to
+   * find which four, and the fields most often missing — a reload time, a
+   * tilt limit — are the ones only visible after a checkbox is ticked. With
+   * the key mandatory the compiler will not let a new rule be added that the
+   * form has nowhere to show.
+   *
+   * Keys are paths into the spec (`sensor.max_range_km`,
+   * `commands.reload_seconds`, `interceptors.1.speed_kts`). A gap about a
+   * whole list keys the list itself (`classes`, `interceptors`).
+   */
+  field: string;
   /** What is wrong, in the designer's terms. */
   what: string;
+}
+
+/** Every gap that belongs to one input, in the order they were raised. */
+export function gapsFor(gaps: Gap[], field: string): Gap[] {
+  return gaps.filter((gap) => gap.field === field);
 }
 
 /** The measured half of a profile — the only half the simulation reads. */
@@ -56,6 +76,25 @@ const COLUMNS = "What the operator reads for each track";
 const ENVELOPE = "What it can reach";
 const COMMANDS = "What the operator can do";
 
+/**
+ * The section headings, exported so a form can group and label by them.
+ *
+ * `Gap.where` promises the designer a heading they can scroll to, and that
+ * promise was only half kept: the entry form used these words, the review
+ * screen called the same sections "Track classifications" and "Engagement
+ * constraints", and a summary that named a heading which did not exist on
+ * the page the reader was looking at sent them hunting. Both screens now take
+ * their headings from here, so the name in the summary is the name on screen.
+ */
+export const SECTIONS = {
+  radar: RADAR,
+  classes: CLASSES,
+  states: STATES,
+  columns: COLUMNS,
+  envelope: ENVELOPE,
+  commands: COMMANDS,
+} as const;
+
 const positive = (value: number | null | undefined): value is number =>
   typeof value === "number" && Number.isFinite(value) && value > 0;
 
@@ -67,79 +106,80 @@ const positive = (value: number | null | undefined): value is number =>
  */
 export function simulationGaps(spec: SimulationSpec): Gap[] {
   const gaps: Gap[] = [];
-  const say = (where: string, what: string) => gaps.push({ where, what });
+  const say = (where: string, field: string, what: string) =>
+    gaps.push({ where, field, what });
 
   /* ---- The radar ------------------------------------------------- */
   // Detection range is the clock on every scenario about time: it decides how
   // long the operator has between seeing something and having to act.
   if (!positive(spec.sensor.max_range_km)) {
-    say(RADAR, "Detection range is empty. It decides how much warning the operator gets, so nothing can be placed on the scope without it.");
+    say(RADAR, "sensor.max_range_km", "Detection range is empty. It decides how much warning the operator gets, so nothing can be placed on the scope without it.");
   }
   if (!positive(spec.sensor.azimuth_coverage_deg)) {
-    say(RADAR, "Azimuth coverage is empty. 360° for a rotating radar; the arc it faces for a fixed array.");
+    say(RADAR, "sensor.azimuth_coverage_deg", "Azimuth coverage is empty. 360° for a rotating radar; the arc it faces for a fixed array.");
   } else if (spec.sensor.azimuth_coverage_deg! > 360) {
-    say(RADAR, `Azimuth coverage is ${spec.sensor.azimuth_coverage_deg}°, which is more than a full circle.`);
+    say(RADAR, "sensor.azimuth_coverage_deg", `Azimuth coverage is ${spec.sensor.azimuth_coverage_deg}°, which is more than a full circle.`);
   }
   if (spec.sensor.min_range_km !== null && spec.sensor.min_range_km < 0) {
-    say(RADAR, "The close-in blind zone cannot be negative. Leave it empty if there is none.");
+    say(RADAR, "sensor.min_range_km", "The close-in blind zone cannot be negative. Leave it empty if there is none.");
   }
 
   /* ---- What can appear ------------------------------------------- */
   if (spec.track_classifications.length === 0) {
-    say(CLASSES, "No track classes. An exercise may only produce tracks of the kinds declared here, so with none there is nothing to fly.");
+    say(CLASSES, "classes", "No track classes. An exercise may only produce tracks of the kinds declared here, so with none there is nothing to fly.");
   }
   spec.track_classifications.forEach((entry, index) => {
     const name = entry.name.trim() || `class ${index + 1}`;
     if (!entry.name.trim()) {
-      say(CLASSES, `Class ${index + 1} has no name. The exercise refers to classes by name.`);
+      say(CLASSES, `classes.${index}.name`, `Class ${index + 1} has no name. The exercise refers to classes by name.`);
     }
     if (!positive(entry.typical_speed_kts.max)) {
-      say(CLASSES, `“${name}” has no top speed. Speed is what moves the track across the scope — at zero it never arrives.`);
+      say(CLASSES, `classes.${index}.speed`, `“${name}” has no top speed. Speed is what moves the track across the scope — at zero it never arrives.`);
     } else if (entry.typical_speed_kts.min > entry.typical_speed_kts.max) {
-      say(CLASSES, `“${name}” has a speed band that runs backwards (${entry.typical_speed_kts.min}–${entry.typical_speed_kts.max} kts).`);
+      say(CLASSES, `classes.${index}.speed`, `“${name}” has a speed band that runs backwards (${entry.typical_speed_kts.min}–${entry.typical_speed_kts.max} kts).`);
     }
     if (entry.typical_altitude_ft.min > entry.typical_altitude_ft.max) {
-      say(CLASSES, `“${name}” has an altitude band that runs backwards (${entry.typical_altitude_ft.min}–${entry.typical_altitude_ft.max} ft).`);
+      say(CLASSES, `classes.${index}.altitude`, `“${name}” has an altitude band that runs backwards (${entry.typical_altitude_ft.min}–${entry.typical_altitude_ft.max} ft).`);
     }
   });
 
   /* ---- Identification -------------------------------------------- */
   if (spec.iff_states.length === 0) {
-    say(STATES, "No identification states. Every track carries one, and the operator's whole judgement is about which.");
+    say(STATES, "states", "No identification states. Every track carries one, and the operator's whole judgement is about which.");
   } else {
     if (spec.iff_states.some((state) => !state.name.trim())) {
-      say(STATES, "An identification state has no name. The exercise and the console both refer to them by name.");
+      say(STATES, "states", "An identification state has no name. The exercise and the console both refer to them by name.");
     }
     // Without something hostile there is nothing to defend against; without
     // something that is not, there is no wrong thing to shoot — and a run
     // where every track is a valid target trains the wrong reflex.
     if (!spec.iff_states.some((state) => state.tone === "hostile")) {
-      say(STATES, "No state is marked hostile. With nothing hostile there is no threat to engage.");
+      say(STATES, "states", "No state is marked hostile. With nothing hostile there is no threat to engage.");
     }
     if (!spec.iff_states.some((state) => state.tone !== "hostile")) {
-      say(STATES, "Every state is hostile. At least one must not be, or there is nothing the operator can wrongly shoot.");
+      say(STATES, "states", "Every state is hostile. At least one must not be, or there is nothing the operator can wrongly shoot.");
     }
   }
 
   /* ---- The columns ------------------------------------------------ */
   if (spec.track_readout_fields.length === 0) {
-    say(COLUMNS, "No readout columns. These are the table the trainee reads, so with none they fly blind.");
+    say(COLUMNS, "columns", "No readout columns. These are the table the trainee reads, so with none they fly blind.");
   } else if (spec.track_readout_fields.some((field) => !field.label.trim())) {
-    say(COLUMNS, "A column has no header.");
+    say(COLUMNS, "columns", "A column has no header.");
   }
 
   /* ---- The envelope ----------------------------------------------- */
   const { engagement } = spec;
   if (!positive(engagement.max_range_km)) {
-    say(ENVELOPE, "Maximum intercept range is empty. Without it nothing can be engaged at all.");
+    say(ENVELOPE, "engagement.max_range_km", "Maximum intercept range is empty. Without it nothing can be engaged at all.");
   }
   if (engagement.min_range_km < 0) {
-    say(ENVELOPE, "Minimum intercept range cannot be negative.");
+    say(ENVELOPE, "engagement.min_range_km", "Minimum intercept range cannot be negative.");
   } else if (
     positive(engagement.max_range_km) &&
     engagement.min_range_km >= engagement.max_range_km
   ) {
-    say(ENVELOPE, `The envelope is inside out: minimum ${engagement.min_range_km} km is not less than maximum ${engagement.max_range_km} km.`);
+    say(ENVELOPE, "engagement.min_range_km", `The envelope is inside out: minimum ${engagement.min_range_km} km is not less than maximum ${engagement.max_range_km} km.`);
   }
 
   // A weapon that outreaches its own radar means the operator is asked to
@@ -150,32 +190,32 @@ export function simulationGaps(spec: SimulationSpec): Gap[] {
     positive(engagement.max_range_km) &&
     spec.sensor.max_range_km! < engagement.max_range_km
   ) {
-    say(RADAR, `Detection range (${spec.sensor.max_range_km} km) is shorter than the engagement envelope (${engagement.max_range_km} km), so a target would be shootable before it is visible.`);
+    say(RADAR, "sensor.max_range_km", `Detection range (${spec.sensor.max_range_km} km) is shorter than the engagement envelope (${engagement.max_range_km} km), so a target would be shootable before it is visible.`);
   }
 
   if (engagement.interceptors.length === 0) {
-    say(ENVELOPE, "No interceptor types. The operator chooses a round before firing, and its speed is what sets the time of flight.");
+    say(ENVELOPE, "interceptors", "No interceptor types. The operator chooses a round before firing, and its speed is what sets the time of flight.");
   }
   engagement.interceptors.forEach((round, index) => {
     const name = round.name.trim() || `interceptor ${index + 1}`;
     if (!round.name.trim()) {
-      say(ENVELOPE, `Interceptor ${index + 1} has no name. The operator picks rounds by name.`);
+      say(ENVELOPE, `interceptors.${index}.name`, `Interceptor ${index + 1} has no name. The operator picks rounds by name.`);
     }
     if (!positive(round.max_range_km)) {
-      say(ENVELOPE, `“${name}” has no maximum range, so it can never reach anything.`);
+      say(ENVELOPE, `interceptors.${index}.max_range_km`, `“${name}” has no maximum range, so it can never reach anything.`);
     } else if (round.min_range_km >= round.max_range_km) {
-      say(ENVELOPE, `“${name}” has a range that runs backwards (${round.min_range_km}–${round.max_range_km} km).`);
+      say(ENVELOPE, `interceptors.${index}.max_range_km`, `“${name}” has a range that runs backwards (${round.min_range_km}–${round.max_range_km} km).`);
     }
     if (!positive(round.speed_kts)) {
-      say(ENVELOPE, `“${name}” has no speed. Speed is the time of flight — how much earlier than impact the decision has to be made.`);
+      say(ENVELOPE, `interceptors.${index}.speed_kts`, `“${name}” has no speed. Speed is the time of flight — how much earlier than impact the decision has to be made.`);
     }
   });
 
   if (!positive(engagement.max_simultaneous)) {
-    say(ENVELOPE, "“Interceptors in the air at once” is empty. It is the limit that makes a third launch a refusal instead of a shrug.");
+    say(ENVELOPE, "engagement.max_simultaneous", "“Interceptors in the air at once” is empty. It is the limit that makes a third launch a refusal instead of a shrug.");
   }
   if (!positive(engagement.magazine_depth)) {
-    say(ENVELOPE, "“Rounds available” is empty. Without a magazine, spending rounds costs nothing and efficiency is not trained.");
+    say(ENVELOPE, "engagement.magazine_depth", "“Rounds available” is empty. Without a magazine, spending rounds costs nothing and efficiency is not trained.");
   }
 
   /* ---- The commands beyond the universal four --------------------- */
@@ -188,20 +228,20 @@ export function simulationGaps(spec: SimulationSpec): Gap[] {
   const commands = spec.operator_commands;
 
   if (commands.reload && !positive(commands.reload_seconds)) {
-    say(COMMANDS, "Reload is switched on with no time against it. A reload that costs nothing teaches an operator that reloading is free, which is the opposite of the lesson — give it the seconds it really takes.");
+    say(COMMANDS, "commands.reload_seconds", "Reload is switched on with no time against it, so it counts as off and no reload control appears on the console. A reload that costs nothing would teach an operator that reloading is free, which is the opposite of the lesson — give it the seconds it really takes.");
   }
   if (commands.launchers && (commands.launcher_count ?? 0) < 2) {
-    say(COMMANDS, "Choosing a launcher is switched on with fewer than two launchers. With one there is nothing to choose, and the control is not shown.");
+    say(COMMANDS, "commands.launcher_count", "Choosing a launcher is switched on with fewer than two launchers, so it counts as off and no launcher picker appears — with one there is nothing to choose. Two or more, and the magazine divides between them.");
   }
   if (commands.tilt) {
     if (commands.tilt_min_deg === null || commands.tilt_max_deg === null) {
-      say(COMMANDS, "Radar tilt is switched on without its limits. The operator has to be told how far up and down the array goes, and nothing below where it points is held.");
+      say(COMMANDS, "commands.tilt_min_deg", "Radar tilt is switched on without its limits, so it counts as off: the console shows no tilt control and the whole air picture stays held, whatever its elevation. Give the lowest and highest the array reaches — below where it points nothing is held at all, and that trade is the thing being trained.");
     } else if (commands.tilt_min_deg >= commands.tilt_max_deg) {
-      say(COMMANDS, `The tilt limits run backwards: ${commands.tilt_min_deg}° is not below ${commands.tilt_max_deg}°.`);
+      say(COMMANDS, "commands.tilt_min_deg", `The tilt limits run backwards: ${commands.tilt_min_deg}° is not below ${commands.tilt_max_deg}°.`);
     }
   }
   if (commands.retype && spec.track_classifications.length < 2) {
-    say(COMMANDS, "Correcting the track type is switched on with fewer than two track classes. There is nothing to change it to.");
+    say(COMMANDS, "commands.retype", "Correcting the track type is switched on with fewer than two track classes. There is nothing to change it to.");
   }
 
   return gaps;
