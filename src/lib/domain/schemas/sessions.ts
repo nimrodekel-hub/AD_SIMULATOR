@@ -112,6 +112,19 @@ export const SessionSchema = z.object({
   clarification_rounds: z.array(ClarificationRoundSchema),
   difficulty_level: DifficultyLevelSchema,
   exercise_instance: ExerciseInstanceSchema,
+  /**
+   * What the generator had to override to fit the system, in the designer's
+   * words — shown to the trainee in the brief, before the clock starts.
+   *
+   * These already existed and were already written; they were simply thrown
+   * away on this path. A designer correcting an exercise saw them and a
+   * trainee starting a run did not, so a request the profile made impossible
+   * — "put some of the jets on Mode 3 and Mode 1", on a system that declares
+   * no transponders — came back as an air picture with nothing in it and no
+   * explanation. A clamp nobody is told about is indistinguishable from a
+   * request nobody read.
+   */
+  exercise_adjustments: z.array(z.string()).default([]),
   /** Legacy: the answers chosen, for runs recorded before the simulator. */
   decisions_made: z.array(DecisionMadeSchema),
   /** What actually happened, second by second. The debrief is built from this. */
