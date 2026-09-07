@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AssessmentPending } from "@/components/assessment-pending";
 import { ScreenShell } from "@/components/screen-shell";
-import { summaryOf } from "@/lib/domain/run-outcome";
+import { criteriaOf, gradeBand, summaryOf } from "@/lib/domain/run-outcome";
 import { getScenario } from "@/lib/store/kb";
 import { getSession } from "@/lib/store/sessions";
 
@@ -17,6 +17,20 @@ import { getSession } from "@/lib/store/sessions";
  */
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Written out rather than built from the tone.
+ *
+ * Tailwind generates a utility only where it finds the whole class name in the
+ * source, so `text-${tone}` produces markup with a class that does not exist —
+ * silently, and only for whichever band nothing else on the site happens to
+ * use. Spelling all three keeps them real.
+ */
+const TONE_TEXT = {
+  danger: "text-danger",
+  warn: "text-warn",
+  ok: "text-ok",
+} as const;
 
 export default async function DebriefPage({
   params,
@@ -61,6 +75,11 @@ export default async function DebriefPage({
   /** Whether a model has written about the run yet. Nothing here waits on it. */
   const assessed = session.debrief_text.trim().length > 0;
 
+  /* The four conditions behind the verdict, and what to call the grade. Both
+     are derived rather than stored, so an old record shows them too. */
+  const criteria = criteriaOf(result, session.exercise_instance.success_criteria);
+  const grade = session.score === null ? null : gradeBand(session.score);
+
   return (
     <ScreenShell
       theme="work"
@@ -91,30 +110,80 @@ export default async function DebriefPage({
       ) : null}
 
       {/* ---- Result ------------------------------------------------- */}
-      <div className="panel flex flex-wrap items-center gap-6 p-6">
+      {/* The grade carries the scale with it. On its own, out of nothing, "8"
+          reads like eight out of ten — a fair mark — when it is eight out of a
+          hundred and the worst the rubric gives. The denominator, the word for
+          the band and the colour all say the same thing, so none of them has
+          to be understood alone. */}
+      <div className="panel flex flex-wrap items-center gap-x-8 gap-y-5 p-6">
         <div>
-          <p className="text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-muted">
-            Score
-          </p>
-          {/* An unscored run shows a dash, not a nought. A score is the
+          <p className="label !mb-1">Grade</p>
+          {/* An unscored run shows a dash, not a nought. A grade is the
               scenario's rubric applied by the model, and printing 0 for
               "nobody has applied it yet" reads as the worst possible result
               for a run that may have been flawless. */}
-          <p className="data mt-1 text-4xl font-semibold">
-            {session.score === null ? (
-              <span className="text-muted">—</span>
-            ) : (
-              Math.round(session.score)
-            )}
-          </p>
+          {session.score === null ? (
+            <>
+              <p className="data text-4xl font-semibold text-muted">—</p>
+              <p className="mt-1 text-xs text-muted">not graded yet</p>
+            </>
+          ) : (
+            <>
+              <p className="data text-4xl font-semibold leading-none">
+                <span className={TONE_TEXT[grade!.tone]}>
+                  {Math.round(session.score)}
+                </span>
+                <span className="text-xl font-normal text-muted"> / 100</span>
+              </p>
+              <p
+                className={`mt-1.5 text-xs font-semibold ${TONE_TEXT[grade!.tone]}`}
+              >
+                {grade!.label}
+              </p>
+            </>
+          )}
         </div>
-        <div className="flex-1">
+
+        <div className="min-w-[16rem] flex-1">
           <span className={`chip ${outcome.success ? "status-ok" : "status-danger"}`}>
             {outcome.success ? "Mission success" : "Mission failed"}
           </span>
-          <p className="mt-2 text-sm text-muted">{outcome.summary}</p>
+          <p className="prose-block mt-2 text-sm text-muted">{outcome.summary}</p>
         </div>
       </div>
+
+      {/* ---- Why it passed or failed -------------------------------- */}
+      {/* The verdict above is one boolean over four conditions, and a trainee
+          shown only the boolean cannot tell which one broke: a run lost on one
+          round too many looks exactly like a run lost on fratricide. Four
+          rows, in the engine's own order, answer that at a glance. */}
+      <section className="mt-6">
+        <h2 className="text-sm font-semibold">What it was judged on</h2>
+        <ul className="panel mt-3 divide-y divide-[var(--border)]">
+          {criteria.map((criterion) => (
+            <li
+              key={criterion.label}
+              className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 py-3"
+            >
+              <span
+                aria-hidden
+                className={`text-sm font-semibold ${criterion.met ? "text-ok" : "text-danger"}`}
+              >
+                {criterion.met ? "✓" : "✗"}
+              </span>
+              <span className="text-sm">{criterion.label}</span>
+              <span className="data ml-auto text-xs text-muted">
+                {criterion.detail}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {session.exercise_instance.success_criteria.statement ? (
+          <p className="prose-block mt-3 text-xs text-muted">
+            {session.exercise_instance.success_criteria.statement}
+          </p>
+        ) : null}
+      </section>
 
       {/* ---- What the simulation counted ---------------------------- */}
       {/* Unconditional, and first. This is the result of the run: the engine
@@ -127,12 +196,22 @@ export default async function DebriefPage({
           Counted from the run itself. These are not judgements and nothing can
           argue with them.
         </p>
-        <dl className="data mt-3 grid grid-cols-2 gap-px overflow-hidden rounded border border-line bg-[var(--border)] sm:grid-cols-3 lg:grid-cols-6">
-          <Tally label="Hostiles destroyed" value={result.hostiles_destroyed} />
+        {/* Each figure carries a line saying what it means. They are terms of
+            art — "leakers", "mean reaction" — and a trainee reading their own
+            result should not have to already know the vocabulary to find out
+            how they did. The three fates of a hostile come first, in order,
+            because together they account for every track in the run. */}
+        <dl className="mt-3 grid grid-cols-1 gap-px overflow-hidden rounded border border-line bg-[var(--border)] sm:grid-cols-2 lg:grid-cols-3">
+          <Tally
+            label="Hostiles destroyed"
+            value={result.hostiles_destroyed}
+            hint="Shot down before they arrived."
+          />
           <Tally
             label="Reached the site"
             value={result.leakers}
             bad={result.leakers > 0}
+            hint="Got through to the defended area."
           />
           {/* The third possible fate, and the one that used to be invisible:
               neither destroyed nor arrived. It only becomes common now that a
@@ -142,20 +221,30 @@ export default async function DebriefPage({
             label="Still inbound"
             value={result.hostiles_unresolved}
             bad={result.hostiles_unresolved > 0}
+            hint="Still closing when the run stopped — neither stopped nor arrived."
           />
           <Tally
             label="Friendlies engaged"
             value={result.friendly_engaged}
             bad={result.friendly_engaged > 0}
+            hint="Fired on and it was not a threat. Fails a run on its own."
           />
-          <Tally label="Rounds spent" value={result.interceptors_spent} />
+          <Tally
+            label="Rounds spent"
+            value={result.interceptors_spent}
+            hint={`Interceptors fired, of ${session.exercise_instance.success_criteria.max_interceptors_spent} allowed.`}
+          />
           <Tally
             label="Mean reaction"
+            /* Whole seconds. A tenth of a second of mean reaction is not a
+               distinction anybody acts on, and "109.4s" was wide enough to
+               run into its own label. */
             value={
               result.mean_reaction_s === null
                 ? "—"
-                : `${result.mean_reaction_s}s`
+                : `${Math.round(result.mean_reaction_s)}s`
             }
+            hint="From a hostile becoming identifiable to you firing on it."
           />
         </dl>
 
@@ -275,18 +364,32 @@ export default async function DebriefPage({
 function Tally({
   label,
   value,
+  hint,
   bad = false,
 }: {
   label: string;
   value: number | string;
+  /** One line of plain English, so the label need not already be understood. */
+  hint: string;
   bad?: boolean;
 }) {
+  /* A div wrapping one dt/dd pair is the sanctioned way to group them inside a
+     dl. The number is ordered first visually because that is what the eye
+     scans, while the DOM keeps term before definition. */
   return (
-    <div className="bg-panel p-4">
-      <dt className="text-[0.625rem] uppercase tracking-[0.1em] text-muted">
+    <div className="flex items-baseline gap-4 bg-panel p-4">
+      <dt className="order-2 min-w-0 text-xs font-semibold">
         {label}
+        <span className="mt-0.5 block font-normal leading-snug text-muted">
+          {hint}
+        </span>
       </dt>
-      <dd className={`mt-1 text-2xl font-semibold ${bad ? "text-danger" : ""}`}>
+      <dd
+        /* A floor rather than a fixed width, so the columns line up on the
+           usual one- and two-digit counts without a wider value colliding
+           with its own label. */
+        className={`data order-1 min-w-14 shrink-0 whitespace-nowrap text-2xl font-semibold ${bad ? "text-danger" : ""}`}
+      >
         {value}
       </dd>
     </div>
