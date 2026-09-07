@@ -20,6 +20,82 @@ import type { Outcome, RunResult, SuccessCriteria } from "./schemas";
  * in this file can fail. The prose arrives later if it arrives.
  */
 
+/**
+ * The four things a run is passed or failed on, each answered separately.
+ *
+ * `met_criteria` is a single boolean over four conditions, and a trainee shown
+ * only the boolean cannot tell which one broke — a run lost on one round too
+ * many reads exactly like a run lost on fratricide. The prose summary said it,
+ * but a paragraph is the wrong shape for four yes/no answers: you have to read
+ * all of it to find the one that went wrong.
+ *
+ * These are the same four conditions the engine ands together, in the same
+ * order, so the list cannot drift from the verdict it explains.
+ */
+export interface Criterion {
+  /** What was required, as a statement that is either true of the run or not. */
+  label: string;
+  met: boolean;
+  /** What actually happened against what was allowed. */
+  detail: string;
+}
+
+export function criteriaOf(
+  result: RunResult,
+  criteria: SuccessCriteria,
+): Criterion[] {
+  return [
+    {
+      label: "Nothing hostile reached the defended area",
+      met: result.leakers <= criteria.max_leakers,
+      detail:
+        criteria.max_leakers > 0
+          ? `${result.leakers} reached it, ${criteria.max_leakers} allowed`
+          : `${result.leakers} reached it, none allowed`,
+    },
+    {
+      label: "Nothing friendly was engaged",
+      met: result.friendly_engaged === 0,
+      detail:
+        result.friendly_engaged === 0
+          ? "none engaged"
+          : `${result.friendly_engaged} engaged — this fails a run on its own`,
+    },
+    {
+      label: "The engagement was seen through",
+      met: result.hostiles_unresolved === 0,
+      detail:
+        result.hostiles_unresolved === 0
+          ? "nothing hostile left in the air"
+          : `${result.hostiles_unresolved} still inbound when the run stopped`,
+    },
+    {
+      label: "Rounds were spent within the allowance",
+      met: result.interceptors_spent <= criteria.max_interceptors_spent,
+      detail: `${result.interceptors_spent} spent of ${criteria.max_interceptors_spent} allowed`,
+    },
+  ];
+}
+
+/**
+ * Which band a grade falls in, and what to call it.
+ *
+ * The number alone was doing too much work. Shown bare, out of nothing, "8"
+ * reads like eight out of ten — a decent mark — when it is eight out of a
+ * hundred and the worst result the rubric can give. The scale goes beside it
+ * on screen; this says what the number *means*, in a word and a colour, so
+ * the reading does not depend on knowing the rubric.
+ */
+export function gradeBand(score: number): {
+  label: string;
+  /** Maps to the status colours: danger, warn, ok. */
+  tone: "danger" | "warn" | "ok";
+} {
+  if (score < 50) return { label: "Poor", tone: "danger" };
+  if (score < 75) return { label: "Fair", tone: "warn" };
+  return { label: "Good", tone: "ok" };
+}
+
 /** Whether the run met the criteria, in the words the criteria are set in. */
 export function outcomeOf(
   result: RunResult,
