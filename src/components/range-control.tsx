@@ -70,8 +70,16 @@ export function RangeControl({
      left plain these render at the full 0.875rem with 0.5rem×1rem of padding —
      about 35 px against the 20 px strip a shell reserves for them — and the
      buttons then sit on top of the shell's own caption row. In a strip that
-     tight the padding goes entirely and the line box carries the height. */
-  const pill = `btn !${size} !px-1.5 ${inShell ? "!py-0 !leading-4" : "!py-0.5"}`;
+     tight the padding goes entirely and the line box carries the height.
+
+     Every one of these is written out whole, never assembled from a variable.
+     Tailwind generates a utility by finding its name as a literal in the
+     source: build `!` + `text-[0.6rem]` at runtime and the two halves are both
+     present, the joined name is not, and the rule is silently never emitted —
+     which is the same failure as leaving the `!` off, one level further back
+     and invisible in the browser's own styles panel. */
+  const forced = variant === "bar" ? "!text-[0.7rem]" : "!text-[0.6rem]";
+  const pill = `btn ${forced} !px-1.5 ${inShell ? "!py-0 !leading-4" : "!py-0.5"}`;
 
   return (
     <div

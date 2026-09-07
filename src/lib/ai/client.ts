@@ -167,6 +167,23 @@ function worthRetrying(reason: unknown): boolean {
 }
 
 /**
+ * Whether a failure is the answer being cut off rather than anything wrong.
+ *
+ * The SDK parses the reply against the schema and throws its own error when
+ * the JSON will not parse — which, on a truncated reply, is a message about a
+ * character offset. Matched on text rather than on a class because the SDK
+ * raises a plain `Error` for it, and the alternative is showing a designer
+ * `Unterminated string in JSON at position 6654` after a three-minute wait.
+ */
+function ranOutOfRoom(reason: unknown): boolean {
+  const said = reason instanceof Error ? reason.message : String(reason);
+  return (
+    /failed to parse structured output/i.test(said) ||
+    /unterminated string|unexpected end of (json|input)/i.test(said)
+  );
+}
+
+/**
  * How long to wait before each further attempt, in seconds.
  *
  * Deliberately long. These calls already run server-side inside a five-minute
@@ -400,7 +417,23 @@ export async function structured<T>({
   messages,
   schema,
   effort = "high",
-  maxTokens = 16000,
+  /**
+   * The ceiling on one reply, thinking included.
+   *
+   * Deliberately far above what any of these tasks needs. It is not a target
+   * and nothing is charged for leaving it high — it is only the point at
+   * which the model is cut off mid-sentence, and being cut off here is not a
+   * short answer but a *broken* one: the reply is a JSON document, so the cut
+   * lands inside a string and there is nothing to parse. That is exactly what
+   * happened — an exercise with a full track list ran three and a half
+   * minutes and came back as `Unterminated string in JSON at position 6654`.
+   *
+   * 16k is the documented ceiling for a request that waits for the whole
+   * reply at once, because beyond it the HTTP request times out before the
+   * model finishes. Streaming removes that limit, which is why the calls
+   * below stream and take the final message rather than asking for it whole.
+   */
+  maxTokens = 64000,
   label = "structured",
   mock,
 }: StructuredRequest<T>): Promise<T> {
@@ -424,11 +457,13 @@ export async function structured<T>({
   const ask = async (): Promise<Parsed<T>> => {
     if (fallbacksUsable !== false) {
       try {
-        const beta = await anthropic().beta.messages.parse({
-          ...request,
-          betas: [FALLBACK_BETA],
-          fallbacks: "default",
-        });
+        const beta = await anthropic()
+          .beta.messages.stream({
+            ...request,
+            betas: [FALLBACK_BETA],
+            fallbacks: "default",
+          })
+          .finalMessage();
         fallbacksUsable = true;
         return {
           parsed_output: beta.parsed_output as T | null | undefined,
@@ -447,7 +482,7 @@ export async function structured<T>({
       }
     }
 
-    const plain = await anthropic().messages.parse(request);
+    const plain = await anthropic().messages.stream(request).finalMessage();
     return {
       parsed_output: plain.parsed_output as T | null | undefined,
       stop_reason: plain.stop_reason,
@@ -457,11 +492,37 @@ export async function structured<T>({
     };
   };
 
-  const response = await withRetry(label, ask);
+  let response: Parsed<T>;
+  try {
+    response = await withRetry(label, ask);
+  } catch (reason) {
+    /* The reply is a JSON document, so being cut off is not a short answer —
+       it is a broken one, and the SDK's own parser is what notices. Its
+       message names a character offset, which tells a designer nothing about
+       what to do. Say what actually happened instead. */
+    if (!ranOutOfRoom(reason)) throw reason;
+    throw new Error(
+      "The model ran out of room before it finished writing this one, so the " +
+        "answer came back cut off. Nothing was saved. Ask for it again — and " +
+        "if it keeps happening, ask for a smaller one: fewer tracks, or a " +
+        "shorter brief.",
+    );
+  }
 
   // The model that answered, not the one asked for: a fallback bills at its
   // own rates, so logging the requested model would misprice the line.
   reportUsage(label, response.served, response.usage);
+
+  /* The same failure, caught before the parser rather than after: the reply
+     stopped because it hit the ceiling. Whether the JSON happens to be
+     parseable at that point is luck, so it is refused either way rather than
+     saved as a half-written exercise. */
+  if (response.stop_reason === "max_tokens") {
+    throw new Error(
+      "The model ran out of room before it finished writing this one. " +
+        "Nothing was saved. Ask for it again, or ask for a smaller one.",
+    );
+  }
 
   if (response.stop_reason === "refusal") {
     throw new Error(
