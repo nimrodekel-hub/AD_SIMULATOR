@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AssessmentRetry } from "@/components/assessment-retry";
+import { AssessmentPending } from "@/components/assessment-pending";
 import { ScreenShell } from "@/components/screen-shell";
 import { summaryOf } from "@/lib/domain/run-outcome";
 import { getScenario } from "@/lib/store/kb";
@@ -185,19 +185,11 @@ export default async function DebriefPage({
              one part that can be missing. Said plainly, beside the result it
              does not affect, rather than in place of it. */
           <div className="panel mt-3 p-5">
-            <p className="text-sm">
-              The written assessment has not been produced for this run. Your
-              result above is final and saved — this is the reading of{" "}
-              <em>how</em> you got there, and it is the only thing still
-              outstanding.
-            </p>
-            <div className="mt-4">
-              <AssessmentRetry
-                sessionId={sessionId}
-                log={session.run_log}
-                result={result}
-              />
-            </div>
+            <AssessmentPending
+              sessionId={sessionId}
+              log={session.run_log}
+              result={result}
+            />
           </div>
         )}
       </section>

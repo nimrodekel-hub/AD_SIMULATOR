@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { z } from "zod";
 import { describeAiError } from "@/lib/ai/client";
 import { generateDebrief } from "@/lib/ai/tasks/debrief";
@@ -20,9 +20,21 @@ import { completeSession, concludeRun, getSession } from "@/lib/store/sessions";
  * trainee's unfinished work.
  *
  * So this route now succeeds whenever the run was recorded, which is
- * everything the caller actually needs from it. `debrief` is present when the
- * assessment was written; `assessment_error` is present, with a 200, when it
- * was not. Only a request that cannot identify the run is an error.
+ * everything the caller actually needs from it. Only a request that cannot
+ * identify the run is an error.
+ *
+ * And it answers *as soon as* the run is recorded, rather than holding the
+ * connection open until the prose is written. The assessment is a model call
+ * of a minute or more, and awaiting it inside the request meant the trainee
+ * sat on a "saving" screen long after the flying was over, with nothing to
+ * look at and no way to tell whether anything was happening. At least one of
+ * them gave up and closed the tab — their run was recorded, scored and filed
+ * exactly as it should have been, and they never saw a word of it, which is
+ * indistinguishable from the feature not existing.
+ *
+ * So the writing is scheduled with `after` and the trainee is sent to their
+ * result immediately. The debrief page shows the tally at once and waits for
+ * the prose there, where there is something to read while it waits.
  *
  * The tally arrives from the browser, computed by the same engine that
  * enforced the rules during the run. That is deliberate: recomputing it here
@@ -76,33 +88,38 @@ export async function POST(
   const scenario = await getScenario(session.system_id, session.scenario_entry_id);
   if (!scenario) {
     return NextResponse.json({
+      recorded: true,
       assessment_error:
         "The scenario this run was built from no longer exists, so it cannot " +
         "be assessed against its rubric. The result of the run itself is saved.",
     });
   }
 
-  try {
-    const debrief = await generateDebrief({
-      scenario,
-      exercise: session.exercise_instance,
-      log: parsed.data.run_log,
-      result: parsed.data.run_result,
-      // What they came for. An assessment that never refers to it is an
-      // assessment of a run nobody asked for.
-      requested: {
-        text: session.requested_text,
-        clarifications: session.clarification_rounds,
-      },
-    });
-    await completeSession(id, debrief);
-    return NextResponse.json({ debrief });
-  } catch (reason) {
-    /* Not an error status. The request did what it was for: the run is
-       recorded, closed and scoreable by eye. Answering 502 here is what used
-       to strand the trainee on the console with no way to their own result —
-       so the failure is reported as a field, and the debrief page shows the
-       tally with the assessment missing and a button to ask for it again. */
-    return NextResponse.json({ assessment_error: describeAiError(reason) });
-  }
+  /* Scheduled, not awaited. Nothing below this point can change what the
+     trainee is about to be shown — the tally is already written — so none of
+     it is worth making them wait for. A failure here leaves the run saved and
+     unassessed, which the debrief page states plainly and offers to retry. */
+  after(async () => {
+    try {
+      const debrief = await generateDebrief({
+        scenario,
+        exercise: session.exercise_instance,
+        log: parsed.data.run_log,
+        result: parsed.data.run_result,
+        // What they came for. An assessment that never refers to it is an
+        // assessment of a run nobody asked for.
+        requested: {
+          text: session.requested_text,
+          clarifications: session.clarification_rounds,
+        },
+      });
+      await completeSession(id, debrief);
+    } catch (reason) {
+      console.error(
+        `[complete] run ${id.slice(0, 8)} is saved but unassessed: ${describeAiError(reason)}`,
+      );
+    }
+  });
+
+  return NextResponse.json({ recorded: true, assessment: "writing" });
 }
