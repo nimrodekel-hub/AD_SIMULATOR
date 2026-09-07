@@ -100,6 +100,12 @@ export async function POST(request: NextRequest) {
       });
 
       let exercise;
+      /* What the generator had to override to fit the system. Carried to the
+         session and shown in the brief: these are already written, and this
+         path used to drop them on the floor — so a request the profile made
+         impossible reached the trainee as an air picture that simply did not
+         contain what they had asked for. */
+      let adjustments: string[] = [];
       if (already) {
         console.log(
           `[exercise:reused] ${already.from} — nothing generated, nothing billed`,
@@ -109,7 +115,7 @@ export async function POST(request: NextRequest) {
         // Only an approved profile governs generation. A draft is the designer
         // still working, and half-taught doctrine is worse than none.
         const profile = await getSystemProfile(body.system_id);
-        ({ exercise } = await generateExercise(
+        ({ exercise, adjustments } = await generateExercise(
           scenario,
           body.difficulty,
           profile?.approved ? profile : null,
@@ -127,6 +133,7 @@ export async function POST(request: NextRequest) {
         clarificationRounds: body.clarifications,
         difficulty: body.difficulty,
         exercise,
+        adjustments,
       });
       // The session is written before the job is marked done, so a finished
       // job always points at something that is already there to open.

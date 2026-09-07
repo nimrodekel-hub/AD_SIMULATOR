@@ -71,6 +71,7 @@ export default async function RunPage({
         exercise={session.exercise_instance}
         difficulty={session.difficulty_level}
         profile={profile?.approved ? profile : null}
+        notices={session.exercise_adjustments}
         templateHtml={usableConsole(template?.approved ? template.generated_ui_code : undefined)}
       />
     </ScreenShell>

@@ -13,6 +13,7 @@ import {
   type Trainee,
 } from "../domain/schemas";
 import { repoFiles } from "./repo-files";
+import { outcomeOf } from "../domain/run-outcome";
 import { currentNames } from "../domain/stored-names";
 
 /**
@@ -44,6 +45,8 @@ export async function createSession(input: {
   clarificationRounds: ClarificationRound[];
   difficulty: DifficultyLevel;
   exercise: ExerciseInstance;
+  /** What the generator had to override to fit the system. Shown in the brief. */
+  adjustments?: string[];
 }): Promise<Session> {
   const session: Session = {
     id: crypto.randomUUID(),
@@ -54,6 +57,7 @@ export async function createSession(input: {
     clarification_rounds: input.clarificationRounds,
     difficulty_level: input.difficulty,
     exercise_instance: input.exercise,
+    exercise_adjustments: input.adjustments ?? [],
     decisions_made: [],
     run_log: [],
     run_result: null,
@@ -92,14 +96,21 @@ async function save(session: Session, message: string): Promise<void> {
 }
 
 /**
- * Stores what happened during a run, before anything is asked to assess it.
+ * Closes a run on the strength of what the engine counted, and nothing else.
  *
- * Written as its own commit rather than folded into the completion, so that a
- * debrief that fails — a model timeout, a bad key — still leaves a full record
- * of the engagement on the branch. The assessment can be produced again from
- * this; the flying cannot.
+ * This is what "the run is over" means: the clock stopped, the tally is in,
+ * and the trainee is owed the result. It used to mean something else — a run
+ * became `completed` only when a model had finished writing about it, so an
+ * assessment that failed left a finished engagement recorded as unfinished
+ * work and showed the trainee "this run has not been completed yet" after
+ * they had destroyed every hostile.
+ *
+ * One save rather than two. The log, the tally and the objective outcome are
+ * known at the same instant and every save here is a commit, so writing them
+ * separately bought a second commit and a window in which the record was
+ * half-written.
  */
-export async function recordRun(
+export async function concludeRun(
   id: string,
   log: SimEvent[],
   result: RunResult,
@@ -107,12 +118,30 @@ export async function recordRun(
   const session = await getSession(id);
   if (!session) return;
   await save(
-    { ...session, run_log: log, run_result: result },
-    `Record run ${id.slice(0, 8)}`,
+    {
+      ...session,
+      run_log: log,
+      run_result: result,
+      outcome: outcomeOf(result, session.exercise_instance.success_criteria),
+      /* Deliberately not scored. A number here would be this file's invention
+         competing with the scenario's own rubric, which is the model's to
+         apply — so the objective close leaves the score empty and the
+         assessment fills it in. */
+      status: "completed",
+      completed_at: new Date().toISOString(),
+    },
+    `Conclude run ${id.slice(0, 8)} — ${result.met_criteria ? "met" : "missed"} criteria`,
   );
 }
 
-/** Writes the debrief and closes the run. */
+/**
+ * Attaches the written assessment to a run that is already closed.
+ *
+ * Its outcome replaces the objective one because it is the same verdict with
+ * the reasoning attached — the model is given the engine's tally and grades
+ * against the scenario's own rubric, so it cannot disagree about what
+ * happened, only add why it mattered.
+ */
 export async function completeSession(
   id: string,
   debrief: Debrief,

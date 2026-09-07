@@ -259,7 +259,6 @@ export async function generateExercise(
     ],
     schema: ExerciseDraftSchema,
     effort: "high",
-    maxTokens: 16000,
     label: revise ? "exercise-revision" : "exercise",
     mock: () => mockExercise(scenario, difficulty, profile),
   });
@@ -377,6 +376,57 @@ function clampToProfile(
       ...transponderReply(track, declared),
     };
   });
+
+  /* Transponder codes the profile made impossible.
+     `transponderReply` silences a track whose class carries nothing, which is
+     right — a cruise missile with a squawk would let a trainee identify it by
+     asking. What was wrong was doing it in silence. A trainee who asks for
+     "some of the jets on Mode 3 and Mode 1" and gets an air picture where
+     nothing replies has had their request dropped without being told, and the
+     reason is a field nobody has filled in rather than anything about their
+     request. So it is named here, with the fix, in the profile's terms. */
+  const mute = new Set<string>();
+  for (const track of draft.live_tracks) {
+    const asked =
+      (track.mode_3 ?? "").trim().length > 0 ||
+      (track.mode_1 ?? "").trim().length > 0;
+    if (!asked) continue;
+    const declared = classes.get(track.classification.toLowerCase());
+    if ((declared?.transponder ?? "none") === "none") {
+      mute.add(declared?.name ?? track.classification);
+    }
+  }
+  if (mute.size > 0) {
+    adjustments.push(
+      `No transponder codes were issued to ${[...mute]
+        .map((name) => `“${name}”`)
+        .join(", ")}. ` +
+        `The system profile declares ${
+          mute.size === 1 ? "that class as carrying" : "those classes as carrying"
+        } no transponder, so ${
+          mute.size === 1 ? "it replies" : "they reply"
+        } to nothing and Mode 3 and Mode 1 stay empty. ` +
+        "To make interrogation part of this exercise, set the transponder to " +
+        "civil or military on those classes in the system profile — that is " +
+        "the only thing missing.",
+    );
+  }
+  /* The interrogate command itself. A profile can declare transponders and
+     still give the operator no way to ask, which is the same request dropped
+     one step earlier. */
+  if (profile && profile.iff_interrogation?.enabled !== true) {
+    const carriers = (profile.track_classifications ?? []).filter(
+      (entry) => (entry.transponder ?? "none") !== "none",
+    );
+    if (carriers.length > 0 || mute.size > 0) {
+      adjustments.push(
+        "The console has no interrogate command, because the profile's IFF " +
+          "interrogation is switched off — so even a track that would reply " +
+          "cannot be asked. Switch it on in the system profile, choosing Mode 3, " +
+          "Mode 1 or both.",
+      );
+    }
+  }
 
   const window = windowFor(draft.time_window_seconds, live_tracks, profile);
   if (window !== Math.round(draft.time_window_seconds)) {
