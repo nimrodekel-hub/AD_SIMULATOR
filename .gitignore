@@ -57,3 +57,7 @@ package-lock.json
 
 # local development data — in production this lives on the `data` branch
 /data/
+
+# Claude Code: the per-machine override file, which is nobody else's business.
+# A shared rule belongs in .claude/settings.json, which is tracked.
+.claude/settings.local.json
