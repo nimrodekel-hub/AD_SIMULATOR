@@ -381,6 +381,46 @@ interface Parsed<T> {
 /* Structured output                                                   */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The room every structured call gets, whatever it asked for.
+ *
+ * Enough for the thinking and the answer together on the largest thing this
+ * app writes — a full exercise with its track list — with a wide margin,
+ * because the margin is free and being wrong in the other direction throws
+ * away the whole reply and everything paid for it.
+ */
+const ROOM_ENOUGH = 64000;
+
+/**
+ * The ceiling used for the one automatic second attempt at a cut-off reply.
+ *
+ * 128k is the documented maximum for a single reply from the models this app
+ * runs, and it is only reachable on a streaming request — which every call
+ * here is. Like any ceiling it costs nothing unless it is used.
+ */
+const ROOMIER = 128000;
+
+/**
+ * What is said when even `ROOMIER` was not enough.
+ *
+ * Two attempts at the largest reply the model can write is where "the
+ * allowance is too small" stops being a plausible explanation, so this is the
+ * one point at which asking for something smaller is the honest advice rather
+ * than a way of handing a mechanical problem to the person who paid for it.
+ */
+const TWICE_OVER =
+  "The model ran out of room writing this one twice over, the second time " +
+  "with the largest reply it can produce — so the request itself is too big " +
+  "rather than the allowance too small. Nothing was saved. Ask for a smaller " +
+  "one: fewer tracks, or a shorter brief.";
+
+/** Whether a 400 is the API refusing the ceiling as larger than the model's. */
+function tooMuchRoom(reason: unknown): boolean {
+  if (!(reason instanceof Anthropic.APIError)) return false;
+  if (reason.status !== 400) return false;
+  return /max_tokens/i.test(apiErrorText(reason));
+}
+
 export interface StructuredRequest<T> {
   /** One block, or several ordered stable-to-variable for caching. */
   system: string | string[];
@@ -418,31 +458,53 @@ export async function structured<T>({
   schema,
   effort = "high",
   /**
-   * The ceiling on one reply, thinking included.
+   * The ceiling on one reply — **and the thinking counts against it.**
    *
-   * Deliberately far above what any of these tasks needs. It is not a target
-   * and nothing is charged for leaving it high — it is only the point at
-   * which the model is cut off mid-sentence, and being cut off here is not a
-   * short answer but a *broken* one: the reply is a JSON document, so the cut
-   * lands inside a string and there is nothing to parse. That is exactly what
-   * happened — an exercise with a full track list ran three and a half
-   * minutes and came back as `Unterminated string in JSON at position 6654`.
+   * That last part is the whole story of a bug that cost real money for
+   * nothing, twice, and it is worth spelling out because the number looks
+   * innocent. Adaptive thinking is billed and budgeted out of `max_tokens`,
+   * so a ceiling is not "how long may the answer be" but "how much room is
+   * there for thinking *plus* answer". Every task in this app used to set its
+   * own tight ceiling — 16k, 8k, 4k — chosen by looking at how big the JSON
+   * was. At `effort: "high"` the thinking alone can run past that, and what
+   * arrives is the first page of a JSON document with the rest missing:
    *
-   * 16k is the documented ceiling for a request that waits for the whole
-   * reply at once, because beyond it the HTTP request times out before the
-   * model finishes. Streaming removes that limit, which is why the calls
-   * below stream and take the final message rather than asking for it whole.
+   *     Unterminated string in JSON at position 6654
+   *
+   * 6654 characters is about 1,700 tokens. Nothing was near "too long to
+   * write"; the room had already been spent before the writing started.
+   *
+   * So a task no longer gets to choose. Whatever a caller passes is treated
+   * as a *floor* and raised to `ROOM_ENOUGH` — which is why the callers that
+   * still pass 16000 or 4000 are harmless: those numbers no longer decide
+   * anything. They are left in place only because this repository is edited
+   * through an API that rewrites whole files rather than diffs, so deleting
+   * six one-line properties would cost 124 KB of transport to change no
+   * behaviour at all. They go when those files are next opened for a real
+   * reason.
+   *
+   * Leaving the real ceiling high is free: an unused ceiling is not charged
+   * for. Only the tokens actually spent are. And `roomier` below raises it
+   * once more if a reply still comes back cut off.
+   *
+   * Why it can be this high: a request that waits for the whole reply in one
+   * piece cannot go much past 16k before the HTTP request times out.
+   * Streaming removes that limit, which is why the calls below stream and
+   * take the final message rather than asking for it whole.
    */
-  maxTokens = 64000,
+  maxTokens = 0,
   label = "structured",
   mock,
 }: StructuredRequest<T>): Promise<T> {
   if (config.anthropic.mock && mock) return mock();
 
   const model = modelFor(label);
-  const request = {
+  /* The floor, applied. See `maxTokens` above for why a caller's number is
+     never taken as an upper bound. */
+  const room = Math.max(maxTokens, ROOM_ENOUGH);
+  const requestWith = (ceiling: number) => ({
     model,
-    max_tokens: maxTokens,
+    max_tokens: ceiling,
     thinking: { type: "adaptive" as const },
     system: cacheableSystem(system),
     messages,
@@ -450,11 +512,12 @@ export async function structured<T>({
       effort,
       format: zodOutputFormat(schema),
     },
-  };
+  });
 
   /* Ask for the fallback, and take it off the table for good the first time
      the account says no — see `fallbacksUsable`. */
-  const ask = async (): Promise<Parsed<T>> => {
+  const ask = async (ceiling: number): Promise<Parsed<T>> => {
+    const request = requestWith(ceiling);
     if (fallbacksUsable !== false) {
       try {
         const beta = await anthropic()
@@ -492,36 +555,74 @@ export async function structured<T>({
     };
   };
 
+  /**
+   * Running out of room is not the designer's problem to solve.
+   *
+   * It used to be reported as one: an error, nothing saved, and the advice to
+   * "ask for a smaller one" — which put the cost of a bad ceiling on the
+   * person who had just paid for it and had no way of knowing what a ceiling
+   * was. A cut-off reply is a mechanical failure with a mechanical remedy, so
+   * it is taken once, here, without asking: the same request again with twice
+   * the room.
+   *
+   * Once, and only on this failure. A ceiling that 128k does not clear is not
+   * a ceiling problem, and retrying a genuinely runaway request is how a
+   * wasted 50 cents becomes a wasted five dollars.
+   */
+  const roomier = async (why: string): Promise<Parsed<T>> => {
+    console.log(
+      `[ai:roomier] ${label} came back cut off (${why}) at max_tokens=` +
+        `${room}; asking again with ${ROOMIER}`,
+    );
+    try {
+      return await withRetry(label, () => ask(ROOMIER));
+    } catch (reason) {
+      /* `ROOMIER` is the maximum for the model this app is configured to run.
+         Point a deployment at a smaller model and the API refuses the number
+         outright — which is a configuration answer, not something to ask the
+         designer to reword. */
+      if (tooMuchRoom(reason)) {
+        throw new Error(
+          `This reply came back cut off, and ${model} cannot be given more ` +
+            "room than it already had. Nothing was saved. Either ask for a " +
+            "smaller one — fewer tracks, or a shorter brief — or configure a " +
+            "model with a larger reply limit.",
+        );
+      }
+      if (ranOutOfRoom(reason)) throw new Error(TWICE_OVER);
+      throw reason;
+    }
+  };
+
   let response: Parsed<T>;
   try {
-    response = await withRetry(label, ask);
+    response = await withRetry(label, () => ask(room));
   } catch (reason) {
     /* The reply is a JSON document, so being cut off is not a short answer —
-       it is a broken one, and the SDK's own parser is what notices. Its
-       message names a character offset, which tells a designer nothing about
-       what to do. Say what actually happened instead. */
+       it is a broken one, and the SDK's own parser is what notices, throwing
+       before there is a `stop_reason` to look at. Its message names a
+       character offset, which tells nobody anything; what it means is that
+       the room ran out. */
     if (!ranOutOfRoom(reason)) throw reason;
-    throw new Error(
-      "The model ran out of room before it finished writing this one, so the " +
-        "answer came back cut off. Nothing was saved. Ask for it again — and " +
-        "if it keeps happening, ask for a smaller one: fewer tracks, or a " +
-        "shorter brief.",
-    );
+    response = await roomier("the reply would not parse");
+  }
+
+  if (response.stop_reason === "max_tokens") {
+    // The same failure caught before the parser rather than after — and this
+    // time the model said so itself.
+    reportUsage(label, response.served, response.usage);
+    response = await roomier("the model said max_tokens");
   }
 
   // The model that answered, not the one asked for: a fallback bills at its
   // own rates, so logging the requested model would misprice the line.
   reportUsage(label, response.served, response.usage);
 
-  /* The same failure, caught before the parser rather than after: the reply
-     stopped because it hit the ceiling. Whether the JSON happens to be
-     parseable at that point is luck, so it is refused either way rather than
-     saved as a half-written exercise. */
   if (response.stop_reason === "max_tokens") {
-    throw new Error(
-      "The model ran out of room before it finished writing this one. " +
-        "Nothing was saved. Ask for it again, or ask for a smaller one.",
-    );
+    /* Twice, at 128k. Whether the JSON happens to be parseable at that point
+       is luck, so it is refused either way rather than saved as a half-written
+       exercise. */
+    throw new Error(TWICE_OVER);
   }
 
   if (response.stop_reason === "refusal") {
@@ -581,13 +682,19 @@ export function streamChat({
   system,
   messages,
   effort = "high",
-  maxTokens = 16000,
+  maxTokens = 0,
   label = "chat",
   mock,
 }: StreamRequest): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const canned = config.anthropic.mock ? mock : undefined;
   const model = modelFor(label);
+  /* A floor, for the same reason as in `structured`: the thinking is spent out
+     of this allowance, so a tight one does not shorten the answer — it cuts
+     it. Prose survives that better than JSON does, which is exactly why it
+     went unnoticed here: a reply that stops mid-sentence still looks like a
+     reply. */
+  const room = Math.max(maxTokens, ROOM_ENOUGH);
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -615,7 +722,7 @@ export function streamChat({
             async () => {
               const stream = anthropic().messages.stream({
                 model,
-                max_tokens: maxTokens,
+                max_tokens: room,
                 thinking: { type: "adaptive" },
                 system: cacheableSystem(system),
                 messages,
