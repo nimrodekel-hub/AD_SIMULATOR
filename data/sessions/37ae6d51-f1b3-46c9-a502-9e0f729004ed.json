@@ -572,13 +572,69 @@
   },
   "outcome": {
     "success": false,
-    "summary": "No hostile reached the defended area — all 10 were stopped. 3 friendly tracks were engaged. That fails the run on its own, whatever else went right. 13 interceptors spent, against the 12 allowed. Mean 109.4s from a hostile becoming identifiable to the launch against it.",
-    "per_decision": []
+    "summary": "Run failed outright. All three Unknown tracks — TK-301, TK-302, TK-303 — were self-classified as enemy by the operator and then engaged and destroyed; all three were friendly. Ten hostiles were destroyed and no leakers reached the site, but the jets were engaged last rather than first, thirteen interceptors were expended against a ceiling of twelve, and the identification rule was broken three times.",
+    "per_decision": [
+      {
+        "dilemma_index": 0,
+        "chosen_action": "Launched long range at TK-202, a UAV at 30 km, as the first shot of the run while TK-101 (90 km) and TK-102 (84 km) sat unengaged.",
+        "preferred_action": "Fire the lead jet at the earliest valid firing solution.",
+        "correct": false,
+        "comment": "T+009. The first commitment of the run went to a UAV. The record names this exactly: engaging the nearest UAV first because proximity reads as urgency on the display, when closure rate — not slant range — determines who must die first. TK-101 and TK-102 were the fastest closers on the picture and were not fired on until T+204 and T+211."
+      },
+      {
+        "dilemma_index": 2,
+        "chosen_action": "Interrogated TK-301 at T+026, got no reply, and set it to enemy yourself at T+035.",
+        "preferred_action": "Refer to the commander and withhold fire until the track is classified Enemy.",
+        "correct": false,
+        "comment": "T+026 to T+035. You did the identification work and then discarded the answer. No reply is not proof of hostility. The record calls this self-classifying an unknown track locally to save the fifteen seconds of referral, when the referral cost is trivial compared with the consequence of being wrong. TK-301 was Our Forces."
+      },
+      {
+        "dilemma_index": 2,
+        "chosen_action": "Launched short range at TK-302 at T+043, then set TK-302 to enemy at T+046 — the classification came three seconds after the missile.",
+        "preferred_action": "Refer to the commander and withhold fire until the track is classified Enemy.",
+        "correct": false,
+        "comment": "T+043. TK-302 was never interrogated at all, and the shot preceded the classification. It appeared at 11 km inside the short ring and the closeness read as urgency; that is precisely the bait the record describes. TK-302 was a friendly helicopter, destroyed at T+070 at Pk 87%."
+      },
+      {
+        "dilemma_index": 2,
+        "chosen_action": "Interrogated TK-303 at T+053, got no reply, self-classified at T+063 and fired at T+066.",
+        "preferred_action": "Refer to the commander and withhold fire until the track is classified Enemy.",
+        "correct": false,
+        "comment": "T+053 to T+066. The third repetition of the same error, by which point the pattern was habit rather than pressure. TK-303 was a friendly UAV."
+      },
+      {
+        "dilemma_index": 3,
+        "chosen_action": "Spent the medium ring on TK-301 at T+097 (Pk 75%) while TK-101, TK-102 and TK-103 were all still inbound and unengaged.",
+        "preferred_action": "Keep both launchers continuously employed against confirmed Enemy tracks by earliest valid solution.",
+        "correct": false,
+        "comment": "T+097. This is the error the record warns about directly: allowing the Unknown's behaviour to pull attention and launchers off the jets. That launcher was occupied for thirty-two seconds against a friendly while the fast closers ran in."
+      },
+      {
+        "dilemma_index": 0,
+        "chosen_action": "First jet engagement of the run came at T+130 against TK-103; TK-102 and TK-101 not committed until T+204 and T+211, at 23 km and 25 km on the medium ring.",
+        "preferred_action": "Fire the jets at the earliest valid firing solution the system offers, at long range.",
+        "correct": false,
+        "comment": "T+130 onward. TK-101 was detected at 90 km at T+000 and killed at 25 km. Both remaining jets were taken deep inside the medium ring at 75-76% rather than in the long-range window where they were cheapest. They were destroyed, but by the timeline rather than by your sequencing."
+      },
+      {
+        "dilemma_index": 0,
+        "chosen_action": "Interrogated TK-101 at T+218, seven seconds after firing on it.",
+        "preferred_action": "Identification work belongs before commitment, not after.",
+        "correct": false,
+        "comment": "T+218. TK-101 was already displayed as Enemy so the shot was legitimate, but interrogating a track after the missile is away shows identification being treated as a formality rather than a gate. That is the same habit that killed three friendlies earlier in the run."
+      }
+    ]
   },
-  "score": null,
-  "debrief_text": "",
-  "recommendations": [],
+  "score": 8,
+  "debrief_text": "You engaged three friendly tracks and destroyed all three. TK-302 was a friendly helicopter, TK-303 a friendly UAV, TK-301 our own forces. That fails the run outright and nothing else in it changes that. The mechanism was the same each time: TK-301 and TK-303 you interrogated, got \"no reply\", and set to enemy yourself; TK-302 you never interrogated at all and fired on at T+043, three seconds before you got round to classifying it. The record is unambiguous — an Unknown is a question, not a permission, and classification goes to the commander, who answers in about fifteen seconds. No reply is not proof of hostility and never was. All three Unknowns in this scenario were friendly, and the aggressive-looking profile was the bait.\n\nThe sequencing was inverted as well. Your first commitment of the run at T+009 went to TK-202, a UAV at 30 km, while TK-101 at 90 km and TK-102 at 84 km sat untouched. That is the documented error of reading slant range as urgency when closure rate is what decides who must die first. It cascaded: the first jet was not engaged until T+130, and TK-102 and TK-101 were not committed until T+204 and T+211, taken at 23 and 25 km on the medium ring at 75-76% when the long-range window had been available from the opening seconds. They died, but because the timeline was generous, not because you sequenced them. The medium-ring shot at TK-301 at T+097 is the clearest single example of what the record calls letting the Unknown pull launchers off the jets — thirty-two seconds of launcher capacity spent killing our own aircraft while three fast closers ran in unengaged.\n\nThe numbers you will point to are ten hostiles destroyed and zero leakers, and those are real. They came from a picture that gave you time, not from a queue you managed. Thirteen interceptors against a ceiling of twelve, three of them fired at friendlies, is the arithmetic of that: the rounds you spent on TK-301, TK-302 and TK-303 are exactly the margin you overran by. Mean reaction of 109 seconds tells the same story from the other end — the jets were left to close for over three minutes.\n\nThe habit to break is not tactical, it is procedural. You did the identification work on two of the three Unknowns and then overrode your own result. Fifteen seconds of referral would have cost you nothing against this timeline and would have turned a failed run into a passable one.",
+  "recommendations": [
+    "Make the referral to the commander on every Unknown and wait for the answer before any launcher is assigned — TK-301, TK-302 and TK-303 all had fifteen seconds of slack available and none were referred.",
+    "Treat a \"no reply\" interrogation as unresolved, not as hostile. TK-301 at T+026 and TK-303 at T+053 both returned no reply and both were friendly.",
+    "Commit the fastest closer first: with TK-101 at 90 km and TK-102 at 84 km on the board at T+000, the first long-range round goes to a jet, not to TK-202 at 30 km.",
+    "Take jets in the long-range window rather than letting them run to the medium ring — TK-102 and TK-101 were engaged at 23 and 25 km when a 70 km solution had been available for over three minutes.",
+    "Never fire before classification is set, as happened with TK-302 at T+043. If the classification is not already resolved, the launcher waits."
+  ],
   "status": "completed",
   "created_at": "2026-09-07T18:45:13.184Z",
-  "completed_at": "2026-09-07T18:49:38.578Z"
+  "completed_at": "2026-09-07T18:50:15.420Z"
 }
