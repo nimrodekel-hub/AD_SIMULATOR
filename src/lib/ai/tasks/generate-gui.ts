@@ -39,7 +39,16 @@ export const REQUIRED_SLOTS = [
 const GuiDraftSchema = z.object({
   /** A self-contained HTML fragment with one inline <style> block. */
   html: z.string(),
-  /** What the model took from the screenshots, for the designer to sanity-check. */
+  /**
+   * What changed and what could not, for the designer to act on.
+   *
+   * Short by instruction, and it has to be: this is read on a screen by
+   * somebody in the middle of converging on a console, and the version that
+   * ran to four hundred words — re-listing the palette, the columns and the
+   * chrome that had not changed — was read by nobody. A designer who stops
+   * reading the notes stops finding out which half of their request was
+   * refused, and asks again in stronger words.
+   */
   design_notes: z.string(),
 });
 
@@ -151,20 +160,33 @@ You may be given the console you produced before, and the designer's change requ
 
 Some of what a designer asks for here is not yours to give, and the worst thing you can do is quietly not give it. They cannot see which of the two they have asked for, and a request that comes back with a tidy summary and no change reads as one that was ignored — so they ask again, in stronger words, and nothing happens again.
 
-**Say it, in the first line of your design notes, whenever it applies.** Name the request, say plainly that the console cannot do it, and say where it actually lives:
+**Say it under \`Not here\`, one line per request.** Name the request and the switch. Nothing else — no explanation of how the console is put together, no apology, no restating the request back at length:
 
-- **A control the operator would press.** You may not draw a working one, and a painted one is worse than none. Which controls exist is not yours to judge either — \`operator_commands\` in the profile says it. Selecting, identifying, firing and ceasing are on every system; the rest appear only where that block switches them on, each with the figures it runs on.
-  - **Switched on** — the console gets it, in the decision area, drawn by the simulator. Lay out room, do not draw the control itself.
-  - **Switched off, but on the list** — say where the switch is: *"You asked for a reload button. This system's profile does not declare one — switch on 'Reload during a run' under 'What the operator can do', and give it the seconds it really takes."*
-  - **Not on the list at all** — say that plainly: *"The simulator has no command for that, so there is nothing for a button to do. It is not something I can add from here."*
-- **A figure that comes from the profile** — the columns in the track table, the identification states, what a round can reach, how deep the magazine is. The shell marks out space; the values are the profile's. If the profile does not declare it, the space stays empty however it is drawn, and the fix is on the behaviour-profile screen: *"There is no IFF column in the profile's readout fields, so the table has nowhere to put a code. Add it under 'How the system behaves'."*
-- **Something the simulation does not model at all.** Say that too, rather than drawing an approximation of it.
+- **A control the operator would press.** You may not draw a working one, and a painted one is worse than none. Which controls exist is \`operator_commands\`' business, not yours. Selecting, identifying, firing and ceasing are on every system; the rest appear only where that block switches them on, each with the figures it runs on.
+  - **Switched on** — the console gets it, drawn by the simulator in the decision area. Lay out room; do not draw the control.
+  - **Switched off, but on the list** — *"Reload button — switch on 'Reload during a run' in the profile, with the seconds it takes."*
+  - **Not on the list at all** — *"Choosing the interceptor band — the simulator has no such command, so a button would do nothing."*
+- **A figure that comes from the profile** — the track table's columns, the identification states, a round's reach, the magazine's depth. The shell marks out space; the values are the profile's. *"IFF column — add it to the profile's readout fields."*
+- **Something the simulation does not model at all.** One line saying so, rather than an approximation drawn anyway.
 
-One or two sentences each, plainly, before you describe what you did change. A designer who is told why is a designer who can go and fix it; a designer who is told nothing asks three times.
+**One line each. Never more.** The screen the designer is reading already lists every operator control and whether it is switched on, with a link to the switch — so you are confirming which of their requests hit that wall, not teaching them the mechanism. Name the request and the switch; stop there.
 
 ## Design notes
 
-Three or four sentences: what you took from the screenshots (name the layout and the palette you sampled), what came from the profile, what you deliberately generalised or left out, and — on a revision — what you changed this time.`;
+**This is read by a busy person on a screen, not filed as a report.** The single worst thing you can do here is bury what matters in length: a designer who has to mine four hundred words for the one sentence that concerns them stops reading the notes at all, and then does not find out that half their request was never applied.
+
+Use exactly this shape, and keep it under 120 words in total:
+
+    Changed: <one line per thing you actually changed this time>
+    Not here: <one line per request that belongs to the profile, naming the switch>
+    <one optional closing sentence, only if something genuinely needs saying>
+
+Rules that make it short, all of which have been broken before:
+
+- **Never recap what stayed the same.** No "everything else is unchanged from the previous revision", and no re-listing the palette, the columns, the chrome or the layout you did not touch. The designer is looking at it.
+- **One line per item, in plain words.** Not a paragraph, not a clause stack, no pixel values, hex codes or CSS unless the designer asked about that exact thing.
+- **Only mention a request that was applied or refused.** Silence on everything else.
+- On a first build rather than a revision, replace \`Changed\` with two lines: the layout and palette you took from the screenshots, and anything you deliberately generalised or left out.`;
 
 /** One thing the designer asked to be different, and what came back. */
 export interface GuiRevisionRequest {
@@ -253,7 +275,6 @@ export async function generateGuiTemplate({
     messages: [{ role: "user", content }],
     schema: GuiDraftSchema,
     effort: "high",
-    maxTokens: 16000,
     label: "console",
     mock: () => ({
       html: MOCK_HTML,
@@ -264,53 +285,3 @@ export async function generateGuiTemplate({
 
   return { ...draft, html: sanitiseHtml(draft.html) };
 }
-
-/* ------------------------------------------------------------------ */
-
-/**
- * Strips anything executable before the markup is ever rendered.
- *
- * The model is instructed not to emit scripts, and the designer approves the
- * result by eye — but neither is a guarantee, and this markup ends up rendered
- * into the trainee's page. Enforcing it here means the guarantee does not
- * depend on the model following instructions.
- */
-export function sanitiseHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<\s*script[^>]*>/gi, "")
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, "")
-    .replace(/\son\w+\s*=\s*"[^"]*"/gi, "")
-    .replace(/\son\w+\s*=\s*'[^']*'/gi, "")
-    .replace(/\son\w+\s*=\s*[^\s>]+/gi, "")
-    .replace(/javascript:/gi, "");
-}
-
-/** Which of the required slots the markup is missing. */
-export function missingSlots(html: string): string[] {
-  return REQUIRED_SLOTS.filter(
-    (slot) => !html.includes(`data-slot="${slot}"`),
-  );
-}
-
-const MOCK_HTML = `<style>
-.sim-console { display: flex; flex-direction: column; gap: 1px; background: #16202b; color: #cfe3f5; font-family: ui-monospace, monospace; height: 100%; overflow: hidden; }
-.sim-console .bar { background: #0b1219; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
-.sim-console .body { display: grid; grid-template-columns: 1.6fr 15rem 13rem; gap: 1px; flex: 1; min-height: 0; }
-.sim-console .pane > [data-slot] { flex: 1; min-height: 0; }
-.sim-console .pane { background: #0b1219; padding: 8px; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-.sim-console .foot { background: #0b1219; padding: 10px 12px; min-height: 0; overflow: auto; }
-.sim-console h4 { font-size: 10px; letter-spacing: .12em; color: #6d8399; margin-bottom: 8px; }
-</style>
-<div class="sim-console">
-  <div class="bar">
-    <div data-slot="system-name"></div>
-    <div data-slot="clock"></div>
-  </div>
-  <div class="body">
-    <div class="pane"><h4>AIR PICTURE</h4><div data-slot="scope"></div></div>
-    <div class="pane"><h4>TRACKS</h4><div data-slot="tracks"></div></div>
-    <div class="pane"><h4>RESOURCES</h4><div data-slot="resources"></div></div>
-  </div>
-  <div class="foot"><div data-slot="decision"></div></div>
-</div>`;
