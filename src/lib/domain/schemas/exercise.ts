@@ -190,6 +190,17 @@ export type SimEvent = z.infer<typeof SimEventSchema>;
 export const RunResultSchema = z.object({
   leakers: z.number().int(),
   hostiles_destroyed: z.number().int(),
+  /**
+   * Hostiles still in the air when the run stopped.
+   *
+   * Neither destroyed nor arrived, and therefore invisible in both of the
+   * counts either side of this line — which stopped being harmless the moment
+   * an operator could end a run themselves. Ending one eight seconds in, with
+   * three jets inbound, satisfied every criterion by having done nothing.
+   * Defaulted, because runs recorded before this field existed could only end
+   * on the clock and were not scored against it.
+   */
+  hostiles_unresolved: z.number().int().default(0),
   friendly_engaged: z.number().int(),
   unknown_engaged: z.number().int(),
   interceptors_spent: z.number().int(),
