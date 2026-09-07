@@ -45,24 +45,33 @@ export default async function ExercisesPage() {
       title="Exercises"
       subtitle="Every engagement the generator has laid out — and the ones you have corrected"
     >
-      <p className="mb-8">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <Link href="/designer" className="text-xs text-muted hover:text-accent">
           ← Back to the systems
         </Link>
-      </p>
+        {/* The way in that did not exist. Every exercise here arrived as a
+            by-product of somebody's run; this is how a designer asks for one
+            on purpose. */}
+        <Link href="/designer/exercises/new" className="btn btn-primary">
+          Build an exercise
+        </Link>
+      </div>
 
       {/* ---- The library -------------------------------------------- */}
       <section>
         <h2 className="text-sm font-semibold">In the library</h2>
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
-          Exercises you have taken hold of. These can be flown, corrected in
-          your own words, and corrected again.
+          Exercises you built, and ones you have taken hold of. These can be
+          flown, corrected in your own words, and corrected again.
         </p>
 
         {saved.length === 0 ? (
           <p className="panel mt-4 p-4 text-sm text-muted">
-            Nothing here yet. Take hold of one of the exercises below and it
-            appears here, where it can be changed.
+            Nothing here yet.{" "}
+            <Link href="/designer/exercises/new" className="text-accent">
+              Build one
+            </Link>{" "}
+            from a brief, or take hold of an exercise below to correct it.
           </p>
         ) : (
           <ul className="mt-4 space-y-2">
