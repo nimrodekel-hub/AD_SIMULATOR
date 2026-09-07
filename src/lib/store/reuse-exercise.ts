@@ -26,10 +26,30 @@ import { listAllSessions } from "./sessions";
  * the *better* answer rather than the worse one: it may since have been
  * corrected by the designer, and the correction is what gets served.
  *
+ * Only a run worth repeating counts — see `worthRepeating`. A record can
+ * match an ask perfectly and still be no use to anybody.
+ *
  * Reuse does not make two runs identical. The luck of the shooting is seeded
  * from the session id, so the same tracks on the same geometry still miss and
  * hit differently — what is reused is the problem, not the outcome.
  */
+
+/**
+ * Whether this exercise is one a trainee could actually fly.
+ *
+ * Not every stored run holds a flyable engagement. Some predate the simulator
+ * and carry the old quiz shape, with no `live_tracks` at all; others are
+ * generations that failed part-way. Either way the record exists and matches
+ * an ask perfectly, and reusing it would hand somebody an empty scope in half
+ * a second — which is worse than the minute they would have waited, not
+ * better. Found on the real data: three of the six runs on the live branch are
+ * like this.
+ *
+ * So reuse asks for a run worth repeating, not merely a run that matches.
+ */
+function worthRepeating(exercise: ExerciseInstance): boolean {
+  return exercise.live_tracks.length > 0 && exercise.time_window_seconds > 0;
+}
 
 /** An exercise that already exists for this ask, and where it came from. */
 export interface Reused {
@@ -56,21 +76,23 @@ export async function reusableExercise(ask: Ask): Promise<Reused | null> {
 
   // Newest first, which `listAllSessions` already guarantees: if the same ask
   // was made several times, the most recent answer is the one to repeat.
-  const match = sessions.find((session) =>
-    sameAsk(ask, {
-      systemId: session.system_id,
-      scenarioId: session.scenario_entry_id,
-      difficulty: session.difficulty_level,
-      requestedText: session.requested_text,
-      clarifications: session.clarification_rounds,
-    }),
+  const match = sessions.find(
+    (session) =>
+      worthRepeating(session.exercise_instance) &&
+      sameAsk(ask, {
+        systemId: session.system_id,
+        scenarioId: session.scenario_entry_id,
+        difficulty: session.difficulty_level,
+        requestedText: session.requested_text,
+        clarifications: session.clarification_rounds,
+      }),
   );
   if (!match) return null;
 
   const corrected = (await listExercisesForSystem(ask.systemId)).find(
     (saved) => saved.from_session_id === match.id,
   );
-  if (corrected) {
+  if (corrected && worthRepeating(corrected.exercise_instance)) {
     return {
       exercise: corrected.exercise_instance,
       from: `corrected exercise ${corrected.id.slice(0, 8)} (from run ${match.id.slice(0, 8)})`,
