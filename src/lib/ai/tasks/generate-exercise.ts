@@ -72,6 +72,8 @@ The trainee will fly this in real time: tracks move at the speeds you give them,
 
 A code is not decoration. Give an airliner an ordinary code and it reads as an airliner; give one \`7700\` (general emergency), \`7600\` (radio failure) or \`7500\` (hijack) and you have built a specific and much harder problem — **do that deliberately, and say so in the brief**, never by accident. Two tracks squawking the same Mode 3 code is also a real and vicious problem, and again only worth doing on purpose.
 
+**A track the operator is expected to spare must be identifiable.** Where a friendly track is shown as unknown and its class carries a transponder, give it a code — that reply is how the operator is supposed to tell it apart, and withholding it does not make the exercise harder, it makes it arbitrary. If the picture holds friendly tracks that never resolve, never reply and cannot be interrogated to any effect, then every interrogation in the run returns "no reply" and the only surviving strategy is to shoot nothing, which is not the lesson. Either let something reply, or set \`resolves_at_s\` early enough that the system does the identifying — and never fail an operator for a call the console gave them no means to make.
+
 **A track the system has mis-typed, where the profile allows it.** \`initial_classification\` is the class the console shows at first, and it is dropped unless \`operator_commands.retype\` is on — on a system where nobody can correct it, a wrong label is not a problem to solve, it is just a wrong label. Where it is on, use it sparingly and only where the scenario is about reading behaviour rather than reading the screen: a helicopter shown as a UAV closing at 130 knots is a real moment. Leave it empty otherwise, which is almost always.
 
 **Include at least one track that must not be engaged** — a friendly or a civil transit — unless the scenario is explicitly about something else. An exercise where everything airborne is a valid target trains the wrong reflex.
@@ -424,6 +426,39 @@ function clampToProfile(
           "interrogation is switched off — so even a track that would reply " +
           "cannot be asked. Switch it on in the system profile, choosing Mode 3, " +
           "Mode 1 or both.",
+      );
+    }
+  }
+
+  /* An interrogator wired to nothing.
+     The two checks above catch a code the profile forbids and a reply nobody
+     can ask for. Between them sits the worst case of the three, and it went
+     unreported: interrogation switched **on** while every declared class
+     carries no transponder. The console then shows an interrogate command,
+     the operator uses it, and it answers "no reply" — to a hostile jet, to a
+     friendly helicopter, to everything, because there is no track in the world
+     that could reply.
+
+     That is not a hard exercise, it is a broken instrument. An operator who
+     interrogates an unknown track, is told "no reply", and concludes hostile
+     has reasoned correctly from the only evidence the console will ever give
+     them; the run then scores it as fratricide and fails them outright. Saying
+     so here is the difference between a trainee learning caution and a trainee
+     learning that the system lies to them. */
+  if (profile?.iff_interrogation?.enabled === true) {
+    const declaredClasses = profile.track_classifications ?? [];
+    const carriers = declaredClasses.filter(
+      (entry) => (entry.transponder ?? "none") !== "none",
+    );
+    if (declaredClasses.length > 0 && carriers.length === 0) {
+      adjustments.push(
+        "Interrogation is switched on, but every declared class carries no " +
+          "transponder — so interrogating any track, hostile or friendly, can " +
+          "only ever answer “no reply”. The command is there and it tells the " +
+          "operator nothing, while the run still fails them for engaging a " +
+          "friendly they had no way to identify. Set the transponder to civil " +
+          "or military on the classes that should reply — friendly aircraft " +
+          "above all, since they are the ones an operator is expected to spare.",
       );
     }
   }
