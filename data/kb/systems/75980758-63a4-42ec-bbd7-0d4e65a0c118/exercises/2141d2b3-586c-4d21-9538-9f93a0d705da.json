@@ -1,0 +1,317 @@
+{
+  "id": "2141d2b3-586c-4d21-9538-9f93a0d705da",
+  "system_id": "75980758-63a4-42ec-bbd7-0d4e65a0c118",
+  "scenario_entry_id": "e2128e4e-e22c-43c7-87af-7c0c846c6f1b",
+  "difficulty_level": "medium",
+  "exercise_instance": {
+    "exercise_name": "IFF dilemas",
+    "situation_brief": "You hold a single battery defending the site, radar fixed on a 120-degree sector facing east. A mixed raid is inbound across that sector at the same time as scheduled civil traffic transits it. Magazine on the rails: 4 long-range, 5 medium-range, 4 short-range. Two rockets may be in the air at once — a third engagement cannot begin until one resolves.\n\nIdentification doctrine for tonight: IFF interrogation is available out to 200 km on any held track. A Mode 3 reply and nothing else means civil traffic — engagement prohibited, and that includes emergency codes (7500/7600/7700); an aircraft in distress is still a civil aircraft. A Mode 1 reply means a military transponder; no own-force aircraft are airborne in your sector tonight, so a Mode 1 reply is not a friendly indication. A track that answers nothing gives you no reply to read and must be judged on its flight profile. Any track still showing Unknown is a question, not a permission — refer it and expect a classification back in about fifteen seconds; fire on nothing that is not Enemy.\n\nFast closers consume the timeline. Interrogate early, classify, and take valid solutions as the system offers them.",
+    "time_window_seconds": 330,
+    "radar_boresight_deg": 90,
+    "live_tracks": [
+      {
+        "designator": "TRK 4101",
+        "classification": "Jet",
+        "initial_classification": "",
+        "spawn_bearing_deg": 82,
+        "spawn_range_km": 94.674,
+        "altitude_ft": 22000,
+        "heading_deg": 262,
+        "speed_kts": 600,
+        "truth_iff": "Enemy",
+        "initial_iff": "Unknown",
+        "resolves_at_s": null,
+        "mode_3": "",
+        "mode_1": "",
+        "appears_at_s": 0,
+        "notes": "Lead jet. Crosses the 70 km ring at about T+81 and the 20 km ring at about T+243. Answers Mode 1 only."
+      },
+      {
+        "designator": "TRK 4102",
+        "classification": "Jet",
+        "initial_classification": "",
+        "spawn_bearing_deg": 100,
+        "spawn_range_km": 91.27866666666668,
+        "altitude_ft": 18000,
+        "heading_deg": 280,
+        "speed_kts": 600,
+        "truth_iff": "Enemy",
+        "initial_iff": "Unknown",
+        "resolves_at_s": null,
+        "mode_3": "",
+        "mode_1": "",
+        "appears_at_s": 0,
+        "notes": "Second jet, crosses 70 km at about T+97. With the lead jet this saturates the two-in-flight limit."
+      },
+      {
+        "designator": "TRK 4103",
+        "classification": "Jet",
+        "initial_classification": "",
+        "spawn_bearing_deg": 67,
+        "spawn_range_km": 83.25333333333334,
+        "altitude_ft": 26000,
+        "heading_deg": 250,
+        "speed_kts": 600,
+        "truth_iff": "Enemy",
+        "initial_iff": "Unknown",
+        "resolves_at_s": null,
+        "mode_3": "",
+        "mode_1": "",
+        "appears_at_s": 15,
+        "notes": "Third jet, crosses 70 km at about T+106 and must queue behind the first two rockets."
+      },
+      {
+        "designator": "TRK 4201",
+        "classification": "UAV",
+        "initial_classification": "",
+        "spawn_bearing_deg": 90,
+        "spawn_range_km": 35.5952,
+        "altitude_ft": 4000,
+        "heading_deg": 270,
+        "speed_kts": 240,
+        "truth_iff": "Enemy",
+        "initial_iff": "Enemy",
+        "resolves_at_s": null,
+        "mode_3": "",
+        "mode_1": "",
+        "appears_at_s": 0,
+        "notes": "Crosses the 20 km ring at about T+130, while both rockets are likely committed to jets."
+      },
+      {
+        "designator": "TRK 4202",
+        "classification": "UAV",
+        "initial_classification": "",
+        "spawn_bearing_deg": 112,
+        "spawn_range_km": 32.93552222222223,
+        "altitude_ft": 3000,
+        "heading_deg": 292,
+        "speed_kts": 230,
+        "truth_iff": "Enemy",
+        "initial_iff": "Enemy",
+        "resolves_at_s": null,
+        "mode_3": "",
+        "mode_1": "",
+        "appears_at_s": 0,
+        "notes": "Crosses 20 km at about T+169."
+      },
+      {
+        "designator": "TRK 4203",
+        "classification": "UAV",
+        "initial_classification": "",
+        "spawn_bearing_deg": 60,
+        "spawn_range_km": 32.83777777777779,
+        "altitude_ft": 5000,
+        "heading_deg": 240,
+        "speed_kts": 250,
+        "truth_iff": "Enemy",
+        "initial_iff": "Unknown",
+        "resolves_at_s": null,
+        "mode_3": "",
+        "mode_1": "",
+        "appears_at_s": 10,
+        "notes": "Silent on interrogation. Earliest short-ring crossing, about T+119."
+      },
+      {
+        "designator": "TRK 4204",
+        "classification": "UAV",
+        "initial_classification": "",
+        "spawn_bearing_deg": 130,
+        "spawn_range_km": 29.144066666666664,
+        "altitude_ft": 2500,
+        "heading_deg": 310,
+        "speed_kts": 220,
+        "truth_iff": "Enemy",
+        "initial_iff": "Unknown",
+        "resolves_at_s": null,
+        "mode_3": "",
+        "mode_1": "",
+        "appears_at_s": 0,
+        "notes": "Silent. Crosses 20 km at about T+177, in the mop-up phase."
+      },
+      {
+        "designator": "TRK 4205",
+        "classification": "UAV",
+        "initial_classification": "",
+        "spawn_bearing_deg": 45,
+        "spawn_range_km": 27.076,
+        "altitude_ft": 6000,
+        "heading_deg": 225,
+        "speed_kts": 240,
+        "truth_iff": "Enemy",
+        "initial_iff": "Enemy",
+        "resolves_at_s": null,
+        "mode_3": "",
+        "mode_1": "",
+        "appears_at_s": 25,
+        "notes": "Crosses 20 km at about T+171."
+      },
+      {
+        "designator": "TRK 4206",
+        "classification": "UAV",
+        "initial_classification": "",
+        "spawn_bearing_deg": 105,
+        "spawn_range_km": 20.717466666666667,
+        "altitude_ft": 1500,
+        "heading_deg": 285,
+        "speed_kts": 210,
+        "truth_iff": "Enemy",
+        "initial_iff": "Enemy",
+        "resolves_at_s": null,
+        "mode_3": "",
+        "mode_1": "",
+        "appears_at_s": 45,
+        "notes": "Late low entry inside the medium ring; crosses 20 km at about T+138."
+      },
+      {
+        "designator": "TRK 4207",
+        "classification": "UAV",
+        "initial_classification": "",
+        "spawn_bearing_deg": 75,
+        "spawn_range_km": 24.606666666666673,
+        "altitude_ft": 8000,
+        "heading_deg": 255,
+        "speed_kts": 250,
+        "truth_iff": "Enemy",
+        "initial_iff": "Unknown",
+        "resolves_at_s": null,
+        "mode_3": "",
+        "mode_1": "",
+        "appears_at_s": 30,
+        "notes": "Silent. Tail of the wave, crosses 20 km at about T+186."
+      },
+      {
+        "designator": "TRK 4301",
+        "classification": "Civil",
+        "initial_classification": "",
+        "spawn_bearing_deg": 97,
+        "spawn_range_km": 41.48044444444445,
+        "altitude_ft": 31000,
+        "heading_deg": 277,
+        "speed_kts": 400,
+        "truth_iff": "Friendly",
+        "initial_iff": "Unknown",
+        "resolves_at_s": null,
+        "mode_3": "",
+        "mode_1": "",
+        "appears_at_s": 0,
+        "notes": "Airliner squawking radio failure, head-on to the site, inside the 70 km ring from about T+121 and unresponsive to any call. Deliberate emergency code. Never resolves; only the Mode 3 reply identifies it."
+      },
+      {
+        "designator": "TRK 4302",
+        "classification": "Civil",
+        "initial_classification": "",
+        "spawn_bearing_deg": 40,
+        "spawn_range_km": 33.49626666666666,
+        "altitude_ft": 33000,
+        "heading_deg": 190,
+        "speed_kts": 380,
+        "truth_iff": "Friendly",
+        "initial_iff": "Unknown",
+        "resolves_at_s": 240,
+        "mode_3": "",
+        "mode_1": "",
+        "appears_at_s": 20,
+        "notes": "Crossing transit that dips inside the 70 km ring at about T+230 during the mop-up; system confirms it Friendly at T+240, after the decision point."
+      },
+      {
+        "designator": "TRK 4303",
+        "classification": "Civil",
+        "initial_classification": "",
+        "spawn_bearing_deg": 138,
+        "spawn_range_km": 22.445999999999994,
+        "altitude_ft": 27000,
+        "heading_deg": 305,
+        "speed_kts": 360,
+        "truth_iff": "Friendly",
+        "initial_iff": "Unknown",
+        "resolves_at_s": null,
+        "mode_3": "",
+        "mode_1": "",
+        "appears_at_s": 60,
+        "notes": "Fast unknown closing from the southern edge of the sector; inside 50 km by about T+260 and inside 40 km at the end of the run, when rounds are short. Never resolves; Mode 3 reply is the only discriminator."
+      }
+    ],
+    "success_criteria": {
+      "max_leakers": 1,
+      "max_interceptors_spent": 12,
+      "statement": "Pass: all three jets destroyed before they reach the 20 km ring, at most one UAV leaking to the site, and no round fired at any track that answers Mode 3 or that was never classified Enemy. Interrogate before you classify. Engaging a civil track fails the run outright, whatever the hostile score. Holding fire while both rockets are committed is correct behaviour, not a failure to act; breaking or switching a good engagement is scored as an error even if it works."
+    },
+    "interceptor_loadout": [
+      {
+        "name": "long range",
+        "rounds": 4
+      },
+      {
+        "name": "medium range",
+        "rounds": 5
+      },
+      {
+        "name": "short range",
+        "rounds": 4
+      }
+    ],
+    "resources": [
+      {
+        "name": "Missiles simultaneously in the air (hard system limit)",
+        "unit": "rockets",
+        "available": 2,
+        "total": 2
+      },
+      {
+        "name": "Long-range engagement ring",
+        "unit": "km",
+        "available": 70,
+        "total": 70
+      },
+      {
+        "name": "Medium-range engagement ring",
+        "unit": "km",
+        "available": 50,
+        "total": 50
+      },
+      {
+        "name": "Short-range engagement ring",
+        "unit": "km",
+        "available": 20,
+        "total": 20
+      },
+      {
+        "name": "IFF interrogation range",
+        "unit": "km",
+        "available": 200,
+        "total": 200
+      },
+      {
+        "name": "Commander referral response time for an Unknown track",
+        "unit": "seconds",
+        "available": 15,
+        "total": 15
+      },
+      {
+        "name": "Long-range rounds",
+        "unit": "rockets",
+        "available": 4,
+        "total": 4
+      },
+      {
+        "name": "Medium-range rounds",
+        "unit": "rockets",
+        "available": 5,
+        "total": 6
+      },
+      {
+        "name": "Short-range rounds",
+        "unit": "rockets",
+        "available": 4,
+        "total": 10
+      }
+    ],
+    "tracks": [],
+    "dilemmas": []
+  },
+  "revisions": [],
+  "source": "Built from a designer's brief",
+  "from_session_id": "",
+  "created_at": "2026-09-07T20:41:20.939Z",
+  "updated_at": "2026-09-07T20:41:20.939Z"
+}
