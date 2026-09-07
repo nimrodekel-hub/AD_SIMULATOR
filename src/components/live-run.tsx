@@ -71,6 +71,7 @@ export function LiveRun({
   difficulty,
   profile,
   templateHtml,
+  notices = [],
   onFinish,
 }: {
   /**
@@ -87,6 +88,16 @@ export function LiveRun({
    * arriving here is known to have somewhere to put the radar picture.
    */
   templateHtml?: string;
+  /**
+   * What the generator had to override to fit the system, in its own words.
+   *
+   * Read before the clock starts, because that is when it changes what the
+   * trainee is looking for. A request the profile made impossible — asking
+   * for transponder codes on a system that declares none — otherwise arrives
+   * as an air picture that quietly lacks what was asked for, which is
+   * indistinguishable from not having been read.
+   */
+  notices?: string[];
   /**
    * Where the run's outcome goes.
    *
@@ -153,12 +164,21 @@ export function LiveRun({
           body: JSON.stringify({ run_log: final.events, run_result: result }),
         });
         const payload = await readJson<{ error?: string }>(response);
-        if (!response.ok) throw new Error(payload.error ?? "Debrief failed.");
+        if (!response.ok) throw new Error(payload.error ?? "Saving the run failed.");
+        /* On to the result, whether or not the written assessment came back.
+           The trainee has just finished flying and the tally is in; holding
+           them on the console because a model call failed is how a completed
+           run — every hostile destroyed — was reported to them as unfinished.
+           The debrief page shows what the engine counted either way, and asks
+           for the assessment again from there. */
         router.push(`/trainee/${runId}/debrief`);
       } catch (reason) {
-        // The log is written before the assessment call, so a failure here
-        // costs the debrief and never the record of what the trainee did.
-        setError(reason instanceof Error ? reason.message : "Debrief failed.");
+        /* Only reached when the run itself could not be recorded. That is the
+           one failure worth stopping for, because it is the part that cannot
+           be reconstructed — so the state is kept in hand and offered again. */
+        setError(
+          reason instanceof Error ? reason.message : "Saving the run failed.",
+        );
         submitted.current = false;
         finished.current = final;
         setStage("failed");
@@ -219,6 +239,7 @@ export function LiveRun({
         exercise={exercise}
         config={config}
         difficulty={difficulty}
+        notices={notices}
         onBegin={() => setStage("running")}
       />
     );
@@ -425,11 +446,13 @@ function Brief({
   exercise,
   config,
   difficulty,
+  notices,
   onBegin,
 }: {
   exercise: ExerciseInstance;
   config: ReturnType<typeof simConfig>;
   difficulty: string;
+  notices: string[];
   onBegin: () => void;
 }) {
   return (
@@ -441,6 +464,23 @@ function Brief({
           <p className="prose-block mt-3 whitespace-pre-wrap text-sm">
             {exercise.situation_brief}
           </p>
+
+          {/* Before the figures, because it changes how they should be read:
+              anything here is a part of the request the system could not
+              honour, and the reason is always something in the profile that
+              can be fixed. */}
+          {notices.length > 0 ? (
+            <div className="mt-4 rounded border border-warn bg-panel-raised p-4">
+              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-warn">
+                Laid out differently from the request
+              </p>
+              <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-muted">
+                {notices.map((notice, index) => (
+                  <li key={index}>{notice}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           <dl className="data mt-5 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
             <Stat label="Window" value={`${exercise.time_window_seconds}s`} />
@@ -1416,10 +1456,16 @@ function Failed({ error, onRetry }: { error?: string; onRetry: () => void }) {
     <div className="fixed inset-x-0 bottom-0 z-50 border-t border-danger bg-panel-raised p-4">
       <p className="text-sm text-danger">{error}</p>
       <p className="mt-1 text-xs text-muted">
-        Your run is recorded. Only the assessment failed.
+        {/* This panel now means what it says. It used to appear when only the
+            written assessment had failed — the run was safely recorded and the
+            trainee was told so while being kept off their own result page. It
+            appears only when the run could not be saved, which is the one thing
+            here that cannot be recovered by asking again later. */}
+        Nothing has been saved yet, so this is worth another go before you
+        leave the page.
       </p>
       <button type="button" className="btn mt-3" onClick={onRetry}>
-        Try the debrief again
+        Save the run again
       </button>
     </div>
   );
