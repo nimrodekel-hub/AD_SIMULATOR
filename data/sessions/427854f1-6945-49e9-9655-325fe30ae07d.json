@@ -613,13 +613,61 @@
   },
   "outcome": {
     "success": false,
-    "summary": "2 hostiles reached the defended area, against a limit of 1. 3 friendly tracks were engaged. That fails the run on its own, whatever else went right. 15 interceptors spent, against the 12 allowed. Mean 137s from a hostile becoming identifiable to the launch against it.",
-    "per_decision": []
+    "summary": "Run failed outright: three friendly tracks (TK-302, TK-303, TK-301) were engaged and destroyed, two hostiles leaked including jet TK-103, and 15 interceptors were spent against a ceiling of 12. The jet-first sequencing the trainee asked to practise was inverted — the first shot of the run went to a UAV, TK-102 was not engaged until 33 km and TK-103 not until 18 km, after being tracked for over three minutes.",
+    "per_decision": [
+      {
+        "dilemma_index": 0,
+        "chosen_action": "Fired the first rocket of the run at UAV TK-202 at 30 km (T+011), leaving lead jet TK-101 unengaged until T+037 and TK-102 unengaged for nearly three minutes",
+        "preferred_action": "Fire the lead jet at the earliest valid firing solution; jets are prioritised because they consume the timeline, not because they are closest",
+        "correct": false,
+        "comment": "T+011. Documented common error: engaging the nearest UAV first because proximity reads as urgency on the display, when closure rate — not slant range — determines who must die first. TK-101 and TK-102 were both on the scope from T+000 at 90 and 84 km."
+      },
+      {
+        "dilemma_index": 2,
+        "chosen_action": "Interrogated TK-302 at T+076, read 'no reply', and launched short range at 8 km (T+079); TK-302 destroyed, it was Friendly",
+        "preferred_action": "Refer the Unknown to the commander and withhold fire until it is classified Enemy",
+        "correct": false,
+        "comment": "T+076–T+101. This is the single worst outcome in the record. A reply of 'no reply' is not proof of hostility and never was — the record states all three Unknowns in this scenario are friendly, and the profile that reads as threatening is the bait. You did the identification work and then acted against what it told you."
+      },
+      {
+        "dilemma_index": 2,
+        "chosen_action": "Launched short range at TK-303 at 9 km (T+101) with no interrogation entry in the log at all; destroyed, it was Friendly",
+        "preferred_action": "Refer and withhold — nothing may be fired on unless classified Enemy",
+        "correct": false,
+        "comment": "T+101. No interrogation of TK-303 appears in the log despite the system having demonstrably interrogated TK-204 and TK-302 minutes earlier. This is self-classifying locally to save the fifteen-second referral, which the record names explicitly."
+      },
+      {
+        "dilemma_index": 2,
+        "chosen_action": "Launched medium range at TK-301 at 15 km, Pk 66% (T+123); destroyed, it was Our Forces",
+        "preferred_action": "Refer and withhold; keep the launchers on confirmed Enemy tracks",
+        "correct": false,
+        "comment": "T+123. Third friendly engaged, and it also cost a medium-range round and launcher time at the exact moment jets TK-102 and TK-103 were still unengaged. The record warns that letting the Unknowns pull attention and launchers off the jets breaks the sequencing that makes the raid solvable — that is precisely what the log shows."
+      },
+      {
+        "dilemma_index": 3,
+        "chosen_action": "Engaged TK-102 at 33 km (T+171) and TK-103 at 18 km (T+214), after clearing six UAVs and three friendlies",
+        "preferred_action": "Take the jets at first valid long-range solution, then mop up the UAVs inside the shorter rings",
+        "correct": false,
+        "comment": "T+171 and T+214. Both jets were tracked from the first minute at nearly 80 km. TK-103's first shot at 18 km missed at Pk 67%, the follow-up at 6 km was a 61% shot, and it leaked at T+262. The record calls a leaked jet the most expensive category of leaker precisely because it proves the sequencing was wrong."
+      },
+      {
+        "dilemma_index": 3,
+        "chosen_action": "Held TK-205 until 3 km and took a Pk 58% shot at T+206; it leaked four seconds later",
+        "preferred_action": "Take the next available valid solution rather than holding for a short-range shot, keeping both rockets continuously employed",
+        "correct": false,
+        "comment": "T+206. TK-205 had been on the scope at 23 km since T+055. This is the documented mop-up error: holding fire for a stronger short-range solution and running out of timeline against the tail of the wave."
+      }
+    ]
   },
-  "score": null,
-  "debrief_text": "",
-  "recommendations": [],
+  "score": 4,
+  "debrief_text": "You destroyed three friendly aircraft in this run — TK-302 at T+101, TK-303 at T+123 and TK-301 at T+147. That fails the run on its own terms, and nothing else in the log changes it. The most instructive of the three is TK-302: you interrogated it at T+076, got 'no reply', and fired eight seconds later. The record is unambiguous that no reply is not proof of hostility, and that all three Unknowns in this scenario were friendly with a flight profile designed to read as aggressive. TK-303 you engaged with no interrogation entry in the log at all, and TK-301 you took at 15 km on a 66% solution. None of the three was ever classified Enemy, and the rule was that nothing may be fired on unless it is.\n\nYou asked to practise jets first, UAVs after, unknowns referred. The exercise put you in that position exactly and the run inverted all three legs of it. Your first rocket of the day went to UAV TK-202 at T+011 while TK-101 and TK-102 sat on the scope at 90 and 84 km — the documented error of reading slant range as urgency when closure rate is what matters. TK-102 was not engaged until 33 km at T+171 and TK-103 not until 18 km at T+214, after you had spent launcher capacity on six UAVs and three friendlies. TK-103's 18 km shot missed at 67%, the reshoot at 6 km was a 61% shot, and it reached the site. That is the most expensive leaker in the scoring hierarchy and it was decided in the first thirty seconds, not at the end.\n\nThe rest follows from the same cause. TK-205 leaked at T+210 after you held it from 23 km at T+055 down to a 3 km, 58% shot — the mop-up error of holding for a stronger short-range solution and running out of timeline. Fifteen rounds against a ceiling of twelve is the arithmetic of shooting everything late: a jet at 79 km cost one long-range round, the same class of target at 6 km cost two and still leaked. Three refusals at T+018, T+028 and T+031 were wrong-ring selections against tracks well beyond that launcher's reach, and three more later were the two-in-flight limit — capacity you had spent on friendlies. Holding while both rockets were committed would have been correct behaviour; you never had a moment where holding was the problem.\n\nThe mean reaction figure of 137 seconds is not a separate fault, it is the same fault measured differently. Tracks you saw at first detection were serviced two to four minutes later, inside the short ring, at Pk figures in the fifties and sixties, when the same targets were available at long range at high confidence.",
+  "recommendations": [
+    "Treat a 'no reply' interrogation as unresolved, not as hostile. On TK-302 you had the answer and overrode it — make the commander's referral and hold until a track comes back classified Enemy before any launch authority is considered.",
+    "Commit the jets first, at the first valid long-range solution the system offers. TK-101 was taken at 79 km for one round at 87%; TK-102 and TK-103 were available on the same terms from the first minute and you took them at 33 and 18 km instead.",
+    "Refer every Unknown the moment it appears and then go back to the confirmed hostiles. In this run the three Unknowns consumed five launches and roughly seventy seconds of launcher capacity that the jets needed.",
+    "Stop holding UAVs for short-range solutions. TK-205 was on the scope at 23 km from T+055 and you shot it at 3 km on a 58% solution; take the next valid shot as launcher capacity frees rather than waiting for the ring to close."
+  ],
   "status": "completed",
   "created_at": "2026-09-07T13:54:14.540Z",
-  "completed_at": "2026-09-07T13:58:48.509Z"
+  "completed_at": "2026-09-07T13:59:40.963Z"
 }
