@@ -277,13 +277,308 @@
   },
   "exercise_adjustments": [],
   "decisions_made": [],
-  "run_log": [],
-  "run_result": null,
-  "outcome": null,
+  "run_log": [
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-101",
+      "detail": "TK-101 detected, 90 km on 85°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-102",
+      "detail": "TK-102 detected, 84 km on 62°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-201",
+      "detail": "TK-201 detected, 34 km on 75°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-202",
+      "detail": "TK-202 detected, 32 km on 105°."
+    },
+    {
+      "t": 9.3,
+      "kind": "launched",
+      "designator": "TK-202",
+      "detail": "long range launched at TK-202 (30 km, intercept in 48 s, Pk 62%)."
+    },
+    {
+      "t": 15.1,
+      "kind": "detected",
+      "designator": "TK-103",
+      "detail": "TK-103 detected, 79 km on 118°."
+    },
+    {
+      "t": 20,
+      "kind": "detected",
+      "designator": "TK-301",
+      "detail": "TK-301 detected, 37 km on 40°."
+    },
+    {
+      "t": 25,
+      "kind": "detected",
+      "designator": "TK-203",
+      "detail": "TK-203 detected, 24 km on 50°."
+    },
+    {
+      "t": 26.6,
+      "kind": "interrogated",
+      "designator": "TK-301",
+      "detail": "TK-301 interrogated: no reply."
+    },
+    {
+      "t": 30,
+      "kind": "detected",
+      "designator": "TK-302",
+      "detail": "TK-302 detected, 11 km on 145°."
+    },
+    {
+      "t": 35.4,
+      "kind": "classified",
+      "designator": "TK-301",
+      "detail": "Operator set TK-301 to enemy."
+    },
+    {
+      "t": 40,
+      "kind": "detected",
+      "designator": "TK-204",
+      "detail": "TK-204 detected, 23 km on 135°."
+    },
+    {
+      "t": 43.1,
+      "kind": "launched",
+      "designator": "TK-302",
+      "detail": "short range launched at TK-302 (10 km, intercept in 28 s, Pk 87%)."
+    },
+    {
+      "t": 45,
+      "kind": "detected",
+      "designator": "TK-303",
+      "detail": "TK-303 detected, 15 km on 88°."
+    },
+    {
+      "t": 46.4,
+      "kind": "classified",
+      "designator": "TK-302",
+      "detail": "Operator set TK-302 to enemy."
+    },
+    {
+      "t": 53.8,
+      "kind": "interrogated",
+      "designator": "TK-303",
+      "detail": "TK-303 interrogated: no reply."
+    },
+    {
+      "t": 55,
+      "kind": "detected",
+      "designator": "TK-205",
+      "detail": "TK-205 detected, 23 km on 92°."
+    },
+    {
+      "t": 57.5,
+      "kind": "hit",
+      "designator": "TK-202",
+      "detail": "TK-202 destroyed by long range. It was Enemy."
+    },
+    {
+      "t": 63.9,
+      "kind": "classified",
+      "designator": "TK-303",
+      "detail": "Operator set TK-303 to enemy."
+    },
+    {
+      "t": 66.5,
+      "kind": "launched",
+      "designator": "TK-303",
+      "detail": "short range launched at TK-303 (12 km, intercept in 30 s, Pk 88%)."
+    },
+    {
+      "t": 70,
+      "kind": "detected",
+      "designator": "TK-206",
+      "detail": "TK-206 detected, 17 km on 65°."
+    },
+    {
+      "t": 70.7,
+      "kind": "hit",
+      "designator": "TK-302",
+      "detail": "TK-302 destroyed by short range. It was Friendly."
+    },
+    {
+      "t": 73.1,
+      "kind": "launched",
+      "designator": "TK-204",
+      "detail": "medium range launched at TK-204 (20 km, intercept in 38 s, Pk 78%)."
+    },
+    {
+      "t": 90.1,
+      "kind": "detected",
+      "designator": "TK-207",
+      "detail": "TK-207 detected, 15 km on 122°."
+    },
+    {
+      "t": 96.6,
+      "kind": "hit",
+      "designator": "TK-303",
+      "detail": "TK-303 destroyed by short range. It was Friendly."
+    },
+    {
+      "t": 97,
+      "kind": "launched",
+      "designator": "TK-301",
+      "detail": "medium range launched at TK-301 (21 km, intercept in 33 s, Pk 75%)."
+    },
+    {
+      "t": 110.7,
+      "kind": "hit",
+      "designator": "TK-204",
+      "detail": "TK-204 destroyed by medium range. It was Enemy."
+    },
+    {
+      "t": 111.2,
+      "kind": "launched",
+      "designator": "TK-207",
+      "detail": "short range launched at TK-207 (13 km, intercept in 29 s, Pk 88%)."
+    },
+    {
+      "t": 129.9,
+      "kind": "hit",
+      "designator": "TK-301",
+      "detail": "TK-301 destroyed by medium range. It was Our Forces."
+    },
+    {
+      "t": 130.7,
+      "kind": "launched",
+      "designator": "TK-103",
+      "detail": "long range launched at TK-103 (44 km, intercept in 53 s, Pk 65%)."
+    },
+    {
+      "t": 140.4,
+      "kind": "hit",
+      "designator": "TK-207",
+      "detail": "TK-207 destroyed by short range. It was Enemy."
+    },
+    {
+      "t": 140.9,
+      "kind": "launched",
+      "designator": "TK-206",
+      "detail": "short range launched at TK-206 (9 km, intercept in 22 s, Pk 81%)."
+    },
+    {
+      "t": 163.3,
+      "kind": "hit",
+      "designator": "TK-206",
+      "detail": "TK-206 destroyed by short range. It was Enemy."
+    },
+    {
+      "t": 163.8,
+      "kind": "launched",
+      "designator": "TK-205",
+      "detail": "short range launched at TK-205 (9 km, intercept in 20 s, Pk 79%)."
+    },
+    {
+      "t": 183.8,
+      "kind": "hit",
+      "designator": "TK-103",
+      "detail": "TK-103 destroyed by long range. It was Enemy."
+    },
+    {
+      "t": 184.3,
+      "kind": "hit",
+      "designator": "TK-205",
+      "detail": "TK-205 destroyed by short range. It was Enemy."
+    },
+    {
+      "t": 184.7,
+      "kind": "launched",
+      "designator": "TK-203",
+      "detail": "short range launched at TK-203 (8 km, intercept in 19 s, Pk 77%)."
+    },
+    {
+      "t": 189.9,
+      "kind": "launched",
+      "designator": "TK-201",
+      "detail": "medium range launched at TK-201 (11 km, intercept in 20 s, Pk 63%)."
+    },
+    {
+      "t": 203.6,
+      "kind": "hit",
+      "designator": "TK-203",
+      "detail": "TK-203 destroyed by short range. It was Enemy."
+    },
+    {
+      "t": 204.7,
+      "kind": "launched",
+      "designator": "TK-102",
+      "detail": "medium range launched at TK-102 (23 km, intercept in 33 s, Pk 75%)."
+    },
+    {
+      "t": 209.9,
+      "kind": "hit",
+      "designator": "TK-201",
+      "detail": "TK-201 destroyed by medium range. It was Enemy."
+    },
+    {
+      "t": 211.2,
+      "kind": "launched",
+      "designator": "TK-101",
+      "detail": "medium range launched at TK-101 (25 km, intercept in 35 s, Pk 76%)."
+    },
+    {
+      "t": 218.7,
+      "kind": "interrogated",
+      "designator": "TK-101",
+      "detail": "TK-101 interrogated: no reply."
+    },
+    {
+      "t": 237.7,
+      "kind": "hit",
+      "designator": "TK-102",
+      "detail": "TK-102 destroyed by medium range. It was Enemy."
+    },
+    {
+      "t": 246.4,
+      "kind": "hit",
+      "designator": "TK-101",
+      "detail": "TK-101 destroyed by medium range. It was Enemy."
+    },
+    {
+      "t": 246.4,
+      "kind": "ended",
+      "designator": "",
+      "detail": "Air picture clear."
+    }
+  ],
+  "run_result": {
+    "leakers": 0,
+    "hostiles_destroyed": 10,
+    "hostiles_unresolved": 0,
+    "friendly_engaged": 3,
+    "unknown_engaged": 0,
+    "interceptors_spent": 13,
+    "spent_by": {
+      "long range": 2,
+      "medium range": 5,
+      "short range": 6
+    },
+    "mean_reaction_s": 109.4,
+    "met_criteria": false
+  },
+  "outcome": {
+    "success": false,
+    "summary": "No hostile reached the defended area — all 10 were stopped. 3 friendly tracks were engaged. That fails the run on its own, whatever else went right. 13 interceptors spent, against the 12 allowed. Mean 109.4s from a hostile becoming identifiable to the launch against it.",
+    "per_decision": []
+  },
   "score": null,
   "debrief_text": "",
   "recommendations": [],
-  "status": "in_progress",
+  "status": "completed",
   "created_at": "2026-09-07T18:45:13.184Z",
-  "completed_at": null
+  "completed_at": "2026-09-07T18:49:38.578Z"
 }
