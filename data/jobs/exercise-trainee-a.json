@@ -1,9 +1,7 @@
 {
-  "status": "done",
-  "started_at": "2026-09-07T09:56:09.386Z",
-  "finished_at": "2026-09-07T09:56:12.041Z",
+  "status": "running",
+  "started_at": "2026-09-07T13:54:13.016Z",
+  "finished_at": null,
   "error": null,
-  "result": {
-    "session_id": "dfb4a9da-c941-490b-875b-a36e6e915a13"
-  }
+  "result": null
 }
