@@ -640,11 +640,70 @@
     "mean_reaction_s": 140.7,
     "met_criteria": false
   },
-  "outcome": null,
-  "score": null,
-  "debrief_text": "",
-  "recommendations": [],
-  "status": "in_progress",
+  "outcome": {
+    "success": false,
+    "summary": "Run failed. Four interceptors were expended against the three initially-Unknown tracks (TK-301, TK-302, TK-303), all of which were friendly, and all three were destroyed. On top of that, the jet-first sequencing was inverted: the first shot of the run went to a UAV, TK-101 and TK-102 were left unengaged for over three minutes despite being on the display at T+000, one UAV (TK-207) leaked, and 17 interceptors were spent against a ceiling of 12. The success criteria state that engaging any of TK-301/302/303 fails the run regardless of how many hostiles died; nine hostiles destroyed does not recover it.",
+    "per_decision": [
+      {
+        "dilemma_index": 0,
+        "chosen_action": "Attempted a short-range engagement on a UAV at 31 km (refused), then launched medium range at TK-202 at T+011 — the first shot of the run went to a UAV while TK-101 (90 km) and TK-102 (84 km) sat unengaged.",
+        "preferred_action": "Fire the lead jet at the earliest valid firing solution.",
+        "correct": false,
+        "comment": "T+007 and T+011. This is the documented error of engaging the nearest UAV first because proximity reads as urgency; the record is explicit that closure rate, not slant range, decides who dies first."
+      },
+      {
+        "dilemma_index": 0,
+        "chosen_action": "Launched long range at TK-103 at T+018, 78 km, Pk 87%.",
+        "preferred_action": "Fire the jets at the earliest valid solution at long range.",
+        "correct": true,
+        "comment": "T+018. The one correctly sequenced shot in the run — a jet taken cheaply at the outer ring. The failure was not repeating it for TK-101 and TK-102."
+      },
+      {
+        "dilemma_index": 2,
+        "chosen_action": "Launched short range at TK-302 at 9 km, Pk 83%; destroyed at T+092. It was Friendly.",
+        "preferred_action": "Refer to the commander and withhold fire until the track is classified Enemy.",
+        "correct": false,
+        "comment": "T+069. The worst outcome in the record. An Unknown is a question, not a permission, and the log carries no referral for TK-302 at all — the fifteen-second referral cost was never paid."
+      },
+      {
+        "dilemma_index": 2,
+        "chosen_action": "Launched short range at TK-303 (T+093, missed), re-attacked at T+144 at 4 km Pk 62% and destroyed it; launched at TK-301 at T+119 and destroyed it at T+149.",
+        "preferred_action": "Refer, withhold fire on all three Unknowns, and keep working the confirmed hostiles.",
+        "correct": false,
+        "comment": "T+093 through T+149. Three more rounds and two more friendly kills. TK-301's aggressive-looking profile is described in the record as exactly the bait; you took it, and then repeated the shot on TK-303 after the first missed."
+      },
+      {
+        "dilemma_index": 3,
+        "chosen_action": "Held short-range capacity on friendly re-attacks and short-range UAV shots; TK-207 was engaged at T+153 at 7 km, Pk 74%, missed, and no second shot was available.",
+        "preferred_action": "Keep both rockets continuously employed against valid solutions inside the shorter rings so no UAV reaches a point where no launcher can be brought to bear.",
+        "correct": false,
+        "comment": "T+153 to T+189. The leaker traces directly to launcher capacity spent on TK-301/302/303 and to low-Pk short-range shots taken after the timeline had already compressed."
+      },
+      {
+        "dilemma_index": 3,
+        "chosen_action": "Launched long range at TK-103 (T+185, Pk 0%) and at TK-102 (T+207, Pk 0%), then re-engaged both with medium range at Pk 58% and 60%.",
+        "preferred_action": "Fire when the system offers a valid solution within system capability — not shots the system prices at zero.",
+        "correct": false,
+        "comment": "T+185 and T+207. Two rounds thrown away at zero kill probability while both launcher slots were the scarce resource. The record does not address zero-Pk launches directly, but they are pure waste against a twelve-round ceiling."
+      },
+      {
+        "dilemma_index": 0,
+        "chosen_action": "TK-101, detected at 90 km at T+000, was not engaged until T+253 at 12 km, Pk 78%; TK-102 not until T+207. Both were interrogated only after commitment (T+259, T+260, 'no reply').",
+        "preferred_action": "Fire the jets at first valid solution at long range, when they are cheapest to kill.",
+        "correct": false,
+        "comment": "T+000 to T+273. Four minutes of unused long-range window on two jets. The interrogations at T+259/260 were identification effort spent on a track already classified Enemy and already engaged — and a 'no reply' would not have been proof of hostility in any case; the three tracks that actually needed interrogating never got it."
+      }
+    ]
+  },
+  "score": 5,
+  "debrief_text": "You asked to practise mass-raid prioritisation — jets first, UAVs after, Unknowns referred. The scenario handed you exactly that, and you inverted all three legs of it.\n\nThe run is failed on identification. You put four interceptors into TK-302, TK-303 (twice) and TK-301, and destroyed all three. Every one was friendly. The log carries no referral for any of them and no interrogation of any of them; the only interrogations in the whole run were of TK-101 at T+259 and T+260, after you had already launched at it, on a track the system had shown as Enemy from second zero. The record is unambiguous here: an Unknown is a question, not a permission, the commander answers in about fifteen seconds, and in this scenario the aggressive-looking flight profile of TK-301 is the bait. You took the bait, and when the first shot at TK-303 missed at T+116 you came back and took it again at 4 km for a 62% Pk. That is the documented worst outcome in this entry and it caps the score regardless of the nine hostiles you did kill.\n\nThe sequencing failed independently. Your first shot of the run — after a refused short-range attempt on a UAV at 31 km — was a medium-range round at TK-202 at T+011, while TK-101 sat at 90 km and TK-102 at 84 km with the entire long-range ring available. That is the classic nearest-UAV error: proximity reads as urgency on the display, but the record says closure rate decides the queue because the jets consume the timeline. TK-103 at T+018 was the one shot you got right. TK-102 was not engaged until T+207 and TK-101 not until T+253, both inside 25 km, both after zero-Pk long-range launches at T+185 and T+207 that were pure waste. You killed all three jets in the end, but you killed them the expensive way — 17 rounds against a ceiling of 12, with the tail of the run reduced to 58–78% short-range shots.\n\nTK-207 leaked at T+189 after a 74% shot at 7 km missed and no launcher was free to re-attack. That leaker is not a bad-luck event; it is the arithmetic of having spent four rounds and two launcher slots on friendlies and two more on zero-Pk geometry. The record notes that the moment when a UAV crosses the short ring with both rockets committed is decided upstream — and yours was decided at T+011.",
+  "recommendations": [
+    "Before any launch, check the track's classification field: if it reads Unknown, refer it and do nothing else with it. Do not fire on TK-301/302/303-type tracks, and do not re-attack one after a miss — the fifteen-second referral is cheap and the log shows you never paid it once.",
+    "Take the jets at the outer ring. TK-101 was on the display at 90 km at T+000 and you did not shoot it until 12 km at T+253 — commit each jet at the first valid long-range solution before touching any UAV, even one at 30 km.",
+    "Stop launching at Pk 0%. The rounds at T+185 and T+207 bought nothing and occupied launcher slots you needed for the UAV wave; wait the few seconds for a priced solution rather than firing to feel busy.",
+    "Treat transponder work as pre-engagement, not post-engagement. Interrogating TK-101 at T+259, after launch and on an already-Enemy track, was effort spent in the wrong place — and remember that 'no reply' is not evidence of hostility."
+  ],
+  "status": "completed",
   "created_at": "2026-09-07T09:56:10.885Z",
-  "completed_at": null
+  "completed_at": "2026-09-07T10:01:40.655Z"
 }
