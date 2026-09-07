@@ -16,6 +16,7 @@ import {
   startExerciseJob,
 } from "@/lib/store/exercise-job";
 import { createSession } from "@/lib/store/sessions";
+import { reusableExercise } from "@/lib/store/reuse-exercise";
 
 /**
  * Instantiates an exercise from the matched scenario and opens a session.
@@ -25,6 +26,11 @@ import { createSession } from "@/lib/store/sessions";
  * trainee sees — the person most likely to be holding a phone, where a locked
  * screen kills the request while the server is still working. So POST starts
  * the work and returns at once, and GET reports where it got to.
+ *
+ * Most of the time it no longer generates anything: an ask that has been made
+ * before is answered with the engagement that answered it before, which costs
+ * nothing and takes a second. See `reusableExercise` for what counts as the
+ * same ask, and why it is deliberately strict.
  *
  * The job is filed under the trainee. Two trainees may start runs on the same
  * system at the same moment, but nobody runs two exercises at once.
@@ -78,17 +84,41 @@ export async function POST(request: NextRequest) {
 
   after(async () => {
     try {
-      // Only an approved profile governs generation. A draft is the designer
-      // still working, and half-taught doctrine is worse than none.
-      const profile = await getSystemProfile(body.system_id);
-      const { exercise } = await generateExercise(
-        scenario,
-        body.difficulty,
-        profile?.approved ? profile : null,
-        // What they asked for, carried through to the thing that lays out the
-        // engagement. It used to stop here, at the record.
-        { text: body.requested_text, clarifications: body.clarifications },
-      );
+      /* Laying out an engagement is the most expensive thing this app does,
+         and asking for one that has already been laid out was paying for it
+         twice and waiting for it twice to be handed the same problem. Only an
+         identical ask is answered this way — same system, same scenario, same
+         difficulty, same words — because the trainee's own words shape the
+         engagement and reusing across different ones would hand somebody an
+         exercise built for a request they did not make. */
+      const already = await reusableExercise({
+        systemId: body.system_id,
+        scenarioId: scenario.id,
+        difficulty: body.difficulty,
+        requestedText: body.requested_text,
+        clarifications: body.clarifications,
+      });
+
+      let exercise;
+      if (already) {
+        console.log(
+          `[exercise:reused] ${already.from} — nothing generated, nothing billed`,
+        );
+        exercise = already.exercise;
+      } else {
+        // Only an approved profile governs generation. A draft is the designer
+        // still working, and half-taught doctrine is worse than none.
+        const profile = await getSystemProfile(body.system_id);
+        ({ exercise } = await generateExercise(
+          scenario,
+          body.difficulty,
+          profile?.approved ? profile : null,
+          // What they asked for, carried through to the thing that lays out
+          // the engagement. It used to stop here, at the record.
+          { text: body.requested_text, clarifications: body.clarifications },
+        ));
+      }
+
       const session = await createSession({
         traineeId: body.trainee_id,
         systemId: body.system_id,
