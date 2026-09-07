@@ -127,12 +127,21 @@ export default async function DebriefPage({
           Counted from the run itself. These are not judgements and nothing can
           argue with them.
         </p>
-        <dl className="data mt-3 grid grid-cols-2 gap-px overflow-hidden rounded border border-line bg-[var(--border)] sm:grid-cols-3 lg:grid-cols-5">
+        <dl className="data mt-3 grid grid-cols-2 gap-px overflow-hidden rounded border border-line bg-[var(--border)] sm:grid-cols-3 lg:grid-cols-6">
           <Tally label="Hostiles destroyed" value={result.hostiles_destroyed} />
           <Tally
             label="Reached the site"
             value={result.leakers}
             bad={result.leakers > 0}
+          />
+          {/* The third possible fate, and the one that used to be invisible:
+              neither destroyed nor arrived. It only becomes common now that a
+              run can be ended on purpose, and it is what stops "I stopped
+              immediately" from scoring as a clean sheet. */}
+          <Tally
+            label="Still inbound"
+            value={result.hostiles_unresolved}
+            bad={result.hostiles_unresolved > 0}
           />
           <Tally
             label="Friendlies engaged"

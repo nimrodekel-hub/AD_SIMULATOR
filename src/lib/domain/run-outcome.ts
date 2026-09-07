@@ -58,6 +58,19 @@ export function summaryOf(
         `the defended area, against a limit of ${criteria.max_leakers}.`,
   );
 
+  /* Said before anything about efficiency, because it is the reason a run
+     ended early reads as a failure rather than as a clean sheet: nothing had
+     leaked and nothing friendly had been engaged, and that is only because
+     the engagement was left unfinished. */
+  if (result.hostiles_unresolved > 0) {
+    lines.push(
+      `${result.hostiles_unresolved} hostile${
+        result.hostiles_unresolved === 1 ? " was" : "s were"
+      } still inbound when the run stopped, neither destroyed nor arrived. ` +
+        "A hostile still closing is not a hostile dealt with.",
+    );
+  }
+
   if (result.friendly_engaged > 0) {
     lines.push(
       `${result.friendly_engaged} friendly track${
