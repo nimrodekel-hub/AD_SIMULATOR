@@ -164,24 +164,24 @@
     "interceptors": [
       {
         "name": "long range",
-        "min_range_km": 5,
-        "max_range_km": 70,
+        "min_range_km": 20,
+        "max_range_km": 100,
         "speed_kts": 1000,
-        "magazine_max": 1
+        "magazine_max": 4
       },
       {
         "name": "medium range",
         "min_range_km": 5,
         "max_range_km": 50,
         "speed_kts": 800,
-        "magazine_max": 2
+        "magazine_max": 6
       },
       {
         "name": "short range",
-        "min_range_km": 5,
+        "min_range_km": 2,
         "max_range_km": 20,
         "speed_kts": 600,
-        "magazine_max": 2
+        "magazine_max": 10
       }
     ],
     "max_simultaneous": 2,
@@ -236,5 +236,5 @@
     }
   ],
   "created_at": "2026-08-29T13:49:43.379Z",
-  "approved_at": "2026-09-06T18:15:56.952Z"
+  "approved_at": "2026-09-07T09:55:51.219Z"
 }
