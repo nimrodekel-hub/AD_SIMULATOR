@@ -1,7 +1,7 @@
 {
-  "status": "running",
+  "status": "failed",
   "started_at": "2026-09-07T07:33:46.411Z",
-  "finished_at": null,
-  "error": null,
+  "finished_at": "2026-09-07T07:37:00.692Z",
+  "error": "The model ran out of room before it finished writing this one, so the answer came back cut off. Nothing was saved. Ask for it again — and if it keeps happening, ask for a smaller one: fewer tracks, or a shorter brief.",
   "result": null
 }
