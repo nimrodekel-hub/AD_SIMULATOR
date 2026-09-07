@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ConsoleControlsSummary } from "@/components/console-controls-summary";
 import { GuiBuilder } from "@/components/gui-builder";
 import { ScreenShell } from "@/components/screen-shell";
 import { asReported, readGuiJob } from "@/lib/store/gui-job";
@@ -69,6 +70,12 @@ export default async function GuiBuilderPage({
           </p>
         </div>
       ) : null}
+
+      {/* Stated before the request rather than after it. A designer asking the
+          builder to colour a reload button gets a refusal, and the refusal is
+          the same every time: the control is not switched on. Here is that
+          answer up front, with the switch. */}
+      {missing === null ? <ConsoleControlsSummary systemId={systemId} profile={profile} /> : null}
 
       {missing === null ? (
         <GuiBuilder
