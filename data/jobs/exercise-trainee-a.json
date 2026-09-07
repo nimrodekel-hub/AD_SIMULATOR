@@ -1,7 +1,7 @@
 {
-  "status": "failed",
-  "started_at": "2026-09-06T18:16:27.280Z",
-  "finished_at": "2026-09-06T18:19:55.303Z",
-  "error": "Failed to parse structured output: Error: Failed to parse structured output as JSON: Unterminated string in JSON at position 6654 (line 1 column 6655)",
+  "status": "running",
+  "started_at": "2026-09-07T07:29:40.112Z",
+  "finished_at": null,
+  "error": null,
   "result": null
 }
