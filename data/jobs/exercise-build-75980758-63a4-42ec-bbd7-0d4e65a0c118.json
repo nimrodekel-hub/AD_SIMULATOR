@@ -1,7 +1,16 @@
 {
-  "status": "running",
+  "status": "done",
   "started_at": "2026-09-07T20:37:29.554Z",
-  "finished_at": null,
+  "finished_at": "2026-09-07T20:41:22.026Z",
   "error": null,
-  "result": null
+  "result": {
+    "exercise_id": "2141d2b3-586c-4d21-9538-9f93a0d705da",
+    "system_id": "75980758-63a4-42ec-bbd7-0d4e65a0c118",
+    "exercise_name": "IFF dilemas",
+    "notes": "Built around the trainee's request that IFF replies drive the classification: the three hostile jets answer Mode 1 only, the three friendly tracks answer Mode 3 only (one with 7600, radio failure, deliberately, and flagged in the brief), and all seven hostile UAVs are silent, so every interrogation returns a meaningful discriminator and no track is spared or shot on arbitrary grounds. Two profile/scenario conflicts you should know about: every track class in the profile is marked transponder \"none\" while the profile's own interrogation block enables Mode 1 and Mode 3 out to 200 km and the console carries an IFF readout field — since the whole exercise is about reading replies I followed the interrogation block and issued codes, and the per-class transponder fields should be corrected; and the window is 330 s rather than the medium band's 270 because the enforced floor for a 600-kt jet against the 70 km ring is 315 s. I also let the three hostile jets enter as Unknown with no auto-resolution (the scenario names only three Unknowns, all friendly) so that interrogation, not the label, is what authorises the jets-first sequencing; the three friendly civil tracks remain the enduring referral problem, two of them never resolving. Arrivals are staggered so the jets cross the 70 km ring at T+81/97/106 while the two-in-flight limit is saturated, the first UAVs cross the 20 km ring at T+119-138, and a Mode 3 civil sits inside the engagement envelope closing head-on from T+121.",
+    "adjustments": [
+      "No transponder codes were issued to “Jet”, “Civil”. The system profile declares those classes as carrying no transponder, so they reply to nothing and Mode 3 and Mode 1 stay empty. To make interrogation part of this exercise, set the transponder to civil or military on those classes in the system profile — that is the only thing missing.",
+      "Interrogation is switched on, but every declared class carries no transponder — so interrogating any track, hostile or friendly, can only ever answer “no reply”. The command is there and it tells the operator nothing, while the run still fails them for engaging a friendly they had no way to identify. Set the transponder to civil or military on the classes that should reply — friendly aircraft above all, since they are the ones an operator is expected to spare."
+    ]
+  }
 }
