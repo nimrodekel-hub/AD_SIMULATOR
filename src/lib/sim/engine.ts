@@ -1422,9 +1422,32 @@ export function summarise(
     reactions.push(Math.max(0, engagement.launched_s - knowable));
   }
 
+  /**
+   * Hostiles that were still in the air when the run stopped.
+   *
+   * Neither destroyed nor arrived, so they fell through both counts and out
+   * of the verdict entirely — which was harmless while a run could only end
+   * by the clock expiring, and became absurd the moment the operator could
+   * end one themselves: stopping eight seconds in, with three jets inbound,
+   * came back as *Mission success, score 100*. Nothing had leaked, nothing
+   * friendly had been engaged, and no rounds had been spent, so every
+   * criterion was satisfied by having done nothing at all.
+   *
+   * A hostile still closing is not a hostile dealt with. It is counted, it is
+   * shown, and it fails the run — which is also what makes ending early an
+   * honest option rather than an escape: everything unresolved counts against
+   * you, exactly as the button says.
+   */
+  const unresolved = state.tracks.filter(
+    (track) =>
+      (track.state === "airborne" || track.state === "pending") &&
+      toneOf(config, track.truth_iff) === "hostile",
+  ).length;
+
   return {
     leakers,
     hostiles_destroyed: destroyed,
+    hostiles_unresolved: unresolved,
     friendly_engaged: friendlyEngaged,
     unknown_engaged: unknownEngaged,
     interceptors_spent: state.spent,
@@ -1438,6 +1461,7 @@ export function summarise(
     met_criteria:
       leakers <= criteria.max_leakers &&
       friendlyEngaged === 0 &&
+      unresolved === 0 &&
       state.spent <= criteria.max_interceptors_spent,
   };
 }
