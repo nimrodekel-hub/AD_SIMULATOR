@@ -285,3 +285,53 @@ export async function generateGuiTemplate({
 
   return { ...draft, html: sanitiseHtml(draft.html) };
 }
+
+/* ------------------------------------------------------------------ */
+
+/**
+ * Strips anything executable before the markup is ever rendered.
+ *
+ * The model is instructed not to emit scripts, and the designer approves the
+ * result by eye — but neither is a guarantee, and this markup ends up rendered
+ * into the trainee's page. Enforcing it here means the guarantee does not
+ * depend on the model following instructions.
+ */
+export function sanitiseHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<\s*script[^>]*>/gi, "")
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, "")
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, "")
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, "")
+    .replace(/\son\w+\s*=\s*[^\s>]+/gi, "")
+    .replace(/javascript:/gi, "");
+}
+
+/** Which of the required slots the markup is missing. */
+export function missingSlots(html: string): string[] {
+  return REQUIRED_SLOTS.filter(
+    (slot) => !html.includes(`data-slot="${slot}"`),
+  );
+}
+
+const MOCK_HTML = `<style>
+.sim-console { display: flex; flex-direction: column; gap: 1px; background: #16202b; color: #cfe3f5; font-family: ui-monospace, monospace; height: 100%; overflow: hidden; }
+.sim-console .bar { background: #0b1219; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+.sim-console .body { display: grid; grid-template-columns: 1.6fr 15rem 13rem; gap: 1px; flex: 1; min-height: 0; }
+.sim-console .pane > [data-slot] { flex: 1; min-height: 0; }
+.sim-console .pane { background: #0b1219; padding: 8px; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.sim-console .foot { background: #0b1219; padding: 10px 12px; min-height: 0; overflow: auto; }
+.sim-console h4 { font-size: 10px; letter-spacing: .12em; color: #6d8399; margin-bottom: 8px; }
+</style>
+<div class="sim-console">
+  <div class="bar">
+    <div data-slot="system-name"></div>
+    <div data-slot="clock"></div>
+  </div>
+  <div class="body">
+    <div class="pane"><h4>AIR PICTURE</h4><div data-slot="scope"></div></div>
+    <div class="pane"><h4>TRACKS</h4><div data-slot="tracks"></div></div>
+    <div class="pane"><h4>RESOURCES</h4><div data-slot="resources"></div></div>
+  </div>
+  <div class="foot"><div data-slot="decision"></div></div>
+</div>`;
