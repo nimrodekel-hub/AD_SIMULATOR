@@ -277,13 +277,349 @@
   },
   "exercise_adjustments": [],
   "decisions_made": [],
-  "run_log": [],
-  "run_result": null,
-  "outcome": null,
+  "run_log": [
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-101",
+      "detail": "TK-101 detected, 90 km on 85°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-102",
+      "detail": "TK-102 detected, 84 km on 62°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-201",
+      "detail": "TK-201 detected, 34 km on 75°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TK-202",
+      "detail": "TK-202 detected, 32 km on 105°."
+    },
+    {
+      "t": 11.8,
+      "kind": "launched",
+      "designator": "TK-202",
+      "detail": "medium range launched at TK-202 (30 km, intercept in 57 s, Pk 89%)."
+    },
+    {
+      "t": 15.1,
+      "kind": "detected",
+      "designator": "TK-103",
+      "detail": "TK-103 detected, 79 km on 118°."
+    },
+    {
+      "t": 18.5,
+      "kind": "refused",
+      "designator": "TK-201",
+      "detail": "Engagement refused: 32 km is beyond the short range's reach of 20 km."
+    },
+    {
+      "t": 20,
+      "kind": "detected",
+      "designator": "TK-301",
+      "detail": "TK-301 detected, 37 km on 40°."
+    },
+    {
+      "t": 25,
+      "kind": "detected",
+      "designator": "TK-203",
+      "detail": "TK-203 detected, 24 km on 50°."
+    },
+    {
+      "t": 28.5,
+      "kind": "refused",
+      "designator": "TK-101",
+      "detail": "Engagement refused: 82 km is beyond the short range's reach of 20 km."
+    },
+    {
+      "t": 30,
+      "kind": "detected",
+      "designator": "TK-302",
+      "detail": "TK-302 detected, 11 km on 145°."
+    },
+    {
+      "t": 31.4,
+      "kind": "refused",
+      "designator": "TK-101",
+      "detail": "Engagement refused: 81 km is beyond the medium range's reach of 50 km."
+    },
+    {
+      "t": 37.1,
+      "kind": "launched",
+      "designator": "TK-101",
+      "detail": "long range launched at TK-101 (79 km, intercept in 96 s, Pk 87%)."
+    },
+    {
+      "t": 40,
+      "kind": "detected",
+      "designator": "TK-204",
+      "detail": "TK-204 detected, 23 km on 135°."
+    },
+    {
+      "t": 45,
+      "kind": "detected",
+      "designator": "TK-303",
+      "detail": "TK-303 detected, 15 km on 88°."
+    },
+    {
+      "t": 55,
+      "kind": "detected",
+      "designator": "TK-205",
+      "detail": "TK-205 detected, 23 km on 92°."
+    },
+    {
+      "t": 55.6,
+      "kind": "refused",
+      "designator": "TK-204",
+      "detail": "Engagement refused: 2 engagement(s) already in the air — the system allows no more."
+    },
+    {
+      "t": 68.4,
+      "kind": "interrogated",
+      "designator": "TK-204",
+      "detail": "TK-204 interrogated: no reply."
+    },
+    {
+      "t": 68.8,
+      "kind": "hit",
+      "designator": "TK-202",
+      "detail": "TK-202 destroyed by medium range. It was Enemy."
+    },
+    {
+      "t": 70,
+      "kind": "detected",
+      "designator": "TK-206",
+      "detail": "TK-206 detected, 17 km on 65°."
+    },
+    {
+      "t": 76.1,
+      "kind": "interrogated",
+      "designator": "TK-302",
+      "detail": "TK-302 interrogated: no reply."
+    },
+    {
+      "t": 79.3,
+      "kind": "launched",
+      "designator": "TK-302",
+      "detail": "short range launched at TK-302 (8 km, intercept in 22 s, Pk 81%)."
+    },
+    {
+      "t": 90.1,
+      "kind": "detected",
+      "designator": "TK-207",
+      "detail": "TK-207 detected, 15 km on 122°."
+    },
+    {
+      "t": 101.3,
+      "kind": "hit",
+      "designator": "TK-302",
+      "detail": "TK-302 destroyed by short range. It was Friendly."
+    },
+    {
+      "t": 101.8,
+      "kind": "launched",
+      "designator": "TK-303",
+      "detail": "short range launched at TK-303 (9 km, intercept in 21 s, Pk 80%)."
+    },
+    {
+      "t": 123.1,
+      "kind": "hit",
+      "designator": "TK-303",
+      "detail": "TK-303 destroyed by short range. It was Friendly."
+    },
+    {
+      "t": 123.3,
+      "kind": "launched",
+      "designator": "TK-301",
+      "detail": "medium range launched at TK-301 (15 km, intercept in 24 s, Pk 66%)."
+    },
+    {
+      "t": 133.2,
+      "kind": "hit",
+      "designator": "TK-101",
+      "detail": "TK-101 destroyed by long range. It was Enemy."
+    },
+    {
+      "t": 134.5,
+      "kind": "launched",
+      "designator": "TK-207",
+      "detail": "short range launched at TK-207 (10 km, intercept in 23 s, Pk 82%)."
+    },
+    {
+      "t": 147.1,
+      "kind": "hit",
+      "designator": "TK-301",
+      "detail": "TK-301 destroyed by medium range. It was Our Forces."
+    },
+    {
+      "t": 148.6,
+      "kind": "launched",
+      "designator": "TK-206",
+      "detail": "short range launched at TK-206 (8 km, intercept in 20 s, Pk 79%)."
+    },
+    {
+      "t": 157.1,
+      "kind": "hit",
+      "designator": "TK-207",
+      "detail": "TK-207 destroyed by short range. It was Enemy."
+    },
+    {
+      "t": 160.3,
+      "kind": "launched",
+      "designator": "TK-204",
+      "detail": "short range launched at TK-204 (10 km, intercept in 23 s, Pk 83%)."
+    },
+    {
+      "t": 166,
+      "kind": "refused",
+      "designator": "TK-102",
+      "detail": "Engagement refused: 2 engagement(s) already in the air — the system allows no more."
+    },
+    {
+      "t": 169,
+      "kind": "hit",
+      "designator": "TK-206",
+      "detail": "TK-206 destroyed by short range. It was Enemy."
+    },
+    {
+      "t": 171,
+      "kind": "launched",
+      "designator": "TK-102",
+      "detail": "medium range launched at TK-102 (33 km, intercept in 47 s, Pk 85%)."
+    },
+    {
+      "t": 183.6,
+      "kind": "hit",
+      "designator": "TK-204",
+      "detail": "TK-204 destroyed by short range. It was Enemy."
+    },
+    {
+      "t": 185.4,
+      "kind": "launched",
+      "designator": "TK-203",
+      "detail": "short range launched at TK-203 (8 km, intercept in 19 s, Pk 76%)."
+    },
+    {
+      "t": 202.1,
+      "kind": "refused",
+      "designator": "TK-205",
+      "detail": "Engagement refused: 2 engagement(s) already in the air — the system allows no more."
+    },
+    {
+      "t": 203.3,
+      "kind": "refused",
+      "designator": "TK-205",
+      "detail": "Engagement refused: 2 engagement(s) already in the air — the system allows no more."
+    },
+    {
+      "t": 204.1,
+      "kind": "hit",
+      "designator": "TK-203",
+      "detail": "TK-203 destroyed by short range. It was Enemy."
+    },
+    {
+      "t": 206.5,
+      "kind": "launched",
+      "designator": "TK-205",
+      "detail": "short range launched at TK-205 (3 km, intercept in 8 s, Pk 58%)."
+    },
+    {
+      "t": 210.1,
+      "kind": "leaked",
+      "designator": "TK-205",
+      "detail": "TK-205 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 214.4,
+      "kind": "launched",
+      "designator": "TK-103",
+      "detail": "medium range launched at TK-103 (18 km, intercept in 25 s, Pk 67%)."
+    },
+    {
+      "t": 218.1,
+      "kind": "hit",
+      "designator": "TK-102",
+      "detail": "TK-102 destroyed by medium range. It was Enemy."
+    },
+    {
+      "t": 221.6,
+      "kind": "launched",
+      "designator": "TK-201",
+      "detail": "short range launched at TK-201 (7 km, intercept in 16 s, Pk 72%)."
+    },
+    {
+      "t": 237.3,
+      "kind": "miss",
+      "designator": "TK-201",
+      "detail": "short range missed TK-201."
+    },
+    {
+      "t": 239.2,
+      "kind": "miss",
+      "designator": "TK-103",
+      "detail": "medium range missed TK-103."
+    },
+    {
+      "t": 241.1,
+      "kind": "launched",
+      "designator": "TK-201",
+      "detail": "short range launched at TK-201 (4 km, intercept in 10 s, Pk 62%)."
+    },
+    {
+      "t": 251.2,
+      "kind": "hit",
+      "designator": "TK-201",
+      "detail": "TK-201 destroyed by short range. It was Enemy."
+    },
+    {
+      "t": 253,
+      "kind": "launched",
+      "designator": "TK-103",
+      "detail": "short range launched at TK-103 (6 km, intercept in 10 s, Pk 61%)."
+    },
+    {
+      "t": 262.6,
+      "kind": "leaked",
+      "designator": "TK-103",
+      "detail": "TK-103 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 262.7,
+      "kind": "ended",
+      "designator": "",
+      "detail": "Air picture clear."
+    }
+  ],
+  "run_result": {
+    "leakers": 2,
+    "hostiles_destroyed": 8,
+    "friendly_engaged": 3,
+    "unknown_engaged": 0,
+    "interceptors_spent": 15,
+    "spent_by": {
+      "long range": 1,
+      "medium range": 4,
+      "short range": 10
+    },
+    "mean_reaction_s": 137,
+    "met_criteria": false
+  },
+  "outcome": {
+    "success": false,
+    "summary": "2 hostiles reached the defended area, against a limit of 1. 3 friendly tracks were engaged. That fails the run on its own, whatever else went right. 15 interceptors spent, against the 12 allowed. Mean 137s from a hostile becoming identifiable to the launch against it.",
+    "per_decision": []
+  },
   "score": null,
   "debrief_text": "",
   "recommendations": [],
-  "status": "in_progress",
+  "status": "completed",
   "created_at": "2026-09-07T13:54:14.540Z",
-  "completed_at": null
+  "completed_at": "2026-09-07T13:58:48.509Z"
 }
