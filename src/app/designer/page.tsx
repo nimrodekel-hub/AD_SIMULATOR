@@ -31,44 +31,57 @@ export default async function DesignerHome() {
       title="Simulated systems"
       subtitle="Each system has its own behaviour, console and scenarios"
     >
-      {/* The library of exercises. Placed beside general knowledge because
-          both are about everything rather than about one system, and because
-          what trainees are actually being given was invisible until it had a
-          front door. */}
-      <Link
-        href="/designer/exercises"
-        className="panel mb-6 block p-5 transition-colors hover:border-accent"
-      >
-        <div className="flex flex-wrap items-baseline gap-x-3">
-          <h2 className="text-base font-semibold">Exercises</h2>
-          <span className="chip">every engagement laid out so far</span>
-        </div>
-        <p className="mt-2 max-w-2xl text-sm text-muted">
-          Every engagement the generator has produced, across every system —
-          what each one puts in the air, what the trainee is told, and what
-          counts as success. If one is no good, say what is wrong with it in
-          your own words and it is laid out again.
-        </p>
-      </Link>
+      {/* The two things that are about *everything* rather than about one
+          system. Side by side and compact, because on the old page they were
+          full-width cards above the list and read as two more systems — the
+          first thing on the screen looked like the thing the screen is a list
+          of. */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link href="/designer/exercises" className="panel card-link p-5">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className="text-base font-semibold">Exercises</h2>
+            <span aria-hidden className="ml-auto text-muted">
+              &rarr;
+            </span>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            Every engagement laid out so far, across every system — and where
+            you build a new one from a brief.
+          </p>
+        </Link>
 
-      {/* The layer above every system. Placed near the top because it is the
-          thing to get right before teaching anything, and because it is easy
-          to forget it exists once systems fill the page. */}
-      <Link
-        href="/designer/knowledge"
-        className="panel mb-6 block p-5 transition-colors hover:border-accent"
-      >
-        <div className="flex flex-wrap items-baseline gap-x-3">
-          <h2 className="text-base font-semibold">General knowledge</h2>
-          <span className="chip status-ok">before any system</span>
+        <Link href="/designer/knowledge" className="panel card-link p-5">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className="text-base font-semibold">General knowledge</h2>
+            <span aria-hidden className="ml-auto text-muted">
+              &rarr;
+            </span>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            How air defence works in general. Every interview is told this
+            first, so it asks you about what only you can answer.
+          </p>
+        </Link>
+      </div>
+
+      {/* ---- The systems themselves --------------------------------- */}
+      <section className="mt-10">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+          <div>
+            <h2 className="section-title">
+              Your systems
+              {bundles.length > 0 ? (
+                <span className="ml-2 text-sm font-normal text-muted">
+                  {bundles.length}
+                </span>
+              ) : null}
+            </h2>
+            <p className="section-note">
+              Each one is independent — its own behaviour, console and
+              scenarios. Open one to carry on setting it up.
+            </p>
+          </div>
         </div>
-        <p className="mt-2 max-w-2xl text-sm text-muted">
-          How air defence works in general, and the lessons that hold across
-          systems. Every interview is told this before your system is
-          discussed, so it asks about what only you can answer instead of the
-          basics. Yours to edit.
-        </p>
-      </Link>
 
       {bundles.length === 0 ? (
         <div className="panel p-8 text-center">
@@ -90,7 +103,7 @@ export default async function DesignerHome() {
               <li key={system.id}>
                 <Link
                   href={`/designer/systems/${system.id}`}
-                  className="panel block p-5 transition-colors hover:border-accent"
+                  className="panel card-link block p-5"
                 >
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <h2 className="text-lg font-semibold">{system.name}</h2>
@@ -147,9 +160,11 @@ export default async function DesignerHome() {
         </ul>
       )}
 
+      </section>
+
       <section className="mt-12 border-t border-line pt-8">
-        <h2 className="text-sm font-semibold">Add a system</h2>
-        <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
+        <h2 className="section-title">Add a system</h2>
+        <p className="section-note mb-4">
           The name is the fictional one operators will see on the console and
           the one a trainee picks from. Keep it vendor-neutral.
         </p>
