@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   ExerciseBuildForm,
   type BuildTarget,
@@ -49,16 +48,8 @@ export default async function NewExercisePage() {
       eyebrow="Designer"
       title="Build an exercise"
       subtitle="Say what it is for, and the engagement is laid out to deliver it"
+      back={{ href: "/designer/exercises", label: "Exercises" }}
     >
-      <p className="mb-8">
-        <Link
-          href="/designer/exercises"
-          className="text-xs text-muted hover:text-accent"
-        >
-          ← Back to the exercises
-        </Link>
-      </p>
-
       <ExerciseBuildForm targets={buildable} />
     </ScreenShell>
   );
