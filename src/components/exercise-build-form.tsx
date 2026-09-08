@@ -217,8 +217,13 @@ export function ExerciseBuildForm({ targets }: { targets: BuildTarget[] }) {
 
   /* ---- The brief -------------------------------------------------- */
   return (
-    <div className="space-y-6">
-      <div className="panel space-y-5 p-5">
+    <div className="space-y-8">
+      <section>
+        {/* Numbered, because these are two different kinds of decision and the
+            page gave no sign of that: which exercise this is, then what it
+            should do to somebody. */}
+        <Stage number={1} title="What it is, and where it lives" />
+        <div className="panel mt-4 space-y-5 p-6">
         <Field label="Name" hint="What you will look for in the list later.">
           <input
             className="field"
@@ -292,16 +297,16 @@ export function ExerciseBuildForm({ targets }: { targets: BuildTarget[] }) {
             ))}
           </div>
         </Group>
-      </div>
+        </div>
+      </section>
 
-      <div className="panel space-y-5 p-5">
-        <p className="text-xs leading-relaxed text-muted">
-          The four answers below are the brief. They shape the engagement itself
-          — the geometry, the timing, what is issued — not the wording of the
-          brief the trainee reads. Anything the scenario or the system will not
-          allow is reported back to you rather than quietly dropped.
-        </p>
-
+      <section>
+        <Stage
+          number={2}
+          title="The brief"
+          note="These four answers shape the engagement itself — the geometry, the timing, what is issued — not the wording of the brief the trainee reads. Anything the scenario or the system will not allow is reported back to you rather than quietly dropped."
+        />
+        <div className="panel mt-4 space-y-5 p-6">
         <Field
           label="What this exercise is for"
           hint="What should the trainee come away able to do?"
@@ -362,14 +367,19 @@ export function ExerciseBuildForm({ targets }: { targets: BuildTarget[] }) {
             disabled={building}
           />
         </Field>
-      </div>
+        </div>
+      </section>
 
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {error ? (
+        <p className="panel border-l-2 border-l-danger p-4 text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-4">
         <button
           type="button"
-          className="btn btn-primary"
+          className="btn btn-primary btn-lg"
           onClick={() => void build()}
           disabled={building || !scenarioId}
         >
@@ -381,6 +391,29 @@ export function ExerciseBuildForm({ targets }: { targets: BuildTarget[] }) {
             and the exercise appears in the library when it is done.
           </p>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** A numbered heading over one group of questions. */
+function Stage({
+  number,
+  title,
+  note,
+}: {
+  number: number;
+  title: string;
+  note?: string;
+}) {
+  return (
+    <div className="flex gap-3.5">
+      <span className="step-disc step-disc-next mt-0.5" aria-hidden>
+        {number}
+      </span>
+      <div className="min-w-0">
+        <h2 className="section-title">{title}</h2>
+        {note ? <p className="section-note">{note}</p> : null}
       </div>
     </div>
   );

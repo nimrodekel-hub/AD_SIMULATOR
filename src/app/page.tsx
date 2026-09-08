@@ -56,14 +56,14 @@ export default async function Home() {
 
   return (
     <div className="theme-work flex min-h-full flex-1 flex-col bg-bg text-ink">
-      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-16">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-20">
         <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-accent">
           Proof of concept
         </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight">
+        <h1 className="mt-4 max-w-3xl text-[2.75rem] font-semibold leading-[1.08] tracking-[-0.03em]">
           Air Defence Training Simulator
         </h1>
-        <p className="prose-block mt-4 max-w-2xl text-muted">
+        <p className="prose-block mt-5 max-w-2xl text-lg text-muted">
           A generic operational trainer. A domain expert teaches the system real
           scenarios by talking through them; trainees then ask for the practice
           they want in plain language, and the system builds an exercise from the
@@ -71,33 +71,39 @@ export default async function Home() {
           reasoning.
         </p>
 
-        <h2 className="mt-14 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-muted">
-          Choose a role
-        </h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <h2 className="section-title mt-16">Where do you want to start?</h2>
+        <p className="section-note">
+          Three ways in. Each one owns a different part of the work.
+        </p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
           {ROLES.map((role) => (
             <Link
               key={role.href}
               href={role.href}
-              className="panel group flex flex-col p-5 transition-colors hover:border-accent"
+              className="panel card-link group flex flex-col p-6"
             >
-              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-muted">
-                {role.responsibility}
-              </p>
-              <h3 className="mt-2 text-lg font-semibold transition-colors group-hover:text-accent">
+              <p className="eyebrow">{role.responsibility}</p>
+              <h3 className="mt-2 text-xl font-semibold transition-colors group-hover:text-accent">
                 {role.name}
               </h3>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">
+              <p className="mt-2.5 flex-1 text-sm leading-relaxed text-muted">
                 {role.blurb}
               </p>
+              <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
+                Open
+                <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+                  &rarr;
+                </span>
+              </span>
             </Link>
           ))}
         </div>
 
-        <h2 className="mt-14 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-muted">
-          System status
-        </h2>
-        <dl className="panel mt-4 divide-y divide-[var(--border)]">
+        <h2 className="section-title mt-16">What the system holds right now</h2>
+        <p className="section-note">
+          Read live on every visit, so it never reports a state the app is not in.
+        </p>
+        <dl className="panel mt-5 divide-y divide-[var(--border)]">
           <StatusRow
             label="Simulated systems"
             value={
