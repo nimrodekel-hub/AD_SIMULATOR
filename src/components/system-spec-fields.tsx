@@ -1,5 +1,6 @@
 "use client";
 
+import { anchorFor } from "@/components/form-section-nav";
 import { READOUT_CATALOGUE } from "@/lib/domain/readouts";
 import { WELL_KNOWN_MODE_3 } from "@/lib/domain/iff-codes";
 import { OPERATOR_COMMANDS_OFF } from "@/lib/domain/schemas";
@@ -1231,19 +1232,21 @@ function Block({
   children: React.ReactNode;
 }) {
   return (
-    <section>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="grid size-7 shrink-0 place-items-center rounded bg-accent-dim text-base text-accent">
+    /* Anchored and offset so the navigator above can jump here without the
+       sticky bar landing on top of the heading. */
+    <section id={anchorFor(title)} className="scroll-mt-24">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent-dim text-base text-accent">
           {icon}
         </span>
-        <h2 className="text-sm font-semibold">
+        <h2 className="section-title">
           {title}
           {required ? <Req /> : null}
         </h2>
         {where && gaps ? <SectionState gaps={gaps} where={where} /> : null}
       </div>
-      <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted">{hint}</p>
-      <div className="mt-4 space-y-4">{children}</div>
+      <p className="section-note">{hint}</p>
+      <div className="mt-5 space-y-4">{children}</div>
     </section>
   );
 }
