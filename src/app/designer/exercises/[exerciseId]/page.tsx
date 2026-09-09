@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExerciseWorkbench } from "@/components/exercise-workbench";
 import { ScreenShell } from "@/components/screen-shell";
@@ -42,21 +41,13 @@ export default async function ExercisePage({
       theme="work"
       eyebrow={`${system?.name ?? "a deleted system"} · exercise`}
       title={saved.exercise_instance.exercise_name || "Untitled exercise"}
+      back={{ href: "/designer/exercises", label: "Exercises" }}
       subtitle={
         scenario
           ? `Teaches: ${scenario.title}`
           : "The scenario this taught is no longer in the knowledge base, so it cannot be laid out again."
       }
     >
-      <p className="mb-8">
-        <Link
-          href="/designer/exercises"
-          className="text-xs text-muted hover:text-accent"
-        >
-          ← Back to the exercises
-        </Link>
-      </p>
-
       <ExerciseWorkbench
         saved={saved}
         canRevise={scenario !== null}

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { KnowledgeEditor } from "@/components/knowledge-editor";
 import { ScreenShell } from "@/components/screen-shell";
 import { getGeneralKnowledge } from "@/lib/store/general-knowledge";
@@ -14,13 +13,8 @@ export default async function GeneralKnowledgePage() {
       eyebrow="Before any system"
       title="General knowledge"
       subtitle="What holds across every air-defence system, and the lessons that keep proving true"
+      back={{ href: "/designer", label: "System designer" }}
     >
-      <p className="mb-8">
-        <Link href="/designer" className="text-sm text-muted hover:text-accent">
-          ← System designer
-        </Link>
-      </p>
-
       <KnowledgeEditor initial={knowledge} />
     </ScreenShell>
   );

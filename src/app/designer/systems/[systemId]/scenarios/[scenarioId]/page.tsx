@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ScenarioEditor } from "@/components/scenario-editor";
 import { ScreenShell } from "@/components/screen-shell";
@@ -22,16 +21,8 @@ export default async function ScenarioPage({
       eyebrow={system.name}
       title={entry.title}
       subtitle={entry.sub_domain_tag}
+      back={{ href: `/designer/systems/${systemId}`, label: system.name }}
     >
-      <p className="mb-8">
-        <Link
-          href={`/designer/systems/${systemId}`}
-          className="text-sm text-muted hover:text-accent"
-        >
-          ← {system.name}
-        </Link>
-      </p>
-
       <ScenarioEditor systemId={systemId} entry={entry} />
     </ScreenShell>
   );

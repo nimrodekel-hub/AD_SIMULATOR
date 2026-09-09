@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ScreenshotUploader } from "@/components/screenshot-uploader";
 import { ScreenShell } from "@/components/screen-shell";
@@ -22,16 +21,8 @@ export default async function ScreenshotsPage({
       eyebrow={system.name}
       title="Reference screenshots"
       subtitle="Uploaded once, read twice: when your answers are interpreted, and when the console is built"
+      back={{ href: `/designer/systems/${systemId}`, label: system.name }}
     >
-      <p className="mb-8">
-        <Link
-          href={`/designer/systems/${systemId}`}
-          className="text-sm text-muted hover:text-accent"
-        >
-          ← {system.name}
-        </Link>
-      </p>
-
       <div className="panel mb-8 p-4">
         <p className="prose-block text-sm">
           These come first because the next step asks what your display shows —
