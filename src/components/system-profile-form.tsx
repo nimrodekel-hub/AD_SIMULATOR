@@ -1,6 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import {
+  FormSectionNav,
+  anchorFor,
+  type NavSection,
+} from "@/components/form-section-nav";
 import { useState } from "react";
 import type { GuidedQuestion } from "@/lib/ai/tasks/learn-system";
 import {
@@ -236,13 +241,21 @@ export function SystemProfileForm({
           </p>
         </div>
 
+        {/* Same map as the review screen gets, over the same kind of page:
+            this half is nearly ten thousand pixels too, and the figures the
+            simulation cannot run without are scattered through it. */}
+        <FormSectionNav sections={answeringSections(gaps)} />
+
         {/* ---- The measured half: entered, never interpreted ---------- */}
         <SystemSpecFields spec={spec} onChange={setSpec} gaps={gaps} />
 
         {/* ---- The described half: still open questions --------------- */}
-        <div className="border-t border-line pt-8">
-          <h2 className="text-sm font-semibold">In your own words</h2>
-          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
+        <div
+          id={anchorFor("In your own words")}
+          className="scroll-mt-24 border-t border-line pt-8"
+        >
+          <h2 className="section-title">In your own words</h2>
+          <p className="section-note">
             The rest is what a form cannot ask for. Write as much as you like;
             this is the part that gets read carefully.
           </p>
@@ -250,13 +263,11 @@ export function SystemProfileForm({
 
         {questions.map((question, index) => (
           <section key={question.id}>
-            <h2 className="text-sm font-semibold">
+            <h2 className="section-title">
               <span className="mr-2 text-accent">{index + 1}.</span>
               {question.question}
             </h2>
-            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
-              {question.hint}
-            </p>
+            <p className="section-note">{question.hint}</p>
             <textarea
               className="field mt-3 min-h-24"
               placeholder={question.placeholder}
@@ -268,9 +279,9 @@ export function SystemProfileForm({
           </section>
         ))}
 
-        <section>
-          <h2 className="text-sm font-semibold">Anything else</h2>
-          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
+        <section id={anchorFor("Anything else")} className="scroll-mt-24">
+          <h2 className="section-title">Anything else</h2>
+          <p className="section-note">
             Whatever the questions did not ask about. Vocabulary the operators
             use, quirks of the display, habits and workarounds, anything that
             would confuse someone seeing the system for the first time.
@@ -408,6 +419,12 @@ export function SystemProfileForm({
           Back to the questions
         </button>
       </div>
+
+      {/* ---- The map over a form nine screens long ------------------- */}
+      {/* Built here rather than in the navigator so the titles can only ever
+          be the titles actually rendered below: both sides take them from
+          `SECTIONS`, and both derive the anchor the same way. */}
+      <FormSectionNav sections={navSections(gaps, systemName)} />
 
       <Section
         icon={<NotesIcon />}
@@ -1591,20 +1608,86 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="grid size-7 shrink-0 place-items-center rounded bg-accent-dim text-base text-accent">
+    /* The anchor is derived from the title rather than passed in, so a section
+       can never be listed in the navigator under an id it does not have.
+       `scroll-mt` keeps the heading clear of the sticky bar when jumped to. */
+    <section id={anchorFor(title)} className="scroll-mt-24">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent-dim text-base text-accent">
           {icon}
         </span>
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="section-title">{title}</h2>
         {where && gaps ? <SectionState gaps={gaps} where={where} /> : null}
       </div>
-      {hint ? (
-        <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted">{hint}</p>
-      ) : null}
-      <div className="mt-4 space-y-4">{children}</div>
+      {hint ? <p className="section-note">{hint}</p> : null}
+      <div className="mt-5 space-y-4">{children}</div>
     </section>
   );
+}
+
+/**
+ * The answering half's sections, in the order `SystemSpecFields` renders them.
+ *
+ * Written out rather than discovered from the DOM, because a navigator built
+ * by reading the page can only be built after the page — and this one has to
+ * be right on the first paint, which is exactly when a designer is deciding
+ * whether the form is worth starting.
+ */
+function answeringSections(gaps: Gap[]): NavSection[] {
+  const missing = (where: string) =>
+    gaps.filter((gap) => gap.where === where).length;
+
+  const titles: [string, number][] = [
+    [SECTIONS.radar, missing(SECTIONS.radar)],
+    [SECTIONS.classes, missing(SECTIONS.classes)],
+    [SECTIONS.states, missing(SECTIONS.states)],
+    ["Can the operator interrogate a transponder?", 0],
+    ["What else can the operator do?", missing(SECTIONS.commands)],
+    [SECTIONS.columns, missing(SECTIONS.columns)],
+    [SECTIONS.envelope, missing(SECTIONS.envelope)],
+    ["In your own words", 0],
+    ["Anything else", 0],
+  ];
+
+  return titles.map(([title, count]) => ({
+    id: anchorFor(title),
+    title,
+    missing: count,
+  }));
+}
+
+/**
+ * The sections, in the order they are rendered, with what each still needs.
+ *
+ * Only the six that `simulationGaps` reports against can be incomplete; the
+ * four that cannot — identity, interrogation, responsibilities, notes — are
+ * listed anyway, because a navigator that shows six of the ten sections is
+ * worse than none: a designer looking for "General notes" would conclude it
+ * had gone.
+ */
+function navSections(gaps: Gap[], systemName: string): NavSection[] {
+  const missing = (where: string) =>
+    gaps.filter((gap) => gap.where === where).length;
+
+  const titles: [string, number][] = [
+    ["Identity", 0],
+    [SECTIONS.radar, missing(SECTIONS.radar)],
+    [SECTIONS.classes, missing(SECTIONS.classes)],
+    [SECTIONS.states, missing(SECTIONS.states)],
+    ["IFF interrogation", 0],
+    [SECTIONS.commands, missing(SECTIONS.commands)],
+    [SECTIONS.columns, missing(SECTIONS.columns)],
+    [SECTIONS.envelope, missing(SECTIONS.envelope)],
+    ["Who does what", 0],
+    ["General notes", 0],
+  ];
+  void systemName;
+
+  return titles.map(([title, count]) => ({
+    id: anchorFor(title),
+    title,
+    missing: count,
+  }));
 }
 
 /**
