@@ -40,16 +40,8 @@ export default async function GuiBuilderPage({
       eyebrow={system.name}
       title="Simulated console"
       subtitle="Built once from the stored references and the behaviour profile, then used by every run"
+      back={{ href: `/designer/systems/${systemId}`, label: system.name }}
     >
-      <p className="mb-8">
-        <Link
-          href={`/designer/systems/${systemId}`}
-          className="text-sm text-muted hover:text-accent"
-        >
-          ← {system.name}
-        </Link>
-      </p>
-
       {/* A console built before the simulator has nowhere to put a radar
           picture, so runs fall back to the built-in layout rather than
           squeezing a scope into a panel meant for rows of text. Say so here,
