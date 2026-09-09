@@ -731,13 +731,54 @@
   },
   "outcome": {
     "success": false,
-    "summary": "4 hostiles reached the defended area, against a limit of 2. 1 friendly track was engaged. That fails the run on its own, whatever else went right. 11 interceptors spent, within the 11 allowed. Mean 95.9s from a hostile becoming identifiable to the launch against it.",
-    "per_decision": []
+    "summary": "Run failed outright: a friendly helicopter (TRK-4472) was self-classified as enemy at T+151 and destroyed at T+183. All three fast movers also leaked, along with one UAV, for four leakers against a limit of two. Six hostiles destroyed, 11 of 12 rounds expended, three long-range rounds fired at 0% Pk.",
+    "per_decision": [
+      {
+        "dilemma_index": 0,
+        "chosen_action": "Attempted short-range engagements on the nearest UAVs at 29, 26 and 25 km (T+014, T+020, T+027), then committed both launchers to TRK-3303 and TRK-3301 at T+033 and T+037, leaving TRK-2101 and TRK-2102 untouched",
+        "preferred_action": "Fire the lead jet at the earliest valid firing solution",
+        "correct": false,
+        "comment": "T+000–T+037. Two jets were displayed Enemy from second zero at 92 and 89 km and were the whole reason the long rail existed. You spent the opening 37 seconds on the tracks nearest the site — the documented error of reading slant range as urgency when closure rate is what determines who must die first. The three refusals at 29/26/25 km were you trying to reach with a 20 km weapon; they cost you the long-range window in which the jets were cheapest to kill."
+      },
+      {
+        "dilemma_index": 1,
+        "chosen_action": "Attempted a third launch at T+070 while both rockets were committed",
+        "preferred_action": "Hold and wait for a fire status to resolve",
+        "correct": false,
+        "comment": "T+070. The refusal is not a system fault — you had already spent your capacity and tried to force a third round through a hard two-in-flight limit. The record is explicit that this achieves nothing except lost seconds. Note that the queue you were waiting on was a UAV queue, not a jet queue, so the pressure at this moment was self-inflicted upstream."
+      },
+      {
+        "dilemma_index": 2,
+        "chosen_action": "Set TRK-4472 to enemy locally at T+151 after an interrogation returned no reply at T+043, then launched a medium round at it at T+168 (Pk 58%)",
+        "preferred_action": "Refer to the commander and withhold fire until the track is classified Enemy",
+        "correct": false,
+        "comment": "T+151–T+183. This is the single worst outcome available in this scenario and it is what ended the run. You had already seen the referral system work twice — TRK-4471 came back Friendly at T+070, TRK-4470 came back Our Forces at T+118. You had the evidence that a fifteen-second question gets answered, and you answered it yourself instead. The interrogation returning 'no reply' was not evidence of anything; the brief stated interrogation returns nothing on any mode in this theatre, and the aggressive close-in profile was the bait."
+      },
+      {
+        "dilemma_index": 3,
+        "chosen_action": "Fired the entire long-range rail at the three jets from T+198, at 24, 24 and 22 km, each at Pk 0%; all three missed",
+        "preferred_action": "Engage the jets at the earliest valid solution at long range, keeping the launchers free for the UAV wave",
+        "correct": false,
+        "comment": "T+198–T+254. By the time you turned to the jets they were sitting on the edge of the long round's 20 km minimum with no usable geometry — the log shows Pk 0% on all three launches, then three refusals for 'inside minimum range' at 12, 14 and 9 km. Three rounds were spent on shots that could not work. The jets did not leak because the weapons failed; they leaked because they were engaged roughly 200 seconds late."
+      },
+      {
+        "dilemma_index": 3,
+        "chosen_action": "Never engaged TRK-3302, detected at 30 km at T+000 and interrogated at T+158; it reached the defended area at T+213",
+        "preferred_action": "Mop up the UAVs by earliest available valid solution inside the shorter rings, keeping both rockets continuously employed",
+        "correct": false,
+        "comment": "T+213. A track shown Enemy from second zero, sat on for the whole run and then interrogated at T+158 when interrogation could not tell you anything you did not already have. That was time and attention available for a shot."
+      }
+    ]
   },
-  "score": null,
-  "debrief_text": "",
-  "recommendations": [],
+  "score": 6,
+  "debrief_text": "You asked for a picture where everything arrives at once and you have to choose what to engage first, with IFF dilemmas in it. You got exactly that, and the run turned on both halves of the request going the wrong way. Start with the one that failed it outright: at T+151 you set TRK-4472 — an Unknown that had never been resolved — to enemy yourself, and at T+168 you launched on it. At T+183 you destroyed a friendly helicopter. You had already watched the referral chain work twice in this same run: TRK-4471 came back Friendly at T+070 and TRK-4470 came back Our Forces at T+118, and you correctly let that one overfly the site rather than shoot it. So you knew the commander answers, and you knew roughly what it costs. The interrogation at T+043 returned 'no reply', and you appear to have read that as confirmation. It is not, and it never was — the brief told you interrogation returns nothing on any mode here, and the record says plainly that a track behaving aggressively is not a classification. In this scenario all three Unknowns were friendly and the threatening flight profile was the bait.\n\nThe sequencing failed independently. TRK-2101 and TRK-2102 were displayed Enemy at second zero at 92 and 89 km, and you did not fire at a jet until T+198. In the opening 37 seconds you made three attempts to reach UAVs at 29, 26 and 25 km with a 20 km weapon, then put both launchers onto UAVs. That is the documented error of proximity reading as urgency on the display when closure rate, not slant range, decides who must die first. Everything downstream follows from it: the short rail was empty by T+122, the two-in-flight limit was occupied by UAV engagements when you tried to force a third round at T+070, and when you finally turned to the jets they were at the ragged edge of the long round's minimum range. Three long rounds went out at Pk 0% and all three missed, followed by three refusals for firing inside 20 km. The jets did not leak because the weapon failed; they leaked because they were engaged two hundred seconds late, and a leaking fast mover is the most expensive category of leaker in this record.\n\nWhat went right is narrow but real: you did not fire on TRK-4470 or TRK-4471 once they resolved, and the four UAV kills at Pk 90%, 89%, 77% and 83% were competently taken shots at reasonable geometry. But the mean reaction of 95.9 seconds is not a side note here — it is the mechanism by which three jets crossed the site. And TRK-3302 sat in the picture as Enemy from T+000, got interrogated at T+158 for information the system could not give you, and leaked at T+213.\n\nThe habit to break is treating identification as something you can resolve at the console under time pressure. Refer it, keep shooting the tracks already marked Enemy, and act on the answer when it lands. The habit to build is committing to the fast closers at the first valid long-range solution, before proximity on the display starts making decisions for you.",
+  "recommendations": [
+    "Never set an Unknown to enemy at the console. Refer TRK-4470/4471/4472-class tracks the moment they appear and leave the classification field alone — in this run the commander answered in about 40 seconds on 4471 and 88 on 4470, and both answers would have saved you the friendly kill.",
+    "Treat 'no reply' from the interrogator as no information. You interrogated eight tracks in this run and every one returned no reply, including TRK-2102 at T+210 which was already classified Enemy. Stop spending seconds on an interrogator that this theatre has told you is mute.",
+    "Commit the long rail to the fast movers inside the first 30 seconds, at 70 km, before touching anything inside the medium ring — not at T+198 when TRK-2101/2102/2103 were at 22–24 km and the solution had already collapsed to Pk 0%.",
+    "When both rockets are in the air and something crosses the short ring, hold and let a fire status resolve rather than attempting a third launch as you did at T+070. If that moment feels unwinnable, the fault is in the order you built the queue, not in the limit."
+  ],
   "status": "completed",
   "created_at": "2026-09-09T20:43:37.960Z",
-  "completed_at": "2026-09-09T20:48:51.317Z"
+  "completed_at": "2026-09-09T20:49:50.431Z"
 }
