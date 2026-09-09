@@ -1,40 +1,18 @@
-import Link from "next/link";
+import { JourneyStages, type Stage } from "@/components/journey-stages";
 import { config, githubConfigProblems } from "@/lib/config";
 import { getSystemBundle, listSystems } from "@/lib/store/kb";
 import { githubWriteAccess, isGitBacked } from "@/lib/store/repo-files";
+import { listAllSessions } from "@/lib/store/sessions";
 
 /* Reads the knowledge base on every request — this page is a live status
    board, and a cached copy would misreport what the system holds. */
 export const dynamic = "force-dynamic";
 
-const ROLES = [
-  {
-    href: "/designer",
-    name: "System Designer",
-    blurb:
-      "Set up a simulated system: describe how it behaves, build its console from screenshots, and teach it operational scenarios through conversation. As many systems as you need, side by side.",
-    responsibility: "Owns the knowledge base",
-  },
-  {
-    href: "/instructor",
-    name: "Instructor",
-    blurb:
-      "Follow trainees across sessions: scores, trend, and the full record of every decision and debrief.",
-    responsibility: "Owns oversight",
-  },
-  {
-    href: "/trainee",
-    name: "Trainee",
-    blurb:
-      "Pick the system you operate, then ask for the training you want in your own words. It finds the matching scenario and builds an exercise around it.",
-    responsibility: "Runs the training",
-  },
-] as const;
-
 export default async function Home() {
   const systems = await listSystems();
-  const [bundles, storage] = await Promise.all([
+  const [bundles, sessions, storage] = await Promise.all([
     Promise.all(systems.map((system) => getSystemBundle(system.id))),
+    listAllSessions(),
     // Asks GitHub whether the token can actually write, rather than trusting
     // that the variables being set means saving works.
     isGitBacked() ? githubWriteAccess() : Promise.resolve(null),
@@ -53,6 +31,57 @@ export default async function Home() {
       bundle.scenarios.some((entry) => entry.status === "approved"),
   ).length;
   const consoles = bundles.filter((bundle) => bundle.gui?.approved === true).length;
+  const flown = sessions.filter((entry) => entry.status === "completed").length;
+
+  /* The three roles were laid out side by side as equals, and they are not.
+     Nothing can be trained until a system is set up, and nothing can be
+     reviewed until something has been flown — so a first-time visitor who
+     picked the middle card arrived at a screen that could only turn them
+     away. Drawn as the sequence it actually is, with each stage saying what
+     it is waiting for, the order stops being something to discover. */
+  const journey: Stage[] = [
+    {
+      title: "Set up a system to train on",
+      href: "/designer",
+      begun: trainable > 0,
+      state:
+        systems.length === 0
+          ? "Nothing yet"
+          : trainable > 0
+            ? `${trainable} ready`
+            : `${systems.length} in setup`,
+      blurb:
+        "Describe how a system behaves, build its console from screenshots of the real one, and teach it operational scenarios by talking them through. As many systems as you need, side by side.",
+    },
+    {
+      title: "Put a trainee through it",
+      href: "/trainee",
+      begun: sessions.length > 0,
+      blocked: trainable === 0,
+      state:
+        sessions.length === 0
+          ? "No runs yet"
+          : `${sessions.length} run${sessions.length === 1 ? "" : "s"}`,
+      blurb:
+        "The trainee picks a system and asks for the practice they want in their own words. A matching scenario is found and an exercise built around it, then flown on the console.",
+      note:
+        trainable === 0
+          ? systems.length === 0
+            ? "Waiting on a system. Start at stage 1."
+            : "A system is ready once its behaviour profile is approved and it has at least one approved scenario."
+          : undefined,
+    },
+    {
+      title: "Review how they did",
+      href: "/instructor",
+      begun: flown > 0,
+      blocked: sessions.length === 0,
+      state: flown === 0 ? "Nothing to review" : `${flown} debriefed`,
+      blurb:
+        "Every run a trainee has flown: the score, the trend across sessions, and the full record of each decision alongside the debrief written against the expert's own reasoning.",
+      note: sessions.length === 0 ? "Waiting on a completed run." : undefined,
+    },
+  ];
 
   return (
     <div className="theme-work flex min-h-full flex-1 flex-col bg-bg text-ink">
@@ -71,32 +100,13 @@ export default async function Home() {
           reasoning.
         </p>
 
-        <h2 className="section-title mt-16">Where do you want to start?</h2>
+        <h2 className="section-title mt-16">How this works</h2>
         <p className="section-note">
-          Three ways in. Each one owns a different part of the work.
+          Three stages, in order — each one needs the one before it. Open any of
+          them to pick up where you left off.
         </p>
-        <div className="mt-5 grid gap-4 sm:grid-cols-3">
-          {ROLES.map((role) => (
-            <Link
-              key={role.href}
-              href={role.href}
-              className="panel card-link group flex flex-col p-6"
-            >
-              <p className="eyebrow">{role.responsibility}</p>
-              <h3 className="mt-2 text-xl font-semibold transition-colors group-hover:text-accent">
-                {role.name}
-              </h3>
-              <p className="mt-2.5 flex-1 text-sm leading-relaxed text-muted">
-                {role.blurb}
-              </p>
-              <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
-                Open
-                <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
-                  &rarr;
-                </span>
-              </span>
-            </Link>
-          ))}
+        <div className="mt-5">
+          <JourneyStages stages={journey} />
         </div>
 
         <h2 className="section-title mt-16">What the system holds right now</h2>

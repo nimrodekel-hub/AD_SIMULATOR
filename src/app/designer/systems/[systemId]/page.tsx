@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ScreenShell } from "@/components/screen-shell";
-import { SetupSequence, type SetupStep } from "@/components/setup-steps";
+import { SetupSequence } from "@/components/setup-steps";
+import { setupSteps } from "@/lib/domain/setup-sequence";
 import { getSystemBundle, listScreenshots } from "@/lib/store/kb";
 import { PlayIcon } from "@/components/icons";
 
@@ -31,83 +32,14 @@ export default async function SystemSetupPage({
   ]);
   if (!system) notFound();
 
-  const referencesReady = screenshots.length > 0;
-  const profileReady = profile?.approved === true;
-  const consoleReady = gui?.approved === true;
-  const approvedScenarios = scenarios.filter(
-    (entry) => entry.status === "approved",
-  ).length;
   const base = `/designer/systems/${systemId}`;
-
-  const steps: SetupStep[] = [
-    {
-      title: "Store reference screenshots",
-      href: `${base}/screenshots`,
-      done: referencesReady,
-      state: referencesReady ? `${screenshots.length} stored` : "None yet",
-      blurb:
-        "Screenshots of the real console. They are read twice — once while your answers below are interpreted, and again when the console is built — so they come first.",
-    },
-    {
-      title: "Describe how it behaves",
-      href: `${base}/profile`,
-      done: profileReady,
-      state: profileReady ? "Approved" : profile ? "Draft" : "Not started",
-      blurb:
-        "Track classes, identification, what the operator can do, the engagement envelope. Everything downstream is built from this — without it the model invents a system, and the exercises look right without being right.",
-      note: referencesReady
-        ? undefined
-        : "The questions about the display are much easier to answer with the screenshots stored first.",
-    },
-    {
-      title: "Build the simulated console",
-      href: `${base}/gui`,
-      done: consoleReady,
-      blocked: !profileReady || !referencesReady,
-      state: consoleReady ? "Approved" : gui ? "Draft" : "Not built",
-      blurb:
-        "Generated from the screenshots and the behaviour profile together, so it shows the right columns and the right controls — not just the right colours.",
-      note:
-        !profileReady || !referencesReady
-          ? referencesReady
-            ? "Waiting on the behaviour profile."
-            : "Waiting on the screenshots and the behaviour profile."
-          : undefined,
-    },
-    {
-      title: "Fly it yourself",
-      href: `${base}/test`,
-      done: false,
-      repeatable: true,
-      blocked: profile === null,
-      state:
-        profile === null
-          ? "Needs the profile"
-          : consoleReady
-            ? "On your console"
-            : "Built-in layout",
-      blurb:
-        "Targets, real controls, the clock running. This is where you find out whether the detection range gives an operator any warning and whether your console holds up with a live picture in it. Nothing is recorded — run it as often as you like.",
-      note:
-        profile === null
-          ? "Fill in the behaviour profile first — the test flies this system's own figures. A draft is enough."
-          : undefined,
-    },
-    {
-      title: "Teach it a scenario",
-      href: `${base}/learn`,
-      done: approvedScenarios > 0,
-      state:
-        scenarios.length === 0
-          ? "None captured"
-          : `${approvedScenarios} approved`,
-      blurb:
-        "Talk a real operational scenario through, review the record extracted from it, correct it, approve it.",
-      note: profileReady
-        ? undefined
-        : "You can start now, but exercises built from this scenario will use an invented system until the profile is approved.",
-    },
-  ];
+  const steps = setupSteps({
+    systemId,
+    screenshotCount: screenshots.length,
+    profile,
+    gui,
+    scenarios,
+  });
 
   return (
     <ScreenShell
