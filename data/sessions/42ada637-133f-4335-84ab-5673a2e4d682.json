@@ -304,13 +304,440 @@
     "Interrogation is switched on, but every declared class carries no transponder — so interrogating any track, hostile or friendly, can only ever answer “no reply”. The command is there and it tells the operator nothing, while the run still fails them for engaging a friendly they had no way to identify. Set the transponder to civil or military on the classes that should reply — friendly aircraft above all, since they are the ones an operator is expected to spare."
   ],
   "decisions_made": [],
-  "run_log": [],
-  "run_result": null,
-  "outcome": null,
+  "run_log": [
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TRK-2101",
+      "detail": "TRK-2101 detected, 92 km on 72°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TRK-2102",
+      "detail": "TRK-2102 detected, 89 km on 100°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TRK-4471",
+      "detail": "TRK-4471 detected, 53 km on 38°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TRK-3301",
+      "detail": "TRK-3301 detected, 31 km on 62°."
+    },
+    {
+      "t": 0.1,
+      "kind": "detected",
+      "designator": "TRK-3302",
+      "detail": "TRK-3302 detected, 30 km on 96°."
+    },
+    {
+      "t": 7.5,
+      "kind": "interrogated",
+      "designator": "TRK-3301",
+      "detail": "TRK-3301 interrogated: no reply."
+    },
+    {
+      "t": 10.1,
+      "kind": "detected",
+      "designator": "TRK-3303",
+      "detail": "TRK-3303 detected, 27 km on 120°."
+    },
+    {
+      "t": 14.1,
+      "kind": "refused",
+      "designator": "TRK-3301",
+      "detail": "Engagement refused: 29 km is beyond the short range's reach of 20 km."
+    },
+    {
+      "t": 15.1,
+      "kind": "detected",
+      "designator": "TRK-2103",
+      "detail": "TRK-2103 detected, 79 km on 138°."
+    },
+    {
+      "t": 17,
+      "kind": "interrogated",
+      "designator": "TRK-3303",
+      "detail": "TRK-3303 interrogated: no reply."
+    },
+    {
+      "t": 20.3,
+      "kind": "refused",
+      "designator": "TRK-3303",
+      "detail": "Engagement refused: 26 km is beyond the short range's reach of 20 km."
+    },
+    {
+      "t": 27.9,
+      "kind": "refused",
+      "designator": "TRK-3303",
+      "detail": "Engagement refused: 25 km is beyond the short range's reach of 20 km."
+    },
+    {
+      "t": 30,
+      "kind": "detected",
+      "designator": "TRK-4470",
+      "detail": "TRK-4470 detected, 52 km on 45°."
+    },
+    {
+      "t": 33,
+      "kind": "launched",
+      "designator": "TRK-3303",
+      "detail": "medium range launched at TRK-3303 (24 km, intercept in 45 s, Pk 83%)."
+    },
+    {
+      "t": 37.9,
+      "kind": "launched",
+      "designator": "TRK-3301",
+      "detail": "medium range launched at TRK-3301 (26 km, intercept in 49 s, Pk 86%)."
+    },
+    {
+      "t": 40,
+      "kind": "detected",
+      "designator": "TRK-4472",
+      "detail": "TRK-4472 detected, 15 km on 110°."
+    },
+    {
+      "t": 43.5,
+      "kind": "interrogated",
+      "designator": "TRK-4472",
+      "detail": "TRK-4472 interrogated: no reply."
+    },
+    {
+      "t": 45,
+      "kind": "detected",
+      "designator": "TRK-3304",
+      "detail": "TRK-3304 detected, 21 km on 44°."
+    },
+    {
+      "t": 60,
+      "kind": "resolved",
+      "designator": "TRK-2103",
+      "detail": "TRK-2103 resolved to Enemy."
+    },
+    {
+      "t": 60,
+      "kind": "detected",
+      "designator": "TRK-3305",
+      "detail": "TRK-3305 detected, 19 km on 132°."
+    },
+    {
+      "t": 66.8,
+      "kind": "interrogated",
+      "designator": "TRK-3305",
+      "detail": "TRK-3305 interrogated: no reply."
+    },
+    {
+      "t": 70,
+      "kind": "resolved",
+      "designator": "TRK-4471",
+      "detail": "TRK-4471 resolved to Friendly."
+    },
+    {
+      "t": 70.6,
+      "kind": "refused",
+      "designator": "TRK-3305",
+      "detail": "Engagement refused: 2 engagement(s) already in the air — the system allows no more."
+    },
+    {
+      "t": 77.8,
+      "kind": "hit",
+      "designator": "TRK-3303",
+      "detail": "TRK-3303 destroyed by medium range. It was Enemy."
+    },
+    {
+      "t": 80.1,
+      "kind": "detected",
+      "designator": "TRK-3306",
+      "detail": "TRK-3306 detected, 15 km on 84°."
+    },
+    {
+      "t": 80.9,
+      "kind": "launched",
+      "designator": "TRK-3305",
+      "detail": "short range launched at TRK-3305 (16 km, intercept in 36 s, Pk 90%)."
+    },
+    {
+      "t": 86.8,
+      "kind": "interrogated",
+      "designator": "TRK-3306",
+      "detail": "TRK-3306 interrogated: no reply."
+    },
+    {
+      "t": 87.2,
+      "kind": "miss",
+      "designator": "TRK-3301",
+      "detail": "medium range missed TRK-3301."
+    },
+    {
+      "t": 91.1,
+      "kind": "launched",
+      "designator": "TRK-3306",
+      "detail": "short range launched at TRK-3306 (13 km, intercept in 30 s, Pk 89%)."
+    },
+    {
+      "t": 97.4,
+      "kind": "interrogated",
+      "designator": "TRK-3304",
+      "detail": "TRK-3304 interrogated: no reply."
+    },
+    {
+      "t": 100.1,
+      "kind": "detected",
+      "designator": "TRK-3307",
+      "detail": "TRK-3307 detected, 11 km on 108°."
+    },
+    {
+      "t": 107,
+      "kind": "interrogated",
+      "designator": "TRK-3307",
+      "detail": "TRK-3307 interrogated: no reply."
+    },
+    {
+      "t": 117.3,
+      "kind": "hit",
+      "designator": "TRK-3305",
+      "detail": "TRK-3305 destroyed by short range. It was Enemy."
+    },
+    {
+      "t": 117.8,
+      "kind": "launched",
+      "designator": "TRK-3307",
+      "detail": "short range launched at TRK-3307 (8 km, intercept in 19 s, Pk 77%)."
+    },
+    {
+      "t": 118.1,
+      "kind": "resolved",
+      "designator": "TRK-4470",
+      "detail": "TRK-4470 resolved to Our Forces."
+    },
+    {
+      "t": 121.4,
+      "kind": "hit",
+      "designator": "TRK-3306",
+      "detail": "TRK-3306 destroyed by short range. It was Enemy."
+    },
+    {
+      "t": 122.3,
+      "kind": "refused",
+      "designator": "TRK-3304",
+      "detail": "Engagement refused: no short range rounds left — choose another round."
+    },
+    {
+      "t": 126.2,
+      "kind": "interrogated",
+      "designator": "TRK-4470",
+      "detail": "TRK-4470 interrogated: no reply."
+    },
+    {
+      "t": 136.8,
+      "kind": "refused",
+      "designator": "TRK-3304",
+      "detail": "Engagement refused: no short range rounds left — choose another round."
+    },
+    {
+      "t": 137,
+      "kind": "hit",
+      "designator": "TRK-3307",
+      "detail": "TRK-3307 destroyed by short range. It was Enemy."
+    },
+    {
+      "t": 140.7,
+      "kind": "refused",
+      "designator": "TRK-3304",
+      "detail": "Engagement refused: no short range rounds left — choose another round."
+    },
+    {
+      "t": 145.7,
+      "kind": "launched",
+      "designator": "TRK-3304",
+      "detail": "medium range launched at TRK-3304 (9 km, intercept in 16 s, Pk 59%)."
+    },
+    {
+      "t": 151,
+      "kind": "classified",
+      "designator": "TRK-4472",
+      "detail": "Operator set TRK-4472 to enemy."
+    },
+    {
+      "t": 158.5,
+      "kind": "interrogated",
+      "designator": "TRK-3302",
+      "detail": "TRK-3302 interrogated: no reply."
+    },
+    {
+      "t": 162,
+      "kind": "hit",
+      "designator": "TRK-3304",
+      "detail": "TRK-3304 destroyed by medium range. It was Enemy."
+    },
+    {
+      "t": 168.7,
+      "kind": "launched",
+      "designator": "TRK-4472",
+      "detail": "medium range launched at TRK-4472 (7 km, intercept in 15 s, Pk 58%)."
+    },
+    {
+      "t": 174,
+      "kind": "launched",
+      "designator": "TRK-3301",
+      "detail": "medium range launched at TRK-3301 (9 km, intercept in 17 s, Pk 60%)."
+    },
+    {
+      "t": 183.7,
+      "kind": "hit",
+      "designator": "TRK-4472",
+      "detail": "TRK-4472 destroyed by medium range. It was Friendly."
+    },
+    {
+      "t": 184.5,
+      "kind": "refused",
+      "designator": "TRK-3301",
+      "detail": "Engagement refused: no medium range rounds left — choose another round."
+    },
+    {
+      "t": 187.3,
+      "kind": "refused",
+      "designator": "TRK-3302",
+      "detail": "Engagement refused: no medium range rounds left — choose another round."
+    },
+    {
+      "t": 191.4,
+      "kind": "hit",
+      "designator": "TRK-3301",
+      "detail": "TRK-3301 destroyed by medium range. It was Enemy."
+    },
+    {
+      "t": 193.5,
+      "kind": "refused",
+      "designator": "TRK-3302",
+      "detail": "Engagement refused: no medium range rounds left — choose another round."
+    },
+    {
+      "t": 198.3,
+      "kind": "launched",
+      "designator": "TRK-2103",
+      "detail": "long range launched at TRK-2103 (24 km, intercept in 29 s, Pk 0%)."
+    },
+    {
+      "t": 208.5,
+      "kind": "launched",
+      "designator": "TRK-2102",
+      "detail": "long range launched at TRK-2102 (24 km, intercept in 29 s, Pk 0%)."
+    },
+    {
+      "t": 210.1,
+      "kind": "interrogated",
+      "designator": "TRK-2102",
+      "detail": "TRK-2102 interrogated: no reply."
+    },
+    {
+      "t": 213.4,
+      "kind": "leaked",
+      "designator": "TRK-3302",
+      "detail": "TRK-3302 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 227.4,
+      "kind": "miss",
+      "designator": "TRK-2103",
+      "detail": "long range missed TRK-2103."
+    },
+    {
+      "t": 228,
+      "kind": "launched",
+      "designator": "TRK-2101",
+      "detail": "long range launched at TRK-2101 (22 km, intercept in 26 s, Pk 0%)."
+    },
+    {
+      "t": 238,
+      "kind": "miss",
+      "designator": "TRK-2102",
+      "detail": "long range missed TRK-2102."
+    },
+    {
+      "t": 238.4,
+      "kind": "refused",
+      "designator": "TRK-2103",
+      "detail": "Engagement refused: 12 km is inside the long range's minimum range of 20 km."
+    },
+    {
+      "t": 241.1,
+      "kind": "refused",
+      "designator": "TRK-2102",
+      "detail": "Engagement refused: 14 km is inside the long range's minimum range of 20 km."
+    },
+    {
+      "t": 246.7,
+      "kind": "refused",
+      "designator": "TRK-2103",
+      "detail": "Engagement refused: 9 km is inside the long range's minimum range of 20 km."
+    },
+    {
+      "t": 254.2,
+      "kind": "miss",
+      "designator": "TRK-2101",
+      "detail": "long range missed TRK-2101."
+    },
+    {
+      "t": 256.1,
+      "kind": "leaked",
+      "designator": "TRK-4470",
+      "detail": "TRK-4470 overflew the site. It was Our Forces."
+    },
+    {
+      "t": 266.7,
+      "kind": "leaked",
+      "designator": "TRK-2103",
+      "detail": "TRK-2103 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 277.4,
+      "kind": "leaked",
+      "designator": "TRK-2102",
+      "detail": "TRK-2102 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 288.1,
+      "kind": "leaked",
+      "designator": "TRK-2101",
+      "detail": "TRK-2101 reached the defended area. It was Enemy."
+    },
+    {
+      "t": 298.8,
+      "kind": "ended",
+      "designator": "",
+      "detail": "Ended by the operator."
+    }
+  ],
+  "run_result": {
+    "leakers": 4,
+    "hostiles_destroyed": 6,
+    "hostiles_unresolved": 0,
+    "friendly_engaged": 1,
+    "unknown_engaged": 0,
+    "interceptors_spent": 11,
+    "spent_by": {
+      "long range": 3,
+      "medium range": 5,
+      "short range": 3
+    },
+    "mean_reaction_s": 95.9,
+    "met_criteria": false
+  },
+  "outcome": {
+    "success": false,
+    "summary": "4 hostiles reached the defended area, against a limit of 2. 1 friendly track was engaged. That fails the run on its own, whatever else went right. 11 interceptors spent, within the 11 allowed. Mean 95.9s from a hostile becoming identifiable to the launch against it.",
+    "per_decision": []
+  },
   "score": null,
   "debrief_text": "",
   "recommendations": [],
-  "status": "in_progress",
+  "status": "completed",
   "created_at": "2026-09-09T20:43:37.960Z",
-  "completed_at": null
+  "completed_at": "2026-09-09T20:48:51.317Z"
 }
