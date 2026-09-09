@@ -44,23 +44,20 @@ export default async function ExercisesPage() {
       eyebrow="Designer"
       title="Exercises"
       subtitle="Every engagement the generator has laid out — and the ones you have corrected"
-    >
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <Link href="/designer" className="text-xs text-muted hover:text-accent">
-          ← Back to the systems
-        </Link>
-        {/* The way in that did not exist. Every exercise here arrived as a
-            by-product of somebody's run; this is how a designer asks for one
-            on purpose. */}
+      back={{ href: "/designer", label: "Simulated systems" }}
+      /* The way in that did not exist. Every exercise here arrived as a
+         by-product of somebody's run; this is how a designer asks for one on
+         purpose, so it sits in the header rather than in a row of its own. */
+      actions={
         <Link href="/designer/exercises/new" className="btn btn-primary">
           Build an exercise
         </Link>
-      </div>
-
+      }
+    >
       {/* ---- The library -------------------------------------------- */}
       <section>
-        <h2 className="text-sm font-semibold">In the library</h2>
-        <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
+        <h2 className="section-title">In the library</h2>
+        <p className="section-note mb-4">
           Exercises you built, and ones you have taken hold of. These can be
           flown, corrected in your own words, and corrected again.
         </p>
@@ -76,11 +73,11 @@ export default async function ExercisesPage() {
         ) : (
           <ul className="mt-4 space-y-2">
             {saved.map((entry) => (
-              <li key={entry.id} className="panel p-4">
+              <li key={entry.id} className="panel p-5">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <Link
                     href={`/designer/exercises/${entry.id}?system=${entry.system_id}`}
-                    className="text-sm font-semibold hover:text-accent"
+                    className="text-base font-semibold hover:text-accent"
                   >
                     {entry.exercise_instance.exercise_name || "Untitled exercise"}
                   </Link>
@@ -107,8 +104,8 @@ export default async function ExercisesPage() {
 
       {/* ---- Exercises as flown ------------------------------------- */}
       <section className="mt-10">
-        <h2 className="text-sm font-semibold">As given to trainees</h2>
-        <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
+        <h2 className="section-title">As given to trainees</h2>
+        <p className="section-note mb-4">
           One exercise per run, exactly as it was generated. These are records
           and are not edited — the debrief and the score describe what was
           actually flown. To correct one, take hold of it: that copies it into
@@ -122,7 +119,7 @@ export default async function ExercisesPage() {
         ) : (
           <ul className="mt-4 space-y-2">
             {sessions.map((session) => (
-              <li key={session.id} className="panel p-4">
+              <li key={session.id} className="panel p-5">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="text-sm font-semibold">
                     {session.exercise_instance.exercise_name ||

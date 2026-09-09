@@ -32,30 +32,20 @@ export default async function SystemProfilePage({
       eyebrow={system.name}
       title="How the system behaves"
       subtitle="Taught once. Every exercise, console and debrief on this system is built from it."
-    >
-      <div className="mb-8 flex flex-wrap items-center gap-4">
-        <Link
-          href={`/designer/systems/${systemId}`}
-          className="text-sm text-muted hover:text-accent"
-        >
-          ← {system.name}
-        </Link>
-
-        {/* The figures below are exactly the ones a form cannot check: a
-            detection range that gives four seconds of warning is a valid
-            number. Flying them is the check, so the way to it sits on this
-            page rather than only in the sequence. */}
-        {existing ? (
-          <Link
-            href={`/designer/systems/${systemId}/test`}
-            className="btn ml-auto"
-          >
+      back={{ href: `/designer/systems/${systemId}`, label: system.name }}
+      /* The figures below are exactly the ones a form cannot check: a
+         detection range that gives four seconds of warning is a valid number.
+         Flying them is the check, so the way to it sits on this page rather
+         than only in the sequence. */
+      actions={
+        existing ? (
+          <Link href={`/designer/systems/${systemId}/test`} className="btn">
             <PlayIcon className="text-sm" />
             Test these figures
           </Link>
-        ) : null}
-      </div>
-
+        ) : null
+      }
+    >
       <SystemProfileForm
         systemId={systemId}
         systemName={system.name}
