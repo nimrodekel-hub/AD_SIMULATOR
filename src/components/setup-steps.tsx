@@ -1,6 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { CheckIcon } from "@/components/icons";
+import {
+  nextStep,
+  setupProgress,
+  type SetupStep,
+} from "@/lib/domain/setup-sequence";
 
 /**
  * The sequence that turns a described system into one a trainee can fly.
@@ -18,28 +23,6 @@ import { CheckIcon } from "@/components/icons";
  * yet is visibly held back with the reason attached.
  */
 
-export interface SetupStep {
-  /** Short, and a thing you do. This is the largest text on the card. */
-  title: string;
-  href: string;
-  /** Where this step has got to, in three or four words. */
-  state: string;
-  /** What the step is for, in one or two sentences. */
-  blurb: string;
-  done: boolean;
-  /**
-   * A step you *do* rather than one you finish.
-   *
-   * Testing has no completed state — it is worth running again after every
-   * change — so it never counts against the total and never shows as missing.
-   */
-  repeatable?: boolean;
-  /** Cannot be started yet. `note` says what it is waiting for. */
-  blocked?: boolean;
-  /** A caution that does not block: the step works, but works better later. */
-  note?: string;
-}
-
 export function SetupSequence({
   steps,
   heading = "Set the system up",
@@ -49,19 +32,11 @@ export function SetupSequence({
   heading?: string;
   intro?: ReactNode;
 }) {
-  /* Repeatable steps are excluded from the count in both directions: they can
-     never be finished, so counting them would cap the bar below full and tell
-     a designer who has done everything that they have not. */
-  const counted = steps.filter((step) => !step.repeatable);
-  const complete = counted.filter((step) => step.done).length;
-  const allDone = complete === counted.length;
-
-  /* The first thing that can actually be started. Marked rather than merely
-     available, because "what now" is the question this screen exists to
-     answer and it was the one thing it did not say. */
-  const nextIndex = steps.findIndex(
-    (step) => !step.done && !step.blocked && !step.repeatable,
-  );
+  /* Both counted the same way the designer's list counts them — one function,
+     so the two screens cannot disagree about how far along a system is. */
+  const { complete, total } = setupProgress(steps);
+  const allDone = complete === total;
+  const next = nextStep(steps);
 
   return (
     <section>
@@ -73,7 +48,7 @@ export function SetupSequence({
         <p className="data text-sm text-muted">
           <span className={allDone ? "text-ok" : "text-ink"}>{complete}</span>
           {" of "}
-          {counted.length} complete
+          {total} complete
         </p>
       </div>
 
@@ -82,12 +57,12 @@ export function SetupSequence({
         role="progressbar"
         aria-valuenow={complete}
         aria-valuemin={0}
-        aria-valuemax={counted.length}
-        aria-label={`${heading}: ${complete} of ${counted.length} complete`}
+        aria-valuemax={total}
+        aria-label={`${heading}: ${complete} of ${total} complete`}
       >
         <div
           className="progress-fill"
-          style={{ width: `${(complete / Math.max(counted.length, 1)) * 100}%` }}
+          style={{ width: `${(complete / Math.max(total, 1)) * 100}%` }}
         />
       </div>
 
@@ -97,7 +72,7 @@ export function SetupSequence({
             key={step.title}
             step={step}
             number={index + 1}
-            isNext={index === nextIndex}
+            isNext={step === next}
           />
         ))}
       </ol>
