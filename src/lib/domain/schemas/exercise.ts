@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ActionSchema } from "./primitives";
+import { TransponderKindSchema } from "./profile";
 
 /* ------------------------------------------------------------------ */
 /* Exercise instance — one concrete rendering of a scenario             */
@@ -115,6 +116,25 @@ export const LiveTrackSchema = z.object({
   resolves_at_s: z.number().nullable().default(null),
 
   /* ---- What its transponder would reply -------------------------- */
+  /**
+   * This track's transponder, overriding what its class normally carries.
+   *
+   * `null` — the usual case — means "whatever the classification declares".
+   * A value set here is the exception that makes IFF a judgement instead of a
+   * lookup, and both directions matter:
+   *
+   * - **`"none"` on a class that normally replies** is the unserviceable
+   *   transponder. A friendly whose box has failed answers nothing, and the
+   *   operator who treats silence as proof of hostility commits fratricide.
+   * - **`"civil"` on a hostile** is the stolen or spoofed code. It replies,
+   *   and the reply is a lie — which is the whole reason a Mode 3 code alone
+   *   was never identification.
+   *
+   * Without this the two are inexpressible: every track of a class answered
+   * identically, so interrogating told the operator the class they could
+   * already see.
+   */
+  transponder: TransponderKindSchema.nullable().default(null),
   /**
    * Mode 3/A code: four octal digits, or `""` for a track that does not reply.
    *
