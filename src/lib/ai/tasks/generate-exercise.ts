@@ -10,10 +10,10 @@ import {
   type SystemProfile,
   type TrackClassification,
 } from "../../domain/schemas";
-import { isMode1, isMode3 } from "../../domain/iff-codes";
+import { codesFor, isMode1, isMode3 } from "../../domain/iff-codes";
 import { structured } from "../client";
 import { detectionRangeKm, magazineCeiling } from "../../sim/engine";
-import { knotsToKmPerSecond } from "../../sim/geometry";
+import { knotsToKmPerSecond, seededRandom } from "../../sim/geometry";
 import { z } from "zod";
 
 /**
@@ -71,6 +71,19 @@ The trainee will fly this in real time: tracks move at the speeds you give them,
 - A class marked **military** may reply on both: \`mode_3\` as above, \`mode_1\` two digits, each 0–4.
 
 A code is not decoration. Give an airliner an ordinary code and it reads as an airliner; give one \`7700\` (general emergency), \`7600\` (radio failure) or \`7500\` (hijack) and you have built a specific and much harder problem — **do that deliberately, and say so in the brief**, never by accident. Two tracks squawking the same Mode 3 code is also a real and vicious problem, and again only worth doing on purpose.
+
+**\`transponder\` on a track overrides its class**, and is how the two hardest IFF problems get expressed. Leave it \`null\` — the normal case — and the class decides. Set it to:
+
+- **\`"none"\` on a class that normally replies** — the unserviceable transponder. A friendly whose box has failed answers nothing. An operator who has learned that silence means hostile now shoots it, and that is the lesson.
+- **\`"civil"\` on a hostile** — the stolen, copied or spoofed code. It replies, and the reply is a lie. **This is the dilemma of engaging a track that squawks**, and it is the reason a Mode 3 code alone was never identification.
+
+**Build a picture where the reply discriminates.** Interrogation has to separate tracks, or it is a button that returns the same answer every time and teaches nothing. So when the system can interrogate and any class carries a transponder, the air picture must contain **at least two of these three**, and say which in \`notes_for_designer\`:
+
+1. a track that must be spared and **does** reply — the reply is how it is spared;
+2. a track that must be engaged and does **not** reply — silence alongside a real answer is what makes silence mean anything;
+3. a track that must be engaged and **does** reply — a hostile squawking, so a reply is evidence rather than proof.
+
+Where the profile has Mode 1 as well as Mode 3, prefer the sharp version: co-operating military answers on **both**, while a stolen code answers on **Mode 3 only**. Then the operator has a rule they can actually apply, and the exercise is about applying it under time pressure rather than guessing. **Say the rule in \`situation_brief\`** — an operator who was never told what a friendly squawks today cannot use the reply, and a code nobody can check is just four digits.
 
 **A track the operator is expected to spare must be identifiable.** Where a friendly track is shown as unknown and its class carries a transponder, give it a code — that reply is how the operator is supposed to tell it apart, and withholding it does not make the exercise harder, it makes it arbitrary. If the picture holds friendly tracks that never resolve, never reply and cannot be interrogated to any effect, then every interrogation in the run returns "no reply" and the only surviving strategy is to shoot nothing, which is not the lesson. Either let something reply, or set \`resolves_at_s\` early enough that the system does the identifying — and never fail an operator for a call the console gave them no means to make.
 
@@ -312,6 +325,16 @@ function clampToProfile(
     states.find((state) => state.toLowerCase() === value.toLowerCase()) ??
     fallback;
 
+  /* Which identification states mean "an enemy". Read from the designer's own
+     declared states rather than from any word this code knows, because the
+     states are theirs to name — "Enemy", "Hostile", "Weapons free" are all
+     the same tone and none of them is a string worth hard-coding. */
+  const hostileStates = new Set(
+    (profile?.iff_states ?? [])
+      .filter((state) => state.tone === "hostile")
+      .map((state) => state.name.toLowerCase()),
+  );
+
   const seen = new Set<string>();
 
   const live_tracks: LiveTrack[] = draft.live_tracks.map((track, index) => {
@@ -372,10 +395,18 @@ function clampToProfile(
         track.resolves_at_s === null ? null : Math.max(0, track.resolves_at_s),
       appears_at_s: Math.max(0, track.appears_at_s),
 
-      /* The class decides what may reply, not the model. A cruise missile
-         handed a squawk would let a trainee identify it by asking, which is
-         exactly the shortcut the class declaration exists to forbid. */
-      ...transponderReply(track, declared),
+      /* What replies is decided by the class, the track's own truth and any
+         override it carries — not by whatever the model happened to write. A
+         cruise missile handed a squawk would let a trainee identify it by
+         asking, which is the shortcut the class declaration exists to forbid.
+         Seeded from the designator so a minted code is the same on every
+         read. */
+      ...transponderReply(
+        track,
+        declared,
+        hostileStates.has(nameOf(track.truth_iff, "").toLowerCase()),
+        seededRandom(`iff:${designator}`),
+      ),
     };
   });
 
@@ -641,26 +672,63 @@ function clamp(value: number, low: number, high: number): number {
 /**
  * What this track is actually allowed to reply, whatever the model wrote.
  *
- * Two rules, and both of them protect the exercise rather than the data. A
- * class the designer marked as carrying nothing must stay silent, or a trainee
+ * A class the designer marked as carrying nothing stays silent, or a trainee
  * could identify a cruise missile by interrogating it — the shortcut the
- * declaration exists to forbid. And a malformed code is dropped rather than
- * repaired: a console showing `8291` as a Mode 3 code teaches an operator that
- * such a code exists.
+ * declaration exists to forbid. The track may override that in either
+ * direction: a friendly's transponder can be unserviceable, and a hostile can
+ * be squawking a code it has no right to.
+ *
+ * The rest of it exists because of how this failed in practice. A malformed
+ * code used to be dropped to `""`, and so did a code the model simply never
+ * wrote — and `""` does not mean "unspecified", it means **no reply**. On a
+ * real run that turned into thirteen tracks out of thirteen answering nothing:
+ * interrogation returned "no reply" for the airliner and the inbound alike,
+ * the trainee had no way to tell them apart, and the score failed them for
+ * fratricide anyway. A silent drop that turns a declaration into its opposite
+ * is not a safe default.
+ *
+ * So a bad code is now *replaced* rather than dropped. A class that declares a
+ * transponder always produces a valid one; only a declaration of `none` — from
+ * the designer or from this track — produces silence.
  */
 function transponderReply(
   track: LiveTrack,
   declared: TrackClassification | undefined,
+  isHostile: boolean,
+  random: () => number,
 ): { mode_3: string; mode_1: string } {
-  const kind = declared?.transponder ?? "none";
+  /* The class says what the *platform* carries; whether it answers *our*
+     challenge is a different question, and conflating the two was the second
+     half of the bug. An enemy jet has a transponder — it does not have our
+     keys, so it does not reply to us. Left as "the class carries one, so it
+     answers", every track in the picture replied and interrogating became a
+     button that returned the same thing every time.
+
+     So an enemy is silent unless this track explicitly says otherwise, and
+     that explicit override is the stolen or spoofed code — the one case where
+     a reply is a lie, and the reason a Mode 3 code alone was never proof. */
+  const kind =
+    track.transponder ?? (isHostile ? "none" : declared?.transponder ?? "none");
   if (kind === "none") return { mode_3: "", mode_1: "" };
 
   const mode3 = (track.mode_3 ?? "").trim();
   const mode1 = (track.mode_1 ?? "").trim();
 
+  /* Minted from the track's own designator, so a code is stable across
+     re-reads of the same exercise: a debrief quoting a code is still quoting
+     the right one when somebody reviews the run a week later. */
+  const minted = codesFor(kind, random);
+
+  /* Mode 1 is the keyed military mode, so a hostile never has it even when it
+     is squawking a Mode 3 code it stole. That asymmetry is the rule an
+     operator can actually apply: replies on both, ours; Mode 3 alone, look
+     again. Take it away and the spoof is indistinguishable from the friendly,
+     which is not a dilemma — it is a coin toss. */
+  const carriesMode1 = kind === "military" && !isHostile;
+
   return {
-    mode_3: isMode3(mode3) ? mode3 : "",
-    mode_1: kind === "military" && isMode1(mode1) ? mode1 : "",
+    mode_3: isMode3(mode3) ? mode3 : minted.mode_3,
+    mode_1: carriesMode1 ? (isMode1(mode1) ? mode1 : minted.mode_1) : "",
   };
 }
 
@@ -712,10 +780,15 @@ function stripProvenance(profile: SystemProfile) {
 /**
  * A playable stand-in when no API key is configured.
  *
- * Deliberately a real engagement rather than a placeholder: three tracks
- * closing from the same general direction, one of them friendly, so the whole
- * console can be exercised — select, identify, fire, hit, miss, leak — without
- * spending anything.
+ * Deliberately a real engagement rather than a placeholder: four tracks
+ * closing from the same general direction, so the whole console can be
+ * exercised — select, identify, fire, hit, miss, leak — without spending
+ * anything.
+ *
+ * One is friendly and answers on both modes; one is hostile and answers on
+ * Mode 3 alone. That pair is the point: with no API key at all, interrogation
+ * still has to be read rather than merely used, and "it replied" is not an
+ * answer to anything.
  */
 function mockExercise(
   scenario: ScenarioEntry,
@@ -760,6 +833,7 @@ function mockExercise(
       resolves_at_s: null,
       appears_at_s: 0,
       notes: "",
+      transponder: null,
       mode_3: "",
       mode_1: "",
       ...rest,
@@ -771,7 +845,7 @@ function mockExercise(
       "Mock generation — no ANTHROPIC_API_KEY is configured, so this engagement is a built-in placeholder rather than one laid out for this scenario.",
     exercise_name: `Mock run — ${scenario.title} (${difficulty})`,
     situation_brief:
-      "Mock exercise. No ANTHROPIC_API_KEY is configured, so this engagement is laid out locally rather than by the model — but it runs exactly like a real one. Three inbounds, and one of them is not a threat.",
+      "Mock exercise. No ANTHROPIC_API_KEY is configured, so this engagement is laid out locally rather than by the model — but it runs exactly like a real one. Four contacts, and interrogation separates them only if you read the whole reply: ours answer on Mode 3 and Mode 1 together. A Mode 3 code on its own is a code, not an identity.",
     time_window_seconds: Math.max(180, band.time_window_seconds.min),
     radar_boresight_deg: boresight,
     live_tracks: [
@@ -782,9 +856,10 @@ function mockExercise(
         truth_iff: friendly,
         initial_iff: unknown,
         resolves_at_s: 70,
-        // A civil code, so mock mode exercises interrogation too. Dropped
-        // again by `transponderReply` if this class carries no transponder.
-        mode_3: "1200",
+        /* An ordinary assigned code rather than a well-known one: 1200 reads
+           out as "civil VFR", which is a strange thing for one of ours to be
+           squawking and made the mock argue with itself. */
+        mode_3: "4271",
         notes: "Squawking late. Not a threat, whatever the display says at first.",
       },
       {
@@ -793,8 +868,21 @@ function mockExercise(
         classification: klass(1)?.name ?? klass(0)?.name ?? "aircraft",
         notes: "Low and closing.",
       },
+      {
+        /* The whole point of interrogating, and the case the mock had no way
+           to show: a hostile squawking a code it has no right to. It answers
+           on Mode 3 and not on Mode 1, because Mode 1 is keyed and a stolen
+           code is not — so the operator who interrogates and stops at "it
+           replied" shoots the friendly or spares this one. */
+        ...track({ designator: "TK-1104", bearing: boresight - 32 }),
+        appears_at_s: 60,
+        transponder: "civil",
+        mode_3: "2000",
+        notes:
+          "Replies when challenged. The reply is not the whole answer — check which modes came back.",
+      },
     ],
-    /* Two hostiles and three of each round: enough that a miss can be
+    /* Three hostiles and three of each round: enough that a miss can be
        answered, few enough that the per-round counters visibly move. Clamped
        again downstream, so a system that holds fewer gets fewer. */
     interceptor_loadout: magazineCeiling(profile).map((round) => ({
@@ -803,9 +891,9 @@ function mockExercise(
     })),
     success_criteria: {
       max_leakers: 0,
-      max_interceptors_spent: 4,
+      max_interceptors_spent: 5,
       statement:
-        "Stop both hostiles outside the defended area without engaging the friendly.",
+        "Stop all three hostiles outside the defended area without engaging the friendly — including the one that answers when you interrogate it.",
     },
     resources: scenario.key_variables.resource_levels.map((resource) => ({
       name: resource.name,
