@@ -122,6 +122,9 @@ export function rehearsalExercise(profile: SystemProfile | null): ExerciseInstan
       initial_classification: "",
       resolves_at_s: resolvesLate ? arriveAt - 30 : isFriendly ? null : null,
       appears_at_s: index === 0 ? 0 : 10 + index * 15,
+      /* The rehearsal already decides per track whether it replies, above —
+         the class default is not consulted a second time. */
+      transponder: isFriendly ? (declared?.transponder ?? "civil") : "none",
       mode_3: codes.mode_3,
       mode_1: codes.mode_1,
       notes: isFriendly
