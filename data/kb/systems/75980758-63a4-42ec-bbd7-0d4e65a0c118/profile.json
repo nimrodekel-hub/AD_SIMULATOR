@@ -135,7 +135,7 @@
     "enabled": true,
     "mode_3": true,
     "mode_1": true,
-    "note": "every airplane operate IFF can be read. military olso operate mode 1. IFF can be read for 200 km."
+    "note": "Civil traffic answers on Mode 3 only. Jets and helicopters are military: ours answer on Mode 3 and Mode 1 together, and an enemy aircraft does not answer at all — it carries nothing that replies to our interrogation. UAVs carry no transponder. A reply can be read out to 200 km."
   },
   "operator_commands": {
     "retype": false,
