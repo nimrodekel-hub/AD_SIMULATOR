@@ -741,13 +741,54 @@
   },
   "outcome": {
     "success": false,
-    "summary": "4 hostiles reached the defended area, against a limit of 1. 4 friendly tracks were engaged. That fails the run on its own, whatever else went right. 16 interceptors spent, against the 12 allowed. Mean 148.7s from a hostile becoming identifiable to the launch against it.",
-    "per_decision": []
+    "summary": "Run failed outright. Four engagements were taken against friendly tracks: TK-9003 (Friendly UAV) and TK-9001 (Our Forces helicopter) were destroyed, and TK-9002 (Friendly jet) was fired on and missed. All four Unknowns were self-classified as enemy on the strength of a 'no reply' interrogation rather than referred to the commander. No long-range round was ever fired; all three jets were left unengaged until they were inside the long-range minimum and all three leaked, along with one UAV. Sixteen rounds spent against a twelve-round limit, four leakers against a limit of one.",
+    "per_decision": [
+      {
+        "dilemma_index": 2,
+        "chosen_action": "Interrogated TK-9001 at T+020, read 'no reply', set the track to enemy locally at T+024 and launched a short-range round at T+026 (13 km, Pk 90%); after the miss at T+060, re-engaged at T+094 and destroyed it at T+116.",
+        "preferred_action": "Refer the Unknown to the commander and withhold fire until it is classified Enemy.",
+        "correct": false,
+        "comment": "T+020–T+116. This is the documented error of self-classifying an unknown track locally to save the fifteen seconds of referral. A 'no reply' is not a classification and never was. TK-9001 was Our Forces, and you did not just fire once — you re-set it to enemy at T+036 and committed a second round after the first missed."
+      },
+      {
+        "dilemma_index": 2,
+        "chosen_action": "Set TK-9003 to enemy at T+047 with no interrogation on record and no referral, launched at T+049 (16 km, Pk 89%), destroyed it at T+089.",
+        "preferred_action": "Refer to the commander and withhold fire until classified Enemy.",
+        "correct": false,
+        "comment": "T+047–T+089. TK-9003 had been held since T+000 as an Unknown at 21 km. You never interrogated it and never referred it — you simply declared it hostile and killed it. The record calls firing on an Unknown the single worst outcome in this scenario, irrespective of how many hostiles were destroyed."
+      },
+      {
+        "dilemma_index": 0,
+        "chosen_action": "TK-4101, TK-4102 and TK-4103 resolved to Enemy at T+020, T+025 and T+035. No round was launched at any of them. The first shot at a jet came at T+253, at 6 km.",
+        "preferred_action": "Fire the lead jet at the earliest valid firing solution the system offers, at long range, and work the other two jets into the queue as launchers free.",
+        "correct": false,
+        "comment": "T+020–T+035 was the whole run. The system handed you three confirmed Enemy jets at long range with both launchers free, and you spent that window shooting friendlies. Zero long-range rounds were expended across the entire engagement. The refusals at T+219, T+229, T+260 and T+263 — 'inside the long range's minimum range' — are the receipt for that delay, not a system fault."
+      },
+      {
+        "dilemma_index": 2,
+        "chosen_action": "Interrogated TK-9002 at T+123, read 'no reply', set it to enemy at T+126 and launched a medium-range round at T+135 (9 km, Pk 56%).",
+        "preferred_action": "Refer to the commander and withhold fire until classified Enemy.",
+        "correct": false,
+        "comment": "T+123–T+135. Third repetition of the same error, this time a hundred seconds into the run with the jets still unserviced. The shot was also poor geometry — Pk 56% at 9 km on a closing track — and it missed. Only the miss kept a friendly jet in the air."
+      },
+      {
+        "dilemma_index": 3,
+        "chosen_action": "Worked the UAV wave from T+110 onward in a continuous queue, taking TK-5207, TK-5206, TK-5204, TK-5205, TK-5203 and TK-5201, largely at Pk 56–71% inside 13 km.",
+        "preferred_action": "Mop up the UAVs by earliest available valid solution inside the shorter rings, keeping both launchers continuously employed.",
+        "correct": false,
+        "comment": "T+110–T+241. The queue discipline here was the one sound part of the run — launchers were rarely idle and the refusals at T+130 and T+179 are correct holds against the two-in-flight limit. But it came after the jets had been abandoned and after the rounds had been squandered on friendlies, so the shots were all taken deep and cheap-percentage. TK-5202 was engaged at 3 km and Pk 56% at T+241 and leaked a second later."
+      }
+    ]
   },
-  "score": null,
-  "debrief_text": "",
-  "recommendations": [],
+  "score": 3,
+  "debrief_text": "You asked to practise jets first, UAVs after, unknowns referred. The run put you in exactly that position at T+000 — three fast closers at 84–91 km, a UAV wave behind them, and four Unknowns — and you inverted all three parts of it. The run fails on the first line of the hierarchy: you engaged four friendly tracks. TK-9003 was destroyed at T+089 and TK-9001 at T+116; TK-9002 was fired on at T+135 and survived only because the round missed. Nothing else in the log can change that verdict.\n\nThe mechanism was the same every time. You interrogated, got 'no reply', and treated that as proof of hostility — TK-9001 at T+020, TK-9002 at T+123 — then set the track to enemy yourself at T+024, T+036, T+047 and T+126. That is the documented error of self-classifying to save the fifteen seconds of referral, and the record is blunt about why it is tempting and why it is wrong: in this scenario every Unknown is friendly, and the aggressive-looking profile is the bait. A referral costs about fifteen seconds. It cost you a helicopter of Our Forces. TK-9003 you did not even interrogate; you declared it hostile at T+047 and killed it forty seconds later.\n\nThe second failure follows from the first. All three jets resolved to Enemy on their own at T+020, T+025 and T+035, with both launchers free and the whole long-range ring available. You fired nothing at them. Instead the launchers were occupied against TK-9001 from T+026 and TK-9003 from T+049 — the exact cascade the record warns about, where the jet commitment is pushed late and the queue breaks. Your first and only jet shot came at T+253, at 6 km, Pk 61%. The four refusals for 'inside the long range's minimum range' at T+219 through T+263 are the record of three jets walking through a ring you never used; zero long-range rounds were expended all run. All three leaked, and jets are the most expensive category of leaker precisely because their leakage proves the sequencing was wrong.\n\nThe UAV mop-up from T+110 onward was competent in isolation — you kept both launchers loaded, and the holds at T+130 and T+179 against the two-in-flight limit were correct behaviour, not hesitation. But every one of those shots was taken deep and cheap: 62%, 58%, 56%, because the timeline had already been spent. Sixteen rounds against a twelve-round allowance, four leakers against one, and a mean reaction of 148.7 seconds all trace back to the first ninety seconds.",
+  "recommendations": [
+    "Treat 'no reply' on interrogation as a null result, not a classification. On the next run, every Unknown goes to the commander the moment it is held — TK-9003 was on the scope from T+000 and you had over forty seconds before you shot it.",
+    "Fire the lead jet at the first valid long-range solution rather than holding. In this run TK-4101 resolved Enemy at T+020 with both launchers free; that shot should have been in the air within seconds, not withheld until the track was inside the long-range minimum at T+263.",
+    "Do not re-commit against a track you classified yourself. After the miss on TK-9001 at T+060 you launched again at T+094; a self-classified track that has already consumed a round is the point to stop and refer, not to double down.",
+    "Practise reading the refusal messages as feedback in real time. Four 'inside minimum range' refusals against the long-range launcher between T+219 and T+263 were telling you mid-run that the jet queue had collapsed — recognise that signal early enough to change what you are shooting at."
+  ],
   "status": "completed",
   "created_at": "2026-09-13T20:28:44.865Z",
-  "completed_at": "2026-09-13T20:33:35.728Z"
+  "completed_at": "2026-09-13T20:34:27.604Z"
 }
