@@ -464,7 +464,14 @@ export function GuiBuilder({
 
           <div className="mt-4 space-y-3">
             <label className="block">
-              <span className="label">What should be different?</span>
+              <span className="label">Only the screen — straight to the builder</span>
+              {/* The builder cannot touch behaviour, and a request about
+                  behaviour sent here comes back as "not here". Saying which
+                  box is which, at the box, is cheaper than that round trip. */}
+              <span className="mb-2 block text-xs text-muted">
+                A control, IFF, a range, a figure? Use Ask for a change above —
+                it changes how the system behaves and the screen together.
+              </span>
               <textarea
                 className="field min-h-20"
                 placeholder="e.g. the scope should fill the left two thirds, the header is too light, put the resource readout under the track list"
