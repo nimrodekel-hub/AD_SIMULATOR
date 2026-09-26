@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ScreenShell } from "@/components/screen-shell";
 import { SetupSequence } from "@/components/setup-steps";
-import { setupSteps } from "@/lib/domain/setup-sequence";
+import { SystemChangeRequest } from "@/components/system-change-request";
+import { setupProgress, setupSteps } from "@/lib/domain/setup-sequence";
 import { getSystemBundle, listScreenshots } from "@/lib/store/kb";
 import { PlayIcon } from "@/components/icons";
 
@@ -40,6 +41,16 @@ export default async function SystemSetupPage({
     gui,
     scenarios,
   });
+  const progress = setupProgress(steps);
+
+  /* Where to ask for a change, once there is something to change. While the
+     system is still being set up the steps are what matter and this waits
+     below them; once they are done it is the main thing a designer comes back
+     here to do, so it leads. */
+  const changeBox = profile ? (
+    <SystemChangeRequest systemId={systemId} hasConsole={!!gui} />
+  ) : null;
+  const setupDone = progress.complete === progress.total;
 
   return (
     <ScreenShell
@@ -60,10 +71,14 @@ export default async function SystemSetupPage({
         ) : null
       }
     >
+      {setupDone && changeBox ? <div className="mb-10">{changeBox}</div> : null}
+
       <SetupSequence
         steps={steps}
         intro="Five steps, in this order. Each one is used by the ones after it."
       />
+
+      {!setupDone && changeBox ? <div className="mt-10">{changeBox}</div> : null}
 
       {/* ---- This system's scenarios ---------------------------------- */}
       <section className="mt-12 border-t border-line pt-8">

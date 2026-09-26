@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConsoleControlsSummary } from "@/components/console-controls-summary";
 import { GuiBuilder } from "@/components/gui-builder";
+import { SystemChangeRequest } from "@/components/system-change-request";
 import { ScreenShell } from "@/components/screen-shell";
 import { asReported, readGuiJob } from "@/lib/store/gui-job";
 import {
@@ -63,6 +64,16 @@ export default async function GuiBuilderPage({
         </div>
       ) : null}
 
+      {/* The request most often typed on this page is about behaviour — a
+          control that is not there, a code that should come back — and the
+          builder below cannot act on it. This can, and it hands the screen
+          part of anything to the builder itself. */}
+      {missing === null ? (
+        <div className="mb-8">
+          <SystemChangeRequest systemId={systemId} hasConsole={!!existing} />
+        </div>
+      ) : null}
+
       {/* Stated before the request rather than after it. A designer asking the
           builder to colour a reload button gets a refusal, and the refusal is
           the same every time: the control is not switched on. Here is that
@@ -71,6 +82,10 @@ export default async function GuiBuilderPage({
 
       {missing === null ? (
         <GuiBuilder
+          /* A build started from Ask for a change begins outside this
+             component. Keyed on the job, it is mounted afresh for it — and so
+             follows it, rather than holding on to the job it last saw. */
+          key={job?.started_at ?? "none"}
           systemId={systemId}
           systemName={system.name}
           screenshotCount={screenshots.length}
