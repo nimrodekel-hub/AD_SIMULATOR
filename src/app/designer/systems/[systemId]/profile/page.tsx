@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ScreenShell } from "@/components/screen-shell";
+import { SystemChangeRequest } from "@/components/system-change-request";
 import { SystemProfileForm } from "@/components/system-profile-form";
 import { SYSTEM_QUESTIONS } from "@/lib/ai/tasks/learn-system";
-import { getSystem, getSystemProfile } from "@/lib/store/kb";
+import { getGuiTemplate, getSystem, getSystemProfile } from "@/lib/store/kb";
 import { PlayIcon } from "@/components/icons";
 
 /**
@@ -20,9 +21,10 @@ export default async function SystemProfilePage({
   params,
 }: PageProps<"/designer/systems/[systemId]/profile">) {
   const { systemId } = await params;
-  const [system, existing] = await Promise.all([
+  const [system, existing, gui] = await Promise.all([
     getSystem(systemId),
     getSystemProfile(systemId),
+    getGuiTemplate(systemId),
   ]);
   if (!system) notFound();
 
@@ -46,7 +48,22 @@ export default async function SystemProfilePage({
         ) : null
       }
     >
+      {/* One change in words instead of finding the field in ten sections.
+          Only once there is a profile: before that, the questions below are
+          how it gets written in the first place. */}
+      {existing ? (
+        <div className="mb-10">
+          <SystemChangeRequest systemId={systemId} hasConsole={!!gui} />
+        </div>
+      ) : null}
+
       <SystemProfileForm
+        /* Rebuilt from the stored profile whenever that changes. The form
+           keeps its own copy while it is being edited, and a change made by
+           asking — saved and refreshed under it — would otherwise sit behind a
+           form still holding the old values, one Save away from being
+           overwritten. */
+        key={versionOf(existing)}
         systemId={systemId}
         systemName={system.name}
         questions={SYSTEM_QUESTIONS}
@@ -54,4 +71,14 @@ export default async function SystemProfilePage({
       />
     </ScreenShell>
   );
+}
+
+/** A short fingerprint of the stored profile, for keying the form on it. */
+function versionOf(profile: unknown): string {
+  const text = JSON.stringify(profile ?? null);
+  let hash = 0;
+  for (let index = 0; index < text.length; index++) {
+    hash = (hash * 31 + text.charCodeAt(index)) | 0;
+  }
+  return String(hash);
 }

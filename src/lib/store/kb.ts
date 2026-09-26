@@ -139,14 +139,24 @@ export async function saveSystemProfile(
   systemId: string,
   profile: SystemProfile,
   systemName: string,
+  /**
+   * Why it changed, when there is a better answer than "saved".
+   *
+   * A change asked for in plain words is committed with those words, so the
+   * repository history says what the designer wanted — not just that the
+   * profile was written again.
+   */
+  reason?: string,
 ): Promise<void> {
   const validated = SystemProfileSchema.parse(profile);
   await repoFiles().write(
     systemPaths(systemId).profile,
     serialise(validated),
-    validated.approved
-      ? `Approve behaviour profile: ${systemName}`
-      : `Update behaviour profile draft: ${systemName}`,
+    reason
+      ? `Change behaviour profile: ${systemName}\n\n${reason}`
+      : validated.approved
+        ? `Approve behaviour profile: ${systemName}`
+        : `Update behaviour profile draft: ${systemName}`,
   );
 }
 
