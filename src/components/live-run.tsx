@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { RadarScope, rangeScales } from "@/components/radar-scope";
 import { RangeControl } from "@/components/range-control";
@@ -22,6 +22,7 @@ import {
   simConfig,
   step,
   summarise,
+  toneOf,
   viewOf,
   type Command,
   type SimState,
@@ -382,7 +383,7 @@ export function LiveRun({
             decision: (
               <div className="flex h-full min-h-0 gap-3">
                 <div className="min-w-0 flex-1">{controls}</div>
-                <div className="hidden min-h-0 w-72 overflow-y-auto lg:block">
+                <div className="hidden min-h-0 w-56 shrink-0 overflow-y-auto xl:block">
                   {log}
                 </div>
               </div>
@@ -399,47 +400,59 @@ export function LiveRun({
     );
   }
 
-  /* ---- Built-in operations layout ------------------------------- */
+  /* ---- Built-in operations layout -------------------------------
+     Drawn in the instrument palette end to end, so a system with no console
+     of its own still trains on something that looks like a console: dark
+     face, captioned panels, the status line along the top. */
+  const held = views.length;
+  const hostile = views.filter(
+    (v) => toneOf(config, v.track.displayed_iff) === "hostile",
+  ).length;
+  const rounds = config.interceptors.reduce(
+    (sum, option) => sum + remainingOf(state, option.name),
+    0,
+  );
   return (
-    <div className="grid h-full min-h-0 grid-rows-[auto_1fr_auto] gap-px bg-[var(--border)]">
-      <header className="flex flex-wrap items-center gap-3 bg-panel px-4 py-2">
+    <div className="ops-root theme-ops grid h-full min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-px bg-[var(--ops-line)]">
+      <header className="flex flex-wrap items-center gap-x-5 gap-y-2 bg-[var(--ops-surface)] px-3 py-1.5">
+        <span className="flex items-center gap-2">
+          <span className="ops-live" aria-hidden />
+          <span className="ops-value tracking-[0.12em]">
+            {exercise.exercise_name.toUpperCase()}
+          </span>
+        </span>
         {clock}
-        <span className="data text-xs text-muted">
-          {views.length} HELD · {inFlight} IN FLIGHT ·{" "}
-          {config.interceptors.reduce(
-            (sum, round) => sum + remainingOf(state, round.name),
-            0,
-          )}{" "}
-          ROUNDS
+        <span className="flex items-center gap-3">
+          <Stat label="Held" value={held} />
+          <Stat label="Hostile" value={hostile} colour="var(--id-hostile)" />
+          <Stat label="In flight" value={inFlight} colour="var(--ops-phosphor)" />
+          <Stat label="Rounds" value={rounds} colour={rounds === 0 ? "var(--id-hostile)" : undefined} />
         </span>
-        {rangeInHeader}
-        <span className="ml-auto data text-xs text-muted">
-          {exercise.exercise_name}
-        </span>
+        <span className="ml-auto">{rangeInHeader}</span>
       </header>
 
-      <div className="grid min-h-0 grid-cols-1 gap-px lg:grid-cols-[1fr_24rem]">
+      <div className="grid min-h-0 grid-cols-1 gap-px lg:grid-cols-[minmax(0,1fr)_30rem]">
         {/* A plan-position display is a circle: given a wide panel it centres
             itself and leaves a third of the console empty either side.
             Squaring it hands that width back to the track list, where it
             becomes readable columns. */}
-        <section className="grid min-h-0 place-items-center bg-panel p-2">
+        <section className="grid min-h-0 place-items-center bg-[var(--ops-face)] p-2">
           <div className="aspect-square max-h-full max-w-full [height:100%]">
             {scope}
           </div>
         </section>
-        <aside className="grid min-h-0 grid-rows-[1fr_auto] gap-px bg-[var(--border)]">
-          <div className="min-h-0 overflow-y-auto bg-panel">{trackList}</div>
-          <div className="bg-panel">{resources}</div>
+        <aside className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto_11rem] gap-px bg-[var(--ops-line)]">
+          <Panel title="Air picture" note={`${held} held`}>
+            {trackList}
+          </Panel>
+          <Panel title="Magazine">{resources}</Panel>
+          <Panel title="Log">{log}</Panel>
         </aside>
       </div>
 
-      <div className="grid grid-cols-1 gap-px bg-[var(--border)] lg:grid-cols-[1fr_22rem]">
-        <div className="bg-panel-raised p-3">{controls}</div>
-        <div className="hidden max-h-40 overflow-y-auto bg-panel lg:block">
-          {log}
-        </div>
-      </div>
+      {/* The full width, so every station sits on one line with the launch
+          command at the end of it, where the eye finishes the work. */}
+      <Panel title="Engagement">{controls}</Panel>
 
       {stage === "failed" ? (
         <Failed
@@ -448,5 +461,40 @@ export function LiveRun({
         />
       ) : null}
     </div>
+  );
+}
+
+/** A captioned panel of the built-in console. */
+function Panel({
+  title,
+  note,
+  className = "",
+  children,
+}: {
+  title: string;
+  note?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className={`flex h-full min-h-0 min-w-0 flex-col bg-[var(--ops-surface)] ${className}`}>
+      <header className="flex items-center justify-between border-b border-[var(--ops-line)] px-2.5 py-1">
+        <span className="ops-label">{title}</span>
+        {note ? <span className="ops-dim text-[9.5px]">{note}</span> : null}
+      </header>
+      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+    </section>
+  );
+}
+
+/** One figure on the status line. */
+function Stat({ label, value, colour }: { label: string; value: number; colour?: string }) {
+  return (
+    <span className="flex items-baseline gap-1">
+      <span className="ops-label">{label}</span>
+      <span className="ops-value" style={colour && value > 0 ? { color: colour } : undefined}>
+        {value}
+      </span>
+    </span>
   );
 }

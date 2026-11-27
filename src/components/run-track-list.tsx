@@ -1,6 +1,8 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { describeReply, meaningOfMode3 } from "@/lib/domain/iff-codes";
+import { bandsOf, IDENTITY, type Tone } from "@/lib/ops-palette";
 import {
   positionOf,
   probabilityOfKill,
@@ -19,14 +21,16 @@ import { timeToIntercept, vecToPolar } from "@/lib/sim/geometry";
  * it moved all 48 KB, because this repository is written through an API that
  * takes whole files rather than diffs. The seam is a real one: nothing here
  * holds state or knows the run exists, it only renders what it is handed.
+ *
+ * Read like an instrument, not like a spreadsheet. Each row carries its
+ * identity colour down its left edge, so the list can be scanned for "what is
+ * red" without reading a word; a time to impact under a minute is marked,
+ * because that column decides the order of work; and the IFF column's colour
+ * says what a reply means, not just that there was one.
  */
 
-const TONE_CLASS = {
-  friendly: "status-ok",
-  neutral: "status-warn",
-  caution: "status-warn",
-  hostile: "status-danger",
-} as const;
+/** Time to impact, in seconds, below which a track is the next problem. */
+const URGENT_S = 60;
 
 export function Clock({
   remaining,
@@ -36,16 +40,32 @@ export function Clock({
   window: number;
 }) {
   const seconds = Math.ceil(remaining);
+  const fraction = total > 0 ? remaining / total : 0;
   const urgency =
-    remaining <= total * 0.25
-      ? "status-danger"
-      : remaining <= total * 0.5
-        ? "status-warn"
-        : "status-ok";
+    fraction <= 0.1 ? "critical" : fraction <= 0.25 ? "low" : fraction <= 0.5 ? "half" : "normal";
+  const colour = {
+    normal: "var(--ops-phosphor)",
+    half: "var(--id-unknown)",
+    low: "var(--id-suspect)",
+    critical: "var(--id-hostile)",
+  }[urgency];
+
   return (
-    <span className={`chip ${urgency} data`}>
-      T-{String(Math.floor(seconds / 60)).padStart(2, "0")}:
-      {String(seconds % 60).padStart(2, "0")}
+    <span
+      className="ops-root ops-clock"
+      data-urgency={urgency}
+      style={{ "--c": colour } as CSSProperties}
+      role="timer"
+      aria-label={`${seconds} seconds left`}
+    >
+      <span className="ops-label">T−</span>
+      <span className="ops-clock-digits">
+        {String(Math.floor(seconds / 60)).padStart(2, "0")}:
+        {String(seconds % 60).padStart(2, "0")}
+      </span>
+      <span className="ops-bar" style={{ width: 56 }}>
+        <span style={{ width: `${Math.max(0, Math.min(1, fraction)) * 100}%` }} />
+      </span>
     </span>
   );
 }
@@ -78,15 +98,7 @@ const KNOWN_READOUTS = new Set([
 ]);
 
 /** Which way a column reads. Numbers right, words left, as a console does. */
-const RIGHT_ALIGNED = new Set([
-  "AZ",
-  "BRG",
-  "RNG",
-  "ALT",
-  "SPD",
-  "TTI",
-  "PK",
-]);
+const RIGHT_ALIGNED = new Set(["AZ", "BRG", "RNG", "ALT", "SPD", "TTI", "PK"]);
 
 export function TrackList({
   views,
@@ -107,25 +119,24 @@ export function TrackList({
 }) {
   if (views.length === 0) {
     return (
-      <p className="p-3 text-xs text-muted">
-        Nothing held. The scope is clear.
-      </p>
+      <div className="ops-root grid h-full place-items-center p-4 text-center">
+        <div>
+          <p className="ops-label">No tracks held</p>
+          <p className="ops-dim mt-1 text-[10px]">The picture is clear.</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <table className="data w-full text-[0.7rem]">
-      <thead className="sticky top-0 bg-panel text-muted">
-        <tr className="border-b border-line">
+    <table className="ops-root ops-table">
+      <thead>
+        <tr>
           {config.readouts.map((field, index) => (
             <th
               key={`${field.label}-${index}`}
               title={field.description || undefined}
-              className={`px-2 py-1 font-medium ${
-                RIGHT_ALIGNED.has(field.label.toUpperCase())
-                  ? "text-right"
-                  : "text-left"
-              }`}
+              className={RIGHT_ALIGNED.has(field.label.toUpperCase()) ? "num" : undefined}
             >
               {field.label}
             </th>
@@ -133,34 +144,35 @@ export function TrackList({
         </tr>
       </thead>
       <tbody>
-        {views.map((view) => (
-          <tr
-            key={view.track.designator}
-            onClick={() => onSelect(view.track.designator)}
-            className={`cursor-pointer border-b border-line/60 ${
-              view.track.designator === selected ? "bg-panel-raised" : ""
-            }`}
-          >
-            {config.readouts.map((field, index) => (
-              <td
-                key={`${field.label}-${index}`}
-                className={`px-2 py-1 ${
-                  RIGHT_ALIGNED.has(field.label.toUpperCase())
-                    ? "text-right"
-                    : ""
-                }`}
-              >
-                <Readout
-                  field={field.label}
-                  view={view}
-                  config={config}
-                  state={state}
-                  round={round}
-                />
-              </td>
-            ))}
-          </tr>
-        ))}
+        {views.map((view) => {
+          const tone = toneOf(config, view.track.displayed_iff) as Tone;
+          return (
+            <tr
+              key={view.track.designator}
+              onClick={() => onSelect(view.track.designator)}
+              aria-selected={view.track.designator === selected}
+              style={{ "--c": IDENTITY[tone] } as CSSProperties}
+            >
+              {config.readouts.map((field, index) => (
+                <td
+                  key={`${field.label}-${index}`}
+                  className={
+                    RIGHT_ALIGNED.has(field.label.toUpperCase()) ? "num" : undefined
+                  }
+                >
+                  <Readout
+                    field={field.label}
+                    view={view}
+                    tone={tone}
+                    config={config}
+                    state={state}
+                    round={round}
+                  />
+                </td>
+              ))}
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
@@ -170,12 +182,14 @@ export function TrackList({
 function Readout({
   field,
   view,
+  tone,
   config,
   state,
   round,
 }: {
   field: string;
   view: TrackView;
+  tone: Tone;
   config: ReturnType<typeof simConfig>;
   state: SimState;
   round: string;
@@ -184,24 +198,28 @@ function Readout({
 
   switch (field.trim().toUpperCase()) {
     case "TRK":
-      return <>{track.designator}</>;
+      return (
+        <span className="ops-value" style={{ color: IDENTITY[tone] }}>
+          {track.designator}
+        </span>
+      );
 
     /* What the console believes, not what the track is. The two differ only
        on a system that can be wrong about it and lets the operator say so. */
     case "TYPE":
     case "CLASS":
       return (
-        <span className={track.typed_by_operator ? "text-accent" : undefined}>
+        <span style={track.typed_by_operator ? { color: "var(--ops-phosphor)" } : undefined}>
           {track.displayed_classification}
         </span>
       );
 
     case "AZ":
     case "BRG":
-      return <>{view.bearing_deg.toFixed(0)}</>;
+      return <>{String(Math.round(view.bearing_deg) % 360).padStart(3, "0")}</>;
 
     case "RNG":
-      return <>{view.range_km.toFixed(0)}</>;
+      return <>{view.range_km.toFixed(1)}</>;
 
     case "ALT":
       return <>{track.altitude_ft.toLocaleString()}</>;
@@ -210,13 +228,17 @@ function Readout({
       return <>{track.speed_kts}</>;
 
     case "TTI":
-      return <>{view.tti_s === null ? "—" : `${view.tti_s.toFixed(0)}s`}</>;
+      return view.tti_s === null ? (
+        <span className="ops-dim">—</span>
+      ) : (
+        <span className={view.tti_s < URGENT_S ? "ops-urgent" : undefined}>
+          {view.tti_s.toFixed(0)}s
+        </span>
+      );
 
     case "ID":
       return (
-        <span
-          className={`chip ${TONE_CLASS[toneOf(config, track.displayed_iff)]}`}
-        >
+        <span className="ops-tag" style={{ "--c": IDENTITY[tone] } as CSSProperties}>
           {track.displayed_iff}
         </span>
       );
@@ -227,7 +249,7 @@ function Readout({
       return config.iff.enabled ? (
         <Squawk track={track} config={config} />
       ) : (
-        <span className="text-muted" title="This system has no interrogator">
+        <span className="ops-dim" title="This system has no interrogator">
           —
         </span>
       );
@@ -236,51 +258,51 @@ function Readout({
     case "MODE1":
       if (!config.iff.enabled || !config.iff.mode_1) {
         return (
-          <span className="text-muted" title="This system does not read Mode 1">
+          <span className="ops-dim" title="This system does not read Mode 1">
             —
           </span>
         );
       }
       if (!track.squawk_known) {
-        return <span className="text-muted" title="Not interrogated">·</span>;
+        return <span className="ops-dim" title="Not interrogated">·</span>;
       }
       return track.mode_1 ? (
-        <span className="text-ok">{track.mode_1}</span>
+        <span style={{ color: "var(--id-friend)" }}>{track.mode_1}</span>
       ) : (
-        <span className="text-warn">—</span>
+        <span style={{ color: "var(--id-unknown)" }}>—</span>
       );
 
     case "PK": {
       const chosen =
-        config.interceptors.find((r) => r.name === round) ??
-        config.interceptors[0];
+        config.interceptors.find((r) => r.name === round) ?? config.interceptors[0];
       if (!chosen) return <>—</>;
       const flight = timeToIntercept(view.at, track.velocity, chosen.speed_kts);
-      if (flight === null) return <span className="text-danger">—</span>;
-      const meetsAt = vecToPolar(
-        positionOf(track, state.t + flight),
-      ).range_km;
+      if (flight === null) return <span style={{ color: "var(--id-hostile)" }}>—</span>;
+      const meetsAt = vecToPolar(positionOf(track, state.t + flight)).range_km;
       const pk = probabilityOfKill(meetsAt, chosen);
-      return (
-        <span
-          className={pk > 0.7 ? "text-ok" : pk > 0 ? "text-warn" : "text-danger"}
-        >
-          {(pk * 100).toFixed(0)}
-        </span>
-      );
+      return <span style={{ color: pkColour(pk) }}>{(pk * 100).toFixed(0)}</span>;
     }
 
     case "FIRE STATUS": {
-      if (track.state === "destroyed") return <span className="text-ok">KILL</span>;
-      if (track.state === "leaked") return <span className="text-danger">LEAK</span>;
-      const inFlight = state.engagements.some(
+      if (track.state === "destroyed") {
+        return <span className="ops-tag" style={{ "--c": "var(--kill)" } as CSSProperties}>Kill</span>;
+      }
+      if (track.state === "leaked") {
+        return <span className="ops-tag" style={{ "--c": "var(--id-hostile)" } as CSSProperties}>Leak</span>;
+      }
+      const flying = state.engagements.find(
         (e) => e.target === track.designator && !e.resolved,
       );
-      if (inFlight) return <span className="text-warn">IN FLIGHT</span>;
-      const spent = state.engagements.some(
-        (e) => e.target === track.designator,
-      );
-      return spent ? <span className="text-muted">MISS</span> : <>—</>;
+      if (flying) {
+        const band = bandsOf(config.interceptors).get(flying.interceptor);
+        return (
+          <span className="ops-tag" style={{ "--c": band?.colour ?? "var(--ops-phosphor)" } as CSSProperties}>
+            {band?.short ?? ""} In flight
+          </span>
+        );
+      }
+      const spent = state.engagements.some((e) => e.target === track.designator);
+      return spent ? <span className="ops-dim">MISS</span> : <span className="ops-dim">—</span>;
     }
 
     default:
@@ -289,7 +311,7 @@ function Readout({
          "no value here" instead of as a value. */
       return (
         <span
-          className="text-muted"
+          className="ops-dim"
           title={
             KNOWN_READOUTS.has(field.trim().toUpperCase())
               ? "No value for this yet"
@@ -302,6 +324,11 @@ function Readout({
   }
 }
 
+/** A kill probability as a colour: good, marginal, or not worth the round. */
+export function pkColour(pk: number): string {
+  return pk > 0.7 ? "var(--kill)" : pk > 0 ? "var(--id-suspect)" : "var(--id-hostile)";
+}
+
 /**
  * What the transponder said, or the fact that nobody has asked.
  *
@@ -309,6 +336,10 @@ function Readout({
  * not interrogated, interrogated and silent, interrogated and answering. A
  * console that showed a blank for both of the first two would be telling the
  * operator that a track refused to reply when in fact nobody asked it.
+ *
+ * Coloured by what the reply means. Mode 1 is the keyed military mode, so a
+ * reply on it reads friendly; a Mode 3 code alone is only a code; silence is
+ * unresolved; an emergency squawk is an alarm.
  */
 export function Squawk({
   track,
@@ -318,7 +349,7 @@ export function Squawk({
   config: ReturnType<typeof simConfig>;
 }) {
   if (!track.squawk_known) {
-    return <span className="text-muted" title="Not interrogated">·</span>;
+    return <span className="ops-dim" title="Not interrogated">·</span>;
   }
 
   const mode3 = config.iff.mode_3 ? track.mode_3 : "";
@@ -327,19 +358,21 @@ export function Squawk({
 
   if (!reply.replied) {
     return (
-      <span className="text-warn" title="Interrogated — nothing came back">
+      <span style={{ color: "var(--id-unknown)" }} title="Interrogated — nothing came back">
         NO RPLY
       </span>
     );
   }
 
   const meaning = meaningOfMode3(mode3);
+  const colour = meaning
+    ? "var(--id-hostile)"
+    : mode1
+      ? "var(--id-friend)"
+      : "var(--ops-ink)";
   return (
-    <span
-      className={meaning ? "text-danger" : "text-ok"}
-      title={meaning ?? "Transponder reply"}
-    >
-      {mode3 || `M1 ${mode1}`}
+    <span style={{ color: colour, fontWeight: 600 }} title={meaning ?? reply.text}>
+      {[mode3 && `M3 ${mode3}`, mode1 && `M1 ${mode1}`].filter(Boolean).join(" ")}
     </span>
   );
 }
