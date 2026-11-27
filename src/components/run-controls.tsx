@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Squawk } from "@/components/run-track-list";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import { pkColour, Squawk } from "@/components/run-track-list";
 import { describeReply, meaningOfMode3 } from "@/lib/domain/iff-codes";
 import type { ExerciseInstance } from "@/lib/domain/schemas";
+import { bandsOf, IDENTITY, type Tone } from "@/lib/ops-palette";
 import {
   onLauncher as roundsOnLauncher,
   positionOf,
   probabilityOfKill,
   remainingOf,
+  toneOf,
   type Command,
   type RuntimeTrack,
   type SimState,
@@ -23,7 +25,25 @@ import { timeToIntercept, vecToPolar } from "@/lib/sim/geometry";
  * Split out of `live-run.tsx`, which had grown to 48 KB — and every touch of
  * it moved all 48 KB, because this repository is written through an API that
  * takes whole files rather than diffs.
+ *
+ * Drawn as instruments in the ops palette (src/lib/ops-palette.ts): each
+ * interceptor band keeps one colour on the selector, the magazine, the scope's
+ * envelope ring and the round in flight, so choosing a round and seeing what
+ * it reaches and how many are left is one glance. The launch command is red,
+ * round and apart from everything else, because it is the one control here
+ * whose effect cannot be taken back.
  */
+
+type Config = ReturnType<typeof simConfig>;
+
+/** How long a refusal stays on the panel. Long enough to read, not forever. */
+const REFUSAL_SECONDS = 8;
+
+const css = (vars: Record<string, string>) => vars as CSSProperties;
+
+/* ------------------------------------------------------------------ */
+/* Magazines                                                           */
+/* ------------------------------------------------------------------ */
 
 export function Resources({
   config,
@@ -32,114 +52,129 @@ export function Resources({
   inFlight,
   criteria,
 }: {
-  config: ReturnType<typeof simConfig>;
+  config: Config;
   state: SimState;
   /** When each launcher finishes reloading, or null. */
   reloading: (number | null)[];
   inFlight: number;
   criteria: ExerciseInstance["success_criteria"];
 }) {
+  const bands = bandsOf(config.interceptors);
   const spent = state.spent;
-  const left = config.interceptors.reduce(
-    (sum, round) => sum + remainingOf(state, round.name),
-    0,
-  );
 
   return (
-    <div className="space-y-2 p-3 text-xs">
-      {/* A meter per round, because that is what the operator actually
+    <div className="ops-root flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-3">
+      {/* A row of rounds per band, because that is what the operator actually
           spends. One pooled counter said four rounds left and hid the fact
           that none of them could reach the high mover — which made choosing
           a round look free and taught nothing. */}
       {config.interceptors.map((round) => {
-        const remaining = remainingOf(state, round.name);
+        const band = bands.get(round.name);
+        const left = remainingOf(state, round.name);
+        const colour = band?.colour ?? "var(--ops-phosphor)";
         return (
-          <Meter
-            key={round.name}
-            label={round.name}
-            value={remaining}
-            total={round.loaded}
-            warn={remaining === 0}
-          />
+          <div key={round.name}>
+            <div className="flex items-baseline justify-between gap-2">
+              <span
+                className="flex min-w-0 items-baseline gap-1.5"
+                title={`${round.name}: reaches ${round.min_range_km}–${round.max_range_km} km`}
+              >
+                <span className="ops-tag" style={css({ "--c": colour })}>
+                  {band?.short}
+                </span>
+                <span className="ops-dim truncate">{round.name}</span>
+              </span>
+              <span
+                className="ops-value"
+                style={{ color: left === 0 ? "var(--id-hostile)" : colour }}
+              >
+                {left}
+                <span className="ops-dim">/{round.loaded}</span>
+              </span>
+            </div>
+            <div className="ops-pips mt-1.5" aria-hidden>
+              {Array.from({ length: round.loaded }, (_, i) => (
+                <span
+                  key={i}
+                  className="ops-pip"
+                  data-spent={i >= left}
+                  style={css({ "--c": colour })}
+                />
+              ))}
+            </div>
+          </div>
         );
       })}
 
-      {config.interceptors.length > 1 ? (
-        <div className="flex justify-between text-muted">
-          <span>All rounds</span>
-          <span className={`data ${left === 0 ? "text-danger" : ""}`}>
-            {left} / {config.magazine}
+      <div className="mt-auto space-y-1.5 border-t border-[var(--ops-line)] pt-2">
+        <Row label="In the air">
+          <span className="ops-pips" aria-label={`${inFlight} of ${config.max_simultaneous}`}>
+            {Array.from({ length: config.max_simultaneous }, (_, i) => (
+              <span
+                key={i}
+                className="ops-pip"
+                data-spent={i >= inFlight}
+                style={css({ "--c": "var(--ops-phosphor)" })}
+              />
+            ))}
           </span>
-        </div>
-      ) : null}
-
-      {/* Which launcher holds what, once there is more than one to choose
-          between — a total of four is a different picture from four on one
-          rail and none on the other. */}
-      {config.commands.launchers > 1 ? (
-        <div className="flex justify-between text-muted">
-          <span>By launcher</span>
-          <span className="data">
-            {Array.from({ length: config.commands.launchers }, (_, i) =>
-              reloading[i] !== null ? "RLD" : String(roundsOnLauncher(state, i)),
-            ).join(" · ")}
+        </Row>
+        <Row label="Spent">
+          <span
+            className="ops-value"
+            style={
+              spent > criteria.max_interceptors_spent
+                ? { color: "var(--id-hostile)" }
+                : undefined
+            }
+          >
+            {spent}
+            <span className="ops-dim">/{criteria.max_interceptors_spent}</span>
           </span>
-        </div>
-      ) : null}
-      <div className="flex justify-between text-muted">
-        <span>In the air</span>
-        <span className="data">
-          {inFlight} / {config.max_simultaneous}
-        </span>
-      </div>
-      <div className="flex justify-between text-muted">
-        <span>Spent</span>
-        <span
-          className={`data ${spent > criteria.max_interceptors_spent ? "text-danger" : ""}`}
-        >
-          {spent} / {criteria.max_interceptors_spent}
-        </span>
+        </Row>
+        {/* Which launcher holds what, once there is more than one to choose
+            between — a total of four is a different picture from four on one
+            rail and none on the other. */}
+        {config.commands.launchers > 1 ? (
+          <Row label="Launchers">
+            <span className="ops-value">
+              {Array.from({ length: config.commands.launchers }, (_, i) =>
+                reloading[i] !== null ? "RLD" : String(roundsOnLauncher(state, i)),
+              ).join(" · ")}
+            </span>
+          </Row>
+        ) : null}
       </div>
     </div>
   );
 }
 
-function Meter({
-  label,
-  value,
-  total,
-  warn,
-}: {
-  label: string;
-  value: number;
-  total: number;
-  warn: boolean;
-}) {
+function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div>
-      <div className="flex justify-between">
-        <span className="text-muted">{label}</span>
-        <span className={`data ${warn ? "text-danger" : ""}`}>
-          {value} / {total}
-        </span>
-      </div>
-      <div className="mt-1 h-1 w-full bg-[var(--border)]">
-        <div
-          className={warn ? "h-1 bg-danger" : "h-1 bg-ok"}
-          style={{ width: `${total > 0 ? (value / total) * 100 : 0}%` }}
-        />
-      </div>
+    <div className="flex items-center justify-between gap-2">
+      <span className="ops-label">{label}</span>
+      {children}
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Engagement control                                                  */
+/* ------------------------------------------------------------------ */
 
 /**
  * What the operator can actually do with the selected track.
  *
- * The order follows the workflow a real console imposes: read it, decide what
- * it is, choose a round, commit. The firing solution — time of flight and
- * probability of kill — is shown before the launch rather than after, because
- * deciding whether this is a good shot *is* the skill being trained.
+ * The order follows the workflow a real console imposes, left to right: read
+ * it, ask it, decide what it is, choose a round, read the solution, commit.
+ * The solution — time of flight and probability of kill — is shown before the
+ * launch rather than after, because deciding whether this is a good shot *is*
+ * the skill being trained.
+ *
+ * Fire is not disabled when there is no solution. Pressing it and being told
+ * "inside the minimum range" at that moment is the lesson; a button that went
+ * grey would teach only that the button was grey. It is disabled when there
+ * is nothing designated, and the panel says so.
  */
 export function Controls({
   view,
@@ -154,7 +189,7 @@ export function Controls({
   busy,
 }: {
   view: TrackView | null;
-  config: ReturnType<typeof simConfig>;
+  config: Config;
   state: SimState;
   round: string;
   launcher: number;
@@ -165,300 +200,369 @@ export function Controls({
   onEnd: () => void;
   busy: boolean;
 }) {
-  const lastRefusal = [...state.events]
-    .reverse()
-    .find((entry) => entry.kind === "refused");
-
-  /* Reload and tilt are about the system, not about a track, and they are
-     exactly the things wanted when nothing is selected — a magazine emptied
-     on the last engagement is reloaded before the next track is worked, not
-     after. So they render either way, and only what needs a track waits for
-     one. Ending the run belongs to the same group and for the same reason:
-     it is never about the track under the cursor. */
-  const system = (
-    <>
-      {config.commands.tilt.enabled ? (
-        <Tilt config={config} state={state} onCommand={onCommand} busy={busy} />
-      ) : null}
-      {config.commands.reload.enabled ? (
-        <Reload config={config} state={state} onCommand={onCommand} busy={busy} />
-      ) : null}
-      <EndRun onEnd={onEnd} busy={busy} />
-    </>
-  );
-
-  if (!view) {
-    return (
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
-        <p className="text-xs text-muted">
-          Select a track — on the scope or in the list — to work it.
-        </p>
-        {system}
-        {lastRefusal ? (
-          <p className="w-full text-[0.7rem] text-danger">{lastRefusal.detail}</p>
-        ) : null}
-      </div>
-    );
-  }
-
-  const track = view.track;
+  const bands = bandsOf(config.interceptors);
   const chosen =
     config.interceptors.find((r) => r.name === round) ?? config.interceptors[0];
+  const band = chosen ? bands.get(chosen.name) : undefined;
 
-  const flight = timeToIntercept(view.at, track.velocity, chosen.speed_kts);
+  const refusal = [...state.events]
+    .reverse()
+    .find((entry) => entry.kind === "refused");
+  const freshRefusal =
+    refusal && state.t - refusal.t <= REFUSAL_SECONDS ? refusal : null;
+
+  const track = view?.track ?? null;
+  const flight =
+    view && chosen ? timeToIntercept(view.at, view.track.velocity, chosen.speed_kts) : null;
   const meetsAt =
-    flight === null
-      ? null
-      : vecToPolar(positionOf(track, state.t + flight)).range_km;
-  const pk = meetsAt === null ? 0 : probabilityOfKill(meetsAt, chosen);
-  const engaged = state.engagements.some(
-    (e) => e.target === track.designator && !e.resolved,
-  );
+    track && flight !== null
+      ? vecToPolar(positionOf(track, state.t + flight)).range_km
+      : null;
+  const pk = meetsAt === null || !chosen ? 0 : probabilityOfKill(meetsAt, chosen);
+  const engaged =
+    !!track &&
+    state.engagements.some((e) => e.target === track.designator && !e.resolved);
 
   return (
-    <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
-      {/* ---- What is it ---------------------------------------- */}
-      <div>
-        <p className="data text-sm font-semibold">{track.designator}</p>
-        {/* The squawk belongs on this line rather than only beside the
-            button: this is the row an operator's eye lands on once a track is
-            locked, and a reading kept somewhere else is a reading nobody
-            reads. */}
-        <p className="text-[0.7rem] text-muted">
-          {track.classification} · {view.range_km.toFixed(0)} km ·{" "}
-          {view.bearing_deg.toFixed(0)}° · {track.altitude_ft.toLocaleString()} ft ·{" "}
-          {track.speed_kts} kts
-          {config.iff.enabled ? (
-            <>
-              {" · IFF "}
-              <Squawk track={track} config={config} />
-            </>
-          ) : null}
-        </p>
-        {track.notes ? (
-          <p className="mt-1 max-w-xs text-[0.7rem] text-muted">{track.notes}</p>
-        ) : null}
-      </div>
-
-      {/* ---- Interrogation ------------------------------------- */}
-      {config.iff.enabled ? (
-        <div>
-          <p className="label">IFF</p>
-          {/* Only the action here. The code itself reads off the line above,
-              and the sentence below says what it means. */}
-          <button
-            type="button"
-            className="btn text-[0.7rem]"
-            disabled={busy}
-            onClick={() =>
-              onCommand({ kind: "interrogate", designator: track.designator })
-            }
-          >
-            {track.squawk_known ? "Interrogate again" : "Interrogate"}
-          </button>
-          {track.squawk_known ? (
-            <p className="mt-1 max-w-xs text-[0.7rem] text-muted">
-              {interrogationLine(track, config)}
+    /* One row of stations, left to right in the order of the work, each a
+       label over one line of controls. A shell gives this panel a strip a
+       hundred-odd pixels tall; stations that wrapped into a second row put
+       half the panel below the fold, so they never wrap — a narrow screen
+       scrolls the row sideways instead. */
+    <div className="ops-root ops-compact flex h-full min-h-0 flex-col overflow-auto p-2">
+      <div className="flex min-h-0 flex-1 flex-nowrap items-stretch">
+        {/* ---- What is it ---------------------------------------- */}
+        <Station label="Target" wide>
+          {view && track ? (
+            <Target view={view} config={config} />
+          ) : (
+            <p className="ops-dim max-w-[14rem]">
+              No track designated. Select one on the scope or in the list.
             </p>
-          ) : null}
-        </div>
-      ) : null}
+          )}
+        </Station>
 
-      {/* ---- What kind of thing it is -------------------------- */}
-      {config.commands.retype ? (
-        <div>
-          <p className="label">Type</p>
-          <div className="flex flex-wrap gap-1">
-            {config.classes.length === 0 ? (
-              <span className="text-[0.7rem] text-muted">
-                No classes declared in the profile.
-              </span>
-            ) : (
-              config.classes.map((name) => (
+        {track ? (
+          <>
+            {/* ---- Interrogation --------------------------------- */}
+            {config.iff.enabled ? (
+              <Station label="IFF">
                 <button
-                  key={name}
                   type="button"
-                  className={`btn text-[0.7rem] ${
-                    track.displayed_classification === name ? "btn-primary" : ""
-                  }`}
+                  className="ops-btn"
                   disabled={busy}
                   onClick={() =>
-                    onCommand({
-                      kind: "retype",
-                      designator: track.designator,
-                      to: name,
-                    })
+                    onCommand({ kind: "interrogate", designator: track.designator })
                   }
                 >
-                  {name}
+                  Interrogate
                 </button>
-              ))
-            )}
-          </div>
-        </div>
-      ) : null}
+                {track.squawk_known ? (
+                  <p
+                    className="mt-1 max-w-[10rem] truncate text-[10px]"
+                    title={interrogationLine(track, config)}
+                  >
+                    <Squawk track={track} config={config} />
+                    <span className="ops-dim"> {interrogationLine(track, config)}</span>
+                  </p>
+                ) : null}
+              </Station>
+            ) : null}
 
-      {/* ---- Identification ------------------------------------ */}
-      <div>
-        <p className="label">Identification</p>
-        <div className="flex flex-wrap gap-1">
-          {Object.keys(config.tones).length === 0 ? (
-            <span className="text-[0.7rem] text-muted">
-              No states declared in the profile.
-            </span>
-          ) : (
-            Object.keys(config.tones).map((name) => (
-              <button
-                key={name}
-                type="button"
-                className={`btn text-[0.7rem] ${
-                  track.displayed_iff.toLowerCase() === name ? "btn-primary" : ""
-                }`}
-                onClick={() =>
-                  onCommand({
-                    kind: "classify",
-                    designator: track.designator,
-                    to: name,
-                  })
-                }
-              >
-                {name}
-              </button>
-            ))
-          )}
-        </div>
-      </div>
+            {/* ---- What kind of thing it is ---------------------- */}
+            {config.commands.retype ? (
+              <Station label="Type">
+                <div className="flex gap-1">
+                  {config.classes.length === 0 ? (
+                    <span className="ops-dim">No classes declared.</span>
+                  ) : (
+                    config.classes.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className="ops-btn"
+                        aria-pressed={track.displayed_classification === name}
+                        disabled={busy}
+                        onClick={() =>
+                          onCommand({ kind: "retype", designator: track.designator, to: name })
+                        }
+                      >
+                        {name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </Station>
+            ) : null}
 
-      {/* ---- The round ----------------------------------------- */}
-      <div>
-        <p className="label">Interceptor</p>
-        <div className="flex flex-wrap gap-1">
-          {/* Each round carries its own count on its own button. Choosing a
-              round is only a decision if what it costs is visible at the
-              moment of choosing — a pooled total two panels away is not. */}
-          {config.interceptors.map((option) => {
-            const left = remainingOf(state, option.name);
-            return (
-              <button
-                key={option.name}
-                type="button"
-                className={`btn text-[0.7rem] ${option.name === chosen.name ? "btn-primary" : ""}`}
-                onClick={() => onRound(option.name)}
-                title={
-                  left === 0
-                    ? `No ${option.name} rounds left`
-                    : `${left} of ${option.loaded} left · reaches ${option.min_range_km}–${option.max_range_km} km`
-                }
-              >
-                {option.name}
-                <span
-                  className={`ml-1 ${left === 0 ? "text-danger" : "text-ok"}`}
-                >
-                  {left}
-                </span>
-                <span className="ml-1 text-muted">
-                  {option.min_range_km}–{option.max_range_km}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+            {/* ---- Identification -------------------------------- */}
+            <Station label="Identification">
+              <div className="flex gap-1">
+                {Object.keys(config.tones).length === 0 ? (
+                  <span className="ops-dim">No states declared.</span>
+                ) : (
+                  Object.entries(config.tones).map(([name, tone]) => (
+                    <button
+                      key={name}
+                      type="button"
+                      className="ops-btn ops-choice"
+                      style={css({ "--c": IDENTITY[tone as Tone] })}
+                      aria-pressed={track.displayed_iff.toLowerCase() === name}
+                      disabled={busy}
+                      onClick={() =>
+                        onCommand({ kind: "classify", designator: track.designator, to: name })
+                      }
+                    >
+                      {name}
+                    </button>
+                  ))
+                )}
+              </div>
+            </Station>
+          </>
+        ) : null}
 
-      {/* ---- Which launcher ------------------------------------ */}
-      {config.commands.launchers > 1 ? (
-        <div>
-          <p className="label">Launcher</p>
-          <div className="flex flex-wrap gap-1">
-            {Array.from({ length: config.commands.launchers }, (_, index) => {
-              const left = roundsOnLauncher(state, index);
-              const reloading = state.reloading_until[index] !== null;
+        {/* ---- The round -------------------------------------------
+            Shown with nothing designated too: choosing the round before the
+            track is a real habit, and the counts are worth seeing anyway. */}
+        <Station label="Interceptor">
+          <div className="flex gap-1">
+            {config.interceptors.map((option) => {
+              const left = remainingOf(state, option.name);
+              const own = bands.get(option.name);
               return (
                 <button
-                  key={index}
+                  key={option.name}
                   type="button"
-                  className={`btn text-[0.7rem] ${index === launcher ? "btn-primary" : ""}`}
-                  onClick={() => onLauncher(index)}
+                  className="ops-btn ops-choice"
+                  style={css({ "--c": own?.colour ?? "var(--ops-phosphor)" })}
+                  aria-pressed={option.name === chosen?.name}
+                  onClick={() => onRound(option.name)}
                   title={
-                    reloading
-                      ? "Reloading"
-                      : left <= 0
-                        ? "Empty"
-                        : `${left} round(s) ready`
+                    left === 0
+                      ? `No ${option.name} rounds left`
+                      : `${option.name}: ${left} of ${option.loaded} left · reaches ${option.min_range_km}–${option.max_range_km} km`
                   }
                 >
-                  {index + 1}
+                  <span>{own?.short}</span>
                   <span
-                    className={`ml-1 ${
-                      reloading
-                        ? "text-warn"
-                        : left <= 0
-                          ? "text-danger"
-                          : "text-muted"
-                    }`}
+                    className="ops-count"
+                    style={left === 0 ? { color: "var(--id-hostile)" } : undefined}
                   >
-                    {reloading ? "RLD" : left}
+                    {left}
                   </span>
                 </button>
               );
             })}
           </div>
-        </div>
-      ) : null}
+        </Station>
 
-      {/* ---- The firing solution ------------------------------- */}
-      <div className="data text-[0.7rem]">
-        <p className="label">Solution</p>
-        {flight === null ? (
-          <p className="text-danger">No intercept — it cannot be caught.</p>
-        ) : (
-          <p className="text-muted">
-            TOF {flight.toFixed(0)}s · meets at {meetsAt?.toFixed(0)} km · Pk{" "}
-            <span
-              className={pk > 0.7 ? "text-ok" : pk > 0 ? "text-warn" : "text-danger"}
+        {/* ---- Which launcher ------------------------------------ */}
+        {config.commands.launchers > 1 ? (
+          <Station label="Launcher">
+            <div className="flex gap-1">
+              {Array.from({ length: config.commands.launchers }, (_, index) => {
+                const left = roundsOnLauncher(state, index);
+                const reloading = state.reloading_until[index] !== null;
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    className="ops-btn"
+                    aria-pressed={index === launcher}
+                    onClick={() => onLauncher(index)}
+                    title={reloading ? "Reloading" : left <= 0 ? "Empty" : `${left} round(s) ready`}
+                  >
+                    L{index + 1}
+                    <span
+                      style={{
+                        color: reloading
+                          ? "var(--id-suspect)"
+                          : left <= 0
+                            ? "var(--id-hostile)"
+                            : "var(--ops-dim)",
+                      }}
+                    >
+                      {reloading ? "RLD" : left}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </Station>
+        ) : null}
+
+        {/* ---- The firing solution ------------------------------- */}
+        {track ? (
+          <Station label={`Solution${band ? ` · ${band.short}` : ""}`}>
+            <Refusal entry={freshRefusal} />
+            {flight === null ? (
+              <p className="ops-value" style={{ color: "var(--id-hostile)" }}>
+                NO INTERCEPT
+                <span className="ops-dim block text-[10px] font-normal normal-case">
+                  Cannot be caught with this round
+                </span>
+              </p>
+            ) : (
+              <div>
+                <div className="flex items-baseline gap-3">
+                  <Figure label="TOF" value={`${flight.toFixed(0)}s`} />
+                  <Figure label="Meet" value={`${meetsAt?.toFixed(0)} km`} />
+                  <span className="flex items-baseline gap-1">
+                    <span className="ops-label">Pk</span>
+                    <span
+                      className="text-[17px] font-bold leading-none"
+                      style={{ color: pkColour(pk) }}
+                    >
+                      {(pk * 100).toFixed(0)}
+                      <span className="text-[11px]">%</span>
+                    </span>
+                  </span>
+                </div>
+                <span className="ops-bar mt-1.5" style={css({ "--c": pkColour(pk), width: "100%" })}>
+                  <span style={{ width: `${pk * 100}%` }} />
+                </span>
+              </div>
+            )}
+          </Station>
+        ) : null}
+
+        {/* ---- The system: not about any one track --------------- */}
+        <Station label="System">
+          <div className="flex items-center gap-1">
+            {config.commands.tilt.enabled ? (
+              <Tilt config={config} state={state} onCommand={onCommand} busy={busy} />
+            ) : null}
+            {config.commands.reload.enabled ? (
+              <Reload config={config} state={state} onCommand={onCommand} busy={busy} />
+            ) : null}
+            <EndRun onEnd={onEnd} busy={busy} />
+          </div>
+        </Station>
+
+        {/* ---- Commit -------------------------------------------- */}
+        <div className="ml-auto flex shrink-0 items-center gap-3 pl-3">
+          {engaged && track ? (
+            <button
+              type="button"
+              className="ops-btn ops-cease"
+              disabled={busy}
+              onClick={() => onCommand({ kind: "cease", designator: track.designator })}
             >
-              {(pk * 100).toFixed(0)}%
-            </span>
-          </p>
-        )}
-      </div>
-
-      {/* ---- Commit -------------------------------------------- */}
-      <div className="ml-auto flex items-center gap-2">
-        {engaged ? (
+              Cease fire
+            </button>
+          ) : null}
           <button
             type="button"
-            className="btn"
-            disabled={busy}
+            className="ops-fire"
+            disabled={busy || !track || !chosen}
             onClick={() =>
-              onCommand({ kind: "cease", designator: track.designator })
+              track && chosen
+                ? onCommand({
+                    kind: "engage",
+                    designator: track.designator,
+                    interceptor: chosen.name,
+                    launcher,
+                  })
+                : undefined
+            }
+            aria-label={
+              track && chosen ? `Fire ${chosen.name} at ${track.designator}` : "Fire — no track designated"
             }
           >
-            Cease fire
+            FIRE
+            <small>{band?.short ?? ""}</small>
           </button>
-        ) : null}
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={busy}
-          onClick={() =>
-            onCommand({
-              kind: "engage",
-              designator: track.designator,
-              interceptor: chosen.name,
-              launcher,
-            })
-          }
-        >
-          Fire {chosen.name}
-        </button>
+        </div>
       </div>
+    </div>
+  );
+}
 
-      {system}
+/**
+ * The last refusal, for a few seconds, under the solution — where the "no"
+ * belongs. One line; the full sentence is on the log beside it and in the
+ * tooltip here.
+ */
+function Refusal({ entry }: { entry: { detail: string } | null }) {
+  if (!entry) return null;
+  return (
+    <p
+      className="mb-1 max-w-[15rem] truncate text-[10px]"
+      style={{ color: "var(--id-hostile)" }}
+      title={entry.detail}
+      role="alert"
+    >
+      <span className="ops-tag mr-1" style={css({ "--c": "var(--id-hostile)" })}>
+        Refused
+      </span>
+      {entry.detail.replace(/^Engagement refused:\s*/, "")}
+    </p>
+  );
+}
 
-      {lastRefusal ? (
-        <p className="w-full text-[0.7rem] text-danger">{lastRefusal.detail}</p>
-      ) : null}
+function Station({
+  label,
+  wide,
+  children,
+}: {
+  label: string;
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      className={`shrink-0 border-r border-[var(--ops-line)] px-2.5 first:pl-1 ${
+        wide ? "min-w-[10rem]" : ""
+      }`}
+    >
+      <p className="ops-label mb-1.5">{label}</p>
+      {children}
+    </section>
+  );
+}
+
+function Figure({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="flex items-baseline gap-1">
+      <span className="ops-label">{label}</span>
+      <span className="ops-value">{value}</span>
+    </span>
+  );
+}
+
+/** The designated track, as a card: what it is, where, how high, how fast. */
+function Target({ view, config }: { view: TrackView; config: Config }) {
+  const track = view.track;
+  const tone = toneOf(config, track.displayed_iff) as Tone;
+  const colour = IDENTITY[tone];
+  return (
+    <div title={track.notes || undefined}>
+      <div className="flex items-center gap-2">
+        <span className="text-[15px] font-bold leading-none" style={{ color: colour }}>
+          {track.designator}
+        </span>
+        <span className="ops-tag" style={css({ "--c": colour })}>
+          {track.displayed_iff}
+        </span>
+      </div>
+      <div className="mt-1 flex gap-x-2.5 whitespace-nowrap text-[10.5px]">
+        <Figure label="Brg" value={`${String(Math.round(view.bearing_deg) % 360).padStart(3, "0")}`} />
+        <Figure label="Rng" value={view.range_km.toFixed(1)} />
+        <Figure label="FL" value={String(Math.round(track.altitude_ft / 100)).padStart(3, "0")} />
+        <Figure label="Kt" value={`${track.speed_kts}`} />
+      </div>
+      <div className="mt-0.5 flex gap-x-2.5 whitespace-nowrap text-[10.5px]">
+        <Figure label="Typ" value={track.displayed_classification} />
+        <span className="flex items-baseline gap-1">
+          <span className="ops-label">TTI</span>
+          <span
+            className={`ops-value ${view.tti_s !== null && view.tti_s < 60 ? "ops-urgent" : ""}`}
+          >
+            {view.tti_s === null ? "—" : `${view.tti_s.toFixed(0)}s`}
+          </span>
+        </span>
+      </div>
     </div>
   );
 }
@@ -471,8 +575,7 @@ export function Controls({
  * arrival at nine tenths of a window it clamps to as much as ten minutes. A
  * trainee who had seen what they came to see, or who simply had to stop, had
  * no way to finish — and leaving the page recorded *nothing at all*, because
- * the result is posted when the run ends. Six of the nine runs on the live
- * branch are in that state: created, flown into, and holding an empty log.
+ * the result is posted when the run ends.
  *
  * So this closes the run where it stands and scores what happened. It is not
  * an escape hatch from a bad result — everything up to the moment of pressing
@@ -488,46 +591,34 @@ function EndRun({ onEnd, busy }: { onEnd: () => void; busy: boolean }) {
 
   if (!asked) {
     return (
-      <div>
-        <p className="label">Run</p>
-        <button
-          type="button"
-          className="btn text-[0.7rem]"
-          disabled={busy}
-          onClick={() => setAsked(true)}
-          title="Close the run and score what has happened so far"
-        >
-          End run
-        </button>
-      </div>
+      <button
+        type="button"
+        className="ops-btn"
+        disabled={busy}
+        onClick={() => setAsked(true)}
+        title="Close the run and score what has happened so far"
+      >
+        End run
+      </button>
     );
   }
 
   return (
-    <div>
-      <p className="label">End the run?</p>
-      <div className="flex flex-wrap gap-1">
-        <button
-          type="button"
-          className="btn btn-primary text-[0.7rem]"
-          disabled={busy}
-          onClick={onEnd}
-        >
-          End it now
-        </button>
-        <button
-          type="button"
-          className="btn text-[0.7rem]"
-          disabled={busy}
-          onClick={() => setAsked(false)}
-        >
-          Keep going
-        </button>
-      </div>
-      <p className="mt-1 max-w-xs text-[0.7rem] text-muted">
-        Everything so far is scored, including anything still inbound.
-      </p>
-    </div>
+    <span className="flex flex-wrap items-center gap-1">
+      <button
+        type="button"
+        className="ops-btn"
+        style={{ borderColor: "var(--id-hostile)", color: "var(--id-hostile)" }}
+        disabled={busy}
+        onClick={onEnd}
+        title="Everything so far is scored, including anything still inbound"
+      >
+        End it now
+      </button>
+      <button type="button" className="ops-btn" disabled={busy} onClick={() => setAsked(false)}>
+        Keep going
+      </button>
+    </span>
   );
 }
 
@@ -545,49 +636,41 @@ function Reload({
   onCommand,
   busy,
 }: {
-  config: ReturnType<typeof simConfig>;
+  config: Config;
   state: SimState;
   onCommand: (cmd: Command) => void;
   busy: boolean;
 }) {
   return (
-    <div>
-      <p className="label">Reload</p>
-      <div className="flex flex-wrap gap-1">
-        {Array.from({ length: config.commands.launchers }, (_, index) => {
-          const left = roundsOnLauncher(state, index);
-          const until = state.reloading_until[index];
-          const remaining = until === null ? null : Math.max(0, until - state.t);
-          const committed = state.engagements.some(
-            (e) => !e.resolved && e.launcher === index,
-          );
-          return (
-            <button
-              key={index}
-              type="button"
-              className="btn text-[0.7rem]"
-              disabled={busy || remaining !== null}
-              title={
-                committed
-                  ? "A round from this launcher is still in the air"
-                  : `Takes ${config.commands.reload.seconds} s, and the clock does not stop`
-              }
-              onClick={() => onCommand({ kind: "reload", launcher: index })}
-            >
-              {config.commands.launchers > 1 ? `Reload ${index + 1}` : "Reload"}
-              {remaining !== null ? (
-                <span className="ml-1 text-warn">{remaining.toFixed(0)}s</span>
-              ) : (
-                <span className="ml-1 text-muted">{left}</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-      <p className="mt-1 max-w-xs text-[0.7rem] text-muted">
-        {config.commands.reload.seconds} s, and the clock does not stop.
-      </p>
-    </div>
+    <>
+      {Array.from({ length: config.commands.launchers }, (_, index) => {
+        const left = roundsOnLauncher(state, index);
+        const until = state.reloading_until[index];
+        const remaining = until === null ? null : Math.max(0, until - state.t);
+        const committed = state.engagements.some((e) => !e.resolved && e.launcher === index);
+        return (
+          <button
+            key={index}
+            type="button"
+            className="ops-btn"
+            disabled={busy || remaining !== null}
+            title={
+              committed
+                ? "A round from this launcher is still in the air"
+                : `Takes ${config.commands.reload.seconds} s, and the clock does not stop`
+            }
+            onClick={() => onCommand({ kind: "reload", launcher: index })}
+          >
+            {config.commands.launchers > 1 ? `Reload L${index + 1}` : "Reload"}
+            {remaining !== null ? (
+              <span style={{ color: "var(--id-suspect)" }}>{remaining.toFixed(0)}s</span>
+            ) : (
+              <span className="ops-dim">{left}</span>
+            )}
+          </button>
+        );
+      })}
+    </>
   );
 }
 
@@ -596,8 +679,7 @@ function Reload({
  *
  * Shown with what it costs rather than as a bare number: raising the tilt to
  * reach something high drops the low approach off the scope entirely, and a
- * track that is not held cannot be engaged. The count of what is currently
- * held is the honest readout of that trade.
+ * track that is not held cannot be engaged.
  */
 function Tilt({
   config,
@@ -605,7 +687,7 @@ function Tilt({
   onCommand,
   busy,
 }: {
-  config: ReturnType<typeof simConfig>;
+  config: Config;
   state: SimState;
   onCommand: (cmd: Command) => void;
   busy: boolean;
@@ -614,37 +696,31 @@ function Tilt({
   const step = Math.max(1, Math.round((max_deg - min_deg) / 10));
 
   return (
-    <div>
-      <p className="label">Radar tilt</p>
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          className="btn text-[0.7rem]"
-          disabled={busy || state.tilt_deg <= min_deg}
-          onClick={() =>
-            onCommand({ kind: "tilt", to_deg: state.tilt_deg - step })
-          }
-        >
-          ▼
-        </button>
-        <span className="data w-12 text-center text-[0.7rem]">
-          {state.tilt_deg}°
-        </span>
-        <button
-          type="button"
-          className="btn text-[0.7rem]"
-          disabled={busy || state.tilt_deg >= max_deg}
-          onClick={() =>
-            onCommand({ kind: "tilt", to_deg: state.tilt_deg + step })
-          }
-        >
-          ▲
-        </button>
-      </div>
-      <p className="mt-1 max-w-xs text-[0.7rem] text-muted">
-        {min_deg}°–{max_deg}°. Anything below where it points is not held.
-      </p>
-    </div>
+    <span
+      className="flex items-center gap-1"
+      title={`${min_deg}°–${max_deg}°. Anything below where it points is not held.`}
+    >
+      <span className="ops-label">Tilt</span>
+      <button
+        type="button"
+        className="ops-btn"
+        aria-label="Tilt down"
+        disabled={busy || state.tilt_deg <= min_deg}
+        onClick={() => onCommand({ kind: "tilt", to_deg: state.tilt_deg - step })}
+      >
+        ▼
+      </button>
+      <span className="ops-value w-9 text-center">{state.tilt_deg}°</span>
+      <button
+        type="button"
+        className="ops-btn"
+        aria-label="Tilt up"
+        disabled={busy || state.tilt_deg >= max_deg}
+        onClick={() => onCommand({ kind: "tilt", to_deg: state.tilt_deg + step })}
+      >
+        ▲
+      </button>
+    </span>
   );
 }
 
@@ -655,57 +731,73 @@ function Tilt({
  * during a run is exactly what a training simulator is for. A code with no
  * standing meaning is left as itself rather than dressed up.
  */
-function interrogationLine(
-  track: RuntimeTrack,
-  config: ReturnType<typeof simConfig>,
-): string {
+function interrogationLine(track: RuntimeTrack, config: Config): string {
   const mode3 = config.iff.mode_3 ? track.mode_3 : "";
   const mode1 = config.iff.mode_1 ? track.mode_1 : "";
   const reply = describeReply(mode3, mode1);
 
   if (!reply.replied) {
-    return "Nothing came back. It carries no transponder, or is not answering.";
+    return "nothing came back. It carries no transponder, or is not answering.";
   }
 
   const meaning = meaningOfMode3(mode3);
-  const military = mode1
-    ? " Mode 1 replied, so it is a military transponder."
-    : "";
-  return `${reply.text}.${meaning ? ` ${meaning}.` : ""}${military}`;
+  if (meaning) return `${meaning}.`;
+  return mode1
+    ? "Mode 1 replied, so it is a military transponder."
+    : "Mode 3 only — a code, not an identity.";
 }
+
+/* ------------------------------------------------------------------ */
+/* The log                                                             */
+/* ------------------------------------------------------------------ */
+
+/** What each kind of event is called on the log, and the colour it speaks in. */
+const KINDS: Record<string, { tag: string; colour: string }> = {
+  detected: { tag: "DET", colour: "var(--ops-phosphor)" },
+  resolved: { tag: "RES", colour: "var(--id-unknown)" },
+  classified: { tag: "ID", colour: "var(--ops-phosphor)" },
+  retyped: { tag: "TYP", colour: "var(--ops-phosphor)" },
+  interrogated: { tag: "IFF", colour: "var(--id-friend)" },
+  launched: { tag: "LNCH", colour: "var(--band-1)" },
+  refused: { tag: "REF", colour: "var(--id-hostile)" },
+  hit: { tag: "KILL", colour: "var(--kill)" },
+  miss: { tag: "MISS", colour: "var(--id-suspect)" },
+  leaked: { tag: "LEAK", colour: "var(--id-hostile)" },
+  ceased: { tag: "CEASE", colour: "var(--id-suspect)" },
+  reloaded: { tag: "RLD", colour: "var(--ops-dim)" },
+  tilted: { tag: "TILT", colour: "var(--ops-dim)" },
+  ended: { tag: "END", colour: "var(--ops-dim)" },
+};
 
 /** The running record, newest first — what a real console prints as it goes. */
 export function EventLog({ state }: { state: SimState }) {
   const recent = [...state.events].reverse().slice(0, 40);
   return (
-    <ul className="divide-y divide-line/60 text-[0.7rem]">
-      {recent.map((entry, index) => (
-        <li key={index} className="flex gap-2 px-3 py-1">
-          <span className="data shrink-0 text-muted">
-            T+{String(Math.floor(entry.t)).padStart(3, "0")}
-          </span>
-          <span className={entryClass(entry.kind)}>{entry.detail}</span>
-        </li>
-      ))}
+    <ul className="ops-root ops-log">
+      {recent.map((entry, index) => {
+        const kind = KINDS[entry.kind] ?? { tag: entry.kind.toUpperCase(), colour: "var(--ops-dim)" };
+        /* The outcomes are worth reading at a glance; working the console is
+           worth finding afterwards, not shouting now. */
+        const loud = ["hit", "leaked", "refused", "miss"].includes(entry.kind);
+        return (
+          <li key={index}>
+            <time>T+{String(Math.floor(entry.t)).padStart(3, "0")}</time>
+            <span className="ops-tag" style={css({ "--c": kind.colour })}>
+              {kind.tag}
+            </span>
+            <span style={{ color: loud ? kind.colour : "var(--ops-ink)" }}>{entry.detail}</span>
+          </li>
+        );
+      })}
       {recent.length === 0 ? (
-        <li className="px-3 py-2 text-muted">No activity yet.</li>
+        <li>
+          <span className="ops-dim" style={{ gridColumn: "1 / -1" }}>
+            No activity yet.
+          </span>
+        </li>
       ) : null}
     </ul>
   );
-}
-
-function entryClass(kind: string): string {
-  if (kind === "hit") return "text-ok";
-  if (kind === "leaked" || kind === "refused" || kind === "miss")
-    return "text-danger";
-  if (kind === "launched" || kind === "resolved") return "text-warn";
-  // Working the console: worth finding afterwards, not worth shouting now.
-  if (kind === "retyped" || kind === "reloaded" || kind === "tilted")
-    return "text-accent";
-  // An interrogation is a reading, not an outcome: worth finding in the log
-  // afterwards, not worth shouting while the run is on.
-  if (kind === "interrogated") return "text-accent";
-  return "text-muted";
 }
 
 export function Failed({

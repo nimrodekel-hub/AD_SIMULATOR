@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import "./instruments.css";
 
 /* Sans for interface text, monospace for numeric readouts — the console
    screens rely on the distinction, so both are loaded globally. */

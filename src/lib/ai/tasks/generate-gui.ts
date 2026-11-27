@@ -104,6 +104,8 @@ Place these exactly where the corresponding information sits in the reference co
 
 Leave them completely empty. Live content is injected at runtime.
 
+**What lands in a slot is sealed from your stylesheet.** Each slot is a shadow root: the simulator's instruments inside it carry their own look — the identity colours, a colour per interceptor band shared by the selector, the magazine and the scope, and a round red fire command — and no rule of yours reaches them, \`!important\` or not. So style the frame, never the contents: no selectors aimed at buttons, tables or anything else you expect to find inside a slot. Draw no key or legend for interceptor colours either; the instruments label their own bands, and a legend in different colours contradicts them.
+
 ## One more slot, if the reference has the control
 
 - \`<div data-slot="range"></div>\` — **optional.** Where the reference console shows a range-scale or zoom control for the radar picture, put this there and the real one is rendered into it. Omit it and the operator gets a compact one over the corner of the picture instead.
@@ -168,6 +170,7 @@ Some of what a designer asks for here is not yours to give, and the worst thing 
   - **Not on the list at all** — *"Choosing the interceptor band — the simulator has no such command, so a button would do nothing."*
 - **A figure that comes from the profile** — the track table's columns, the identification states, a round's reach, the magazine's depth. The shell marks out space; the values are the profile's. *"IFF column — a behaviour change: ask for it in Ask for a change."*
 - **Something the simulation does not model at all.** One line saying so, rather than an approximation drawn anyway.
+- **The look of an instrument inside a slot** — the colour of a button, the shape of the fire command, the table's font. Those are drawn by the simulator, the same on every console, and you cannot reach them. *"Red round fire button — drawn by the simulator inside the decision slot, not by this console."*
 
 **One line each. Never more.** The screen the designer is reading already lists every operator control and whether it is switched on — so you are confirming which of their requests belong to behaviour, not teaching them the mechanism. Name the request and where to ask for it; stop there.
 

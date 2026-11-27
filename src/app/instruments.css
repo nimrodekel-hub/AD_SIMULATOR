@@ -1,0 +1,508 @@
+/*
+ * The operator's instruments — scope, track table, engagement panel, magazines,
+ * clock, log.
+ *
+ * Kept apart from globals.css because these are a different kind of thing.
+ * The rest of the app is pages; these are instruments, and they are drawn
+ * inside whatever console shell the designer's builder produced — sealed from
+ * it (see simulated-console.tsx), so the shell owns the frame and these own
+ * what is inside the frame. That is also why nothing here needs `!important`
+ * or a specificity trick: nothing outside can reach in.
+ *
+ * Every colour that means something is a token, and the meanings do not
+ * overlap. Identity is the standard symbology set; bands are kept clear of it;
+ * green is reserved for a kill. See src/lib/ops-palette.ts.
+ */
+
+:root {
+  /* Identity — what a track is believed to be. */
+  --id-friend: #3d9bff;
+  --id-unknown: #ffd23f;
+  --id-suspect: #ff9f1c;
+  --id-hostile: #ff4757;
+
+  /* Interceptor bands, longest reach first. Clear of every identity hue. */
+  --band-1: #a78bfa;
+  --band-2: #2dd4bf;
+  --band-3: #f472b6;
+  --band-4: #94a3b8;
+
+  /* Outcomes. */
+  --kill: #35d07f;
+  --ops-fire: #ff3b3b;
+
+  /* The instrument surface. */
+  --ops-face: #02070d;
+  --ops-phosphor: #00d9ff;
+  --ops-grid: rgb(0 217 255 / 0.12);
+  --ops-grid-strong: rgb(0 217 255 / 0.32);
+  --ops-ink: #dbe7f3;
+  --ops-dim: #8199b0;
+  --ops-faint: #4d6278;
+  --ops-line: rgb(130 170 210 / 0.16);
+  --ops-line-strong: rgb(130 170 210 / 0.32);
+  --ops-surface: rgb(8 15 24 / 0.92);
+  --ops-surface-2: rgb(16 27 40 / 0.95);
+  --ops-select: #ffffff;
+}
+
+/* ---- Base ------------------------------------------------------------- */
+
+.ops-root {
+  color: var(--ops-ink);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+
+.ops-label {
+  color: var(--ops-dim);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ops-value {
+  color: var(--ops-ink);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ops-dim {
+  color: var(--ops-dim);
+}
+
+/* ---- Buttons ---------------------------------------------------------- */
+
+.ops-btn {
+  align-items: center;
+  background: var(--ops-surface-2);
+  border: 1px solid var(--ops-line-strong);
+  border-radius: 3px;
+  color: var(--ops-ink);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  gap: 6px;
+  height: 26px;
+  letter-spacing: 0.08em;
+  padding: 0 10px;
+  text-transform: uppercase;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    color 120ms ease;
+  white-space: nowrap;
+}
+
+.ops-btn:hover:not(:disabled) {
+  border-color: var(--ops-phosphor);
+  box-shadow: 0 0 0 1px rgb(0 217 255 / 0.25);
+}
+
+.ops-btn:focus-visible {
+  outline: 2px solid var(--ops-phosphor);
+  outline-offset: 1px;
+}
+
+.ops-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.ops-btn[aria-pressed="true"] {
+  background: rgb(0 217 255 / 0.14);
+  border-color: var(--ops-phosphor);
+  color: var(--ops-phosphor);
+}
+
+/* The small size, for a strip a shell reserves at a fixed height — the
+   range switch, whose strip is 20 px. */
+.ops-btn-sm {
+  font-size: 9.5px;
+  gap: 4px;
+  height: 20px;
+  letter-spacing: 0.06em;
+  padding: 0 6px;
+}
+
+/* A colour-coded choice: an identity state or an interceptor band. The
+   colour arrives as `--c` on the element, so one rule serves every band and
+   every state a profile declares. */
+.ops-choice {
+  --c: var(--ops-phosphor);
+  border-color: color-mix(in srgb, var(--c) 45%, transparent);
+  box-shadow: inset 3px 0 0 var(--c);
+  padding-left: 11px;
+}
+
+.ops-choice[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--c) 20%, transparent);
+  border-color: var(--c);
+  box-shadow:
+    inset 3px 0 0 var(--c),
+    0 0 12px color-mix(in srgb, var(--c) 35%, transparent);
+  color: #fff;
+}
+
+.ops-choice:hover:not(:disabled) {
+  border-color: var(--c);
+  box-shadow:
+    inset 3px 0 0 var(--c),
+    0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent);
+}
+
+.ops-choice .ops-count {
+  color: var(--c);
+}
+
+/* The launch command. Round and red because it is the one control on the
+   console whose effect cannot be taken back, and it must not be mistaken for
+   any of the choices that lead up to it. */
+.ops-fire {
+  align-items: center;
+  background: radial-gradient(
+    circle at 50% 35%,
+    #ff6b6b 0%,
+    var(--ops-fire) 45%,
+    #b3121b 100%
+  );
+  border: 0;
+  border-radius: 9999px;
+  box-shadow:
+    0 0 0 3px var(--ops-face),
+    0 0 0 4px rgb(255 59 59 / 0.8),
+    0 0 22px rgb(255 59 59 / 0.45),
+    inset 0 -4px 8px rgb(0 0 0 / 0.35),
+    inset 0 2px 2px rgb(255 255 255 / 0.25);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  height: 64px;
+  justify-content: center;
+  letter-spacing: 0.16em;
+  line-height: 1.05;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+  transition:
+    transform 80ms ease,
+    box-shadow 120ms ease,
+    filter 120ms ease;
+  width: 64px;
+}
+
+.ops-fire small {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  opacity: 0.85;
+}
+
+.ops-fire:hover:not(:disabled) {
+  box-shadow:
+    0 0 0 3px var(--ops-face),
+    0 0 0 4px #ff8080,
+    0 0 30px rgb(255 59 59 / 0.7),
+    inset 0 -4px 8px rgb(0 0 0 / 0.35),
+    inset 0 2px 2px rgb(255 255 255 / 0.3);
+  filter: brightness(1.08);
+}
+
+.ops-fire:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.ops-fire:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 6px;
+}
+
+/* No solution, or nothing selected: still visibly the fire control, just not
+   armed — a missing button would move everything else on the panel. */
+.ops-fire:disabled {
+  background: radial-gradient(circle at 50% 35%, #3a2427, #1c1012);
+  box-shadow:
+    0 0 0 3px var(--ops-face),
+    0 0 0 4px rgb(255 59 59 / 0.3);
+  color: rgb(255 255 255 / 0.35);
+  cursor: not-allowed;
+  text-shadow: none;
+}
+
+.ops-cease {
+  border-color: rgb(255 159 28 / 0.7);
+  color: var(--id-suspect);
+}
+
+/* ---- Tags ------------------------------------------------------------- */
+
+.ops-tag {
+  --c: var(--ops-dim);
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
+  border-radius: 2px;
+  color: var(--c);
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  padding: 3px 5px 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ---- Track table ------------------------------------------------------ */
+
+.ops-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.ops-table th {
+  background: var(--ops-surface);
+  border-bottom: 1px solid var(--ops-line-strong);
+  color: var(--ops-dim);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  padding: 6px 8px 5px;
+  position: sticky;
+  text-align: left;
+  text-transform: uppercase;
+  top: 0;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.ops-table td {
+  border-bottom: 1px solid var(--ops-line);
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+
+.ops-table .num {
+  text-align: right;
+}
+
+.ops-table tbody tr {
+  --c: var(--ops-dim);
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+/* The identity runs down the left edge of every row, so the list can be read
+   for "what is red" without reading a single word. */
+.ops-table tbody td:first-child {
+  box-shadow: inset 3px 0 0 var(--c);
+  padding-left: 10px;
+}
+
+.ops-table tbody tr:hover {
+  background: rgb(130 170 210 / 0.06);
+}
+
+.ops-table tbody tr[aria-selected="true"] {
+  background: rgb(0 217 255 / 0.1);
+}
+
+.ops-table tbody tr[aria-selected="true"] td {
+  border-bottom-color: rgb(0 217 255 / 0.35);
+  border-top: 1px solid rgb(0 217 255 / 0.35);
+}
+
+.ops-table tbody tr[data-state="gone"] {
+  opacity: 0.45;
+}
+
+/* Time to impact under a minute: the cell that decides the order of work. */
+.ops-urgent {
+  color: var(--id-hostile);
+  font-weight: 700;
+}
+
+/* ---- Meters, gauges, the clock ---------------------------------------- */
+
+.ops-pips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.ops-pip {
+  --c: var(--ops-phosphor);
+  background: var(--c);
+  border-radius: 1px;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--c) 45%, transparent);
+  height: 10px;
+  width: 6px;
+}
+
+.ops-pip[data-spent="true"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent);
+}
+
+.ops-bar {
+  background: rgb(130 170 210 / 0.12);
+  border-radius: 1px;
+  height: 4px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.ops-bar > span {
+  background: var(--c, var(--ops-phosphor));
+  box-shadow: 0 0 8px var(--c, var(--ops-phosphor));
+  display: block;
+  height: 100%;
+  transition: width 200ms linear;
+}
+
+.ops-clock {
+  --c: var(--kill);
+  align-items: center;
+  background: var(--ops-surface);
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  border-radius: 3px;
+  display: inline-flex;
+  gap: 8px;
+  padding: 3px 8px;
+}
+
+.ops-clock-digits {
+  color: var(--c);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--c) 55%, transparent);
+}
+
+.ops-clock[data-urgency="critical"] .ops-clock-digits {
+  animation: ops-blink 1s steps(2, start) infinite;
+}
+
+/* ---- The log ---------------------------------------------------------- */
+
+.ops-log li {
+  border-bottom: 1px solid var(--ops-line);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto auto 1fr;
+  padding: 4px 10px;
+}
+
+.ops-log li:first-child {
+  background: rgb(0 217 255 / 0.05);
+}
+
+.ops-log time {
+  color: var(--ops-faint);
+}
+
+/* ---- Motion ----------------------------------------------------------- */
+
+@keyframes ops-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes ops-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* A fixed array scans its sector side to side. The two limits arrive as
+   custom properties on the beam, so the same rule serves every sector. */
+@keyframes ops-scan {
+  from {
+    transform: rotate(var(--scan-from));
+  }
+  to {
+    transform: rotate(var(--scan-to));
+  }
+}
+
+@keyframes ops-ping {
+  from {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+
+.ops-beam {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+
+.ops-beam[data-mode="sweep"] {
+  animation: ops-sweep 4s linear infinite;
+}
+
+.ops-beam[data-mode="scan"] {
+  animation: ops-scan 2.2s ease-in-out infinite alternate;
+}
+
+.ops-ping {
+  animation: ops-ping 1.6s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-beam,
+  .ops-ping,
+  .ops-clock[data-urgency="critical"] .ops-clock-digits {
+    animation: none;
+  }
+}
+
+/* The live indicator on a console's status line: a run is in progress. */
+.ops-live {
+  background: var(--kill);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--kill);
+  display: inline-block;
+  height: 7px;
+  width: 7px;
+  animation: ops-blink 1.6s steps(2, start) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-live {
+    animation: none;
+  }
+}
+
+/* A tag in a log row sits on the first line of its text, not stretched down
+   the height of a wrapped one. */
+.ops-log li > .ops-tag {
+  align-self: start;
+}
+
+/* The engagement row, where every station has to fit across one strip. */
+.ops-compact .ops-btn {
+  gap: 4px;
+  letter-spacing: 0.05em;
+  padding: 0 7px;
+}
+
+.ops-compact .ops-choice {
+  padding-left: 9px;
+}
