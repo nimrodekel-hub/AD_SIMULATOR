@@ -63,35 +63,20 @@ export function RangeControl({
   };
 
   const inShell = variant === "slot";
-  const size = variant === "bar" ? "text-[0.7rem]" : "text-[0.6rem]";
-
-  /* `.btn` is unlayered in `globals.css`, so it outranks `@layer utilities`
-     and every size utility here is dropped without `!`. That is not a detail:
-     left plain these render at the full 0.875rem with 0.5rem×1rem of padding —
-     about 35 px against the 20 px strip a shell reserves for them — and the
-     buttons then sit on top of the shell's own caption row. In a strip that
-     tight the padding goes entirely and the line box carries the height.
-
-     Every one of these is written out whole, never assembled from a variable.
-     Tailwind generates a utility by finding its name as a literal in the
-     source: build `!` + `text-[0.6rem]` at runtime and the two halves are both
-     present, the joined name is not, and the rule is silently never emitted —
-     which is the same failure as leaving the `!` off, one level further back
-     and invisible in the browser's own styles panel. */
-  const forced = variant === "bar" ? "!text-[0.7rem]" : "!text-[0.6rem]";
-  const pill = `btn ${forced} !px-1.5 ${inShell ? "!py-0 !leading-4" : "!py-0.5"}`;
+  /* The ops button, not the app's `.btn`: this sits on the scope, in the
+     instrument family, and `.ops-btn-sm` fits the 20 px strip a shell
+     reserves for it without overriding anything. */
+  const pill = "ops-btn ops-btn-sm";
 
   return (
     <div
-      className={`flex items-center gap-x-2 ${
+      className={`ops-root flex items-center gap-x-2 ${
         inShell ? "h-full min-w-0 flex-nowrap overflow-hidden" : "flex-wrap gap-y-1"
       }`}
     >
       <div className="flex items-center gap-1">
         {inShell ? null : (
-          <span className={`${size} uppercase tracking-[0.1em] text-muted`}>
-            Range
-          </span>
+          <span className="ops-label">Range</span>
         )}
         {/* In, then out: on a scope, "−" is less range on the ring — which is
             closer in and therefore more magnification. Labelled so the two
@@ -133,7 +118,7 @@ export function RangeControl({
           <button
             key={km}
             type="button"
-            className={`${pill} data ${km === value ? "btn-primary" : ""}`}
+            className={pill}
             onClick={() => onChange(km)}
             aria-pressed={km === value}
             aria-label={`${km} kilometre range scale`}
@@ -141,7 +126,7 @@ export function RangeControl({
             {km}
           </button>
         ))}
-        <span className={`${size} text-muted`}>km</span>
+        <span className="ops-label">km</span>
       </div>
     </div>
   );
